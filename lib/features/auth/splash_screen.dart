@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:pocketledger/app/theme.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -11,20 +10,24 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
-  late Animation<double> _animation;
+  late Animation<double> _fadeAnimation;
+
+  // Local Design Tokens (as requested, separate from global CSS/Theme)
+  static const Color backgroundColor = Color(0xFF0A192F); // Deep Navy
+  static const Color accentColor = Color(0xFF439A86);     // Sea-foam Green
+  static const Color greyText = Color(0xFF94A3B8);        // Tagline grey
 
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(
-      duration: const Duration(seconds: 3),
       vsync: this,
+      duration: const Duration(milliseconds: 1500),
     );
-    _animation = Tween<double>(begin: 0.0, end: 1.0).animate(CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeInOut,
-    ));
-    _controller.forward().then((_) {
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(_controller);
+    _controller.forward();
+
+    Future.delayed(const Duration(seconds: 3), () {
       if (mounted) {
         Navigator.pushReplacementNamed(context, '/login');
       }
@@ -40,142 +43,108 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.primaryBackground,
+      backgroundColor: backgroundColor,
       body: Stack(
         children: [
-          Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Main Icon (Logo) with Circular Clipping and Shadow
-                Container(
-                  width: 180,
-                  height: 180,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.4),
-                        blurRadius: 25,
-                        offset: const Offset(0, 12),
-                      ),
-                    ],
-                  ),
-                  child: ClipOval(
+          FadeTransition(
+            opacity: _fadeAnimation,
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // 💎 Brand Icon with soft 3D shadow
+                  Container(
+                    width: 200,
+                    height: 200,
+                    decoration: BoxDecoration(
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.4),
+                          blurRadius: 40,
+                          offset: const Offset(0, 20),
+                        ),
+                      ],
+                    ),
                     child: Image.asset(
                       'assets/images/logo.png',
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          color: AppColors.brandPrimary,
-                          child: const Icon(
-                            Icons.account_balance_wallet_rounded,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                  const SizedBox(height: 48),
+                  
+                  // ✍️ Typography: PocketLedger
+                  RichText(
+                    text: TextSpan(
+                      children: [
+                        TextSpan(
+                          text: 'Pocket',
+                          style: GoogleFonts.montserrat(
                             color: Colors.white,
-                            size: 80,
+                            fontSize: 38,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1.5,
                           ),
-                        );
-                      },
+                        ),
+                        TextSpan(
+                          text: 'Ledger',
+                          style: GoogleFonts.montserrat(
+                            color: accentColor,
+                            fontSize: 38,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1.5,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ),
-                const SizedBox(height: 40),
-                // Typography: PocketLedger
-                RichText(
-                  text: TextSpan(
+                  const SizedBox(height: 12),
+                  
+                  // 🏷️ Tagline
+                  Text(
+                    '— Track Money. Stay in Control. —',
                     style: GoogleFonts.montserrat(
-                      fontSize: 40,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1.5,
+                      color: greyText.withOpacity(0.6),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w400,
+                      letterSpacing: 1.2,
                     ),
-                    children: const [
-                      TextSpan(
-                        text: 'Pocket',
-                        style: TextStyle(color: AppColors.primaryText),
-                      ),
-                      TextSpan(
-                        text: 'Ledger',
-                        style: TextStyle(color: AppColors.accentAction),
-                      ),
-                    ],
                   ),
-                ),
-                const SizedBox(height: 12),
-                // Tagline with side lines
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      width: 20,
-                      height: 2,
-                      color: AppColors.accentAction,
-                    ),
-                    const SizedBox(width: 10),
-                    Text(
-                      'Track Money. Stay in Control.',
-                      style: GoogleFonts.montserrat(
-                        color: Colors.white,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Container(
-                      width: 20,
-                      height: 2,
-                      color: AppColors.accentAction,
-                    ),
-                  ],
-                ),
-              ],
+                ],
+              ),
             ),
           ),
-          // Loading Element
+          
+          // ⏳ Slim Horizontal Loading Bar
           Positioned(
-            bottom: 100,
-            left: 80,
-            right: 80,
+            bottom: 80,
+            left: 60,
+            right: 60,
             child: Column(
               children: [
-                AnimatedBuilder(
-                  animation: _animation,
-                  builder: (context, child) {
-                    return Container(
-                      height: 8,
-                      width: double.infinity,
+                Container(
+                  height: 3,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.05),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: FractionallySizedBox(
+                    alignment: Alignment.centerLeft,
+                    widthFactor: 0.3, // Fixed 30% as per prompt
+                    child: Container(
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.05),
+                        color: accentColor,
                         borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Stack(
-                        children: [
-                          FractionallySizedBox(
-                            alignment: Alignment.centerLeft,
-                            widthFactor: _animation.value,
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: AppColors.accentAction,
-                                borderRadius: BorderRadius.circular(10),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: AppColors.accentAction.withOpacity(0.5),
-                                    blurRadius: 10,
-                                    spreadRadius: 2,
-                                  ),
-                                ],
-                                gradient: LinearGradient(
-                                  colors: [
-                                    AppColors.accentAction.withOpacity(0.5),
-                                    AppColors.accentAction,
-                                  ],
-                                ),
-                              ),
-                            ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: accentColor.withOpacity(0.6),
+                            blurRadius: 8,
+                            spreadRadius: 1,
                           ),
                         ],
                       ),
-                    );
-                  },
+                    ),
+                  ),
                 ),
               ],
             ),

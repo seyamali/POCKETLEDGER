@@ -1,7 +1,8 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:pocketledger/services/auth_service.dart';
 import 'package:pocketledger/app/theme.dart';
+import 'package:pocketledger/features/auth/widgets/custom_text_field.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -12,40 +13,18 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final AuthService _authService = AuthService();
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController(text: 'Seyamhossain482@gmail.com');
+  final TextEditingController _passwordController = TextEditingController(text: 'Sey@mPocket');
   bool _isLoading = false;
-  
   bool _isPasswordVisible = false;
+
   final FocusNode _emailFocus = FocusNode();
   final FocusNode _passwordFocus = FocusNode();
-  bool _isEmailFocused = false;
-  bool _isPasswordFocused = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _emailFocus.addListener(() {
-      setState(() => _isEmailFocused = _emailFocus.hasFocus);
-    });
-    _passwordFocus.addListener(() {
-      setState(() => _isPasswordFocused = _passwordFocus.hasFocus);
-    });
-  }
-
-  @override
-  void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
-    _emailFocus.dispose();
-    _passwordFocus.dispose();
-    super.dispose();
-  }
 
   void _handleLogin() async {
     if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter email and password')),
+        const SnackBar(content: Text('Please fill all fields')),
       );
       return;
     }
@@ -54,7 +33,6 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       await _authService.signIn(_emailController.text, _passwordController.text);
       if (mounted) {
-        // Navigate to Dashboard on success
         Navigator.pushReplacementNamed(context, '/dashboard');
       }
     } catch (e) {
@@ -64,218 +42,163 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       }
     } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.primaryBackground,
-      body: Stack(
-        children: [
-          // 🌌 Background Glow Effect
-          Positioned(
-            top: -100,
-            right: -50,
-            child: Container(
-              width: 300,
-              height: 300,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.accentAction.withOpacity(0.05),
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: AppColors.textBlack),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 20),
+              Center(child: Image.asset('assets/images/logo.png', height: 60)),
+              const SizedBox(height: 40),
+              Text(
+                'Welcome Back',
+                style: GoogleFonts.outfit(
+                  color: AppColors.textBlack,
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 100, sigmaY: 100),
-                child: Container(color: Colors.transparent),
+              const SizedBox(height: 8),
+              Text(
+                'Enter your credentials to continue',
+                style: GoogleFonts.outfit(
+                  color: AppColors.textGrey,
+                  fontSize: 16,
+                ),
               ),
-            ),
-          ),
-          
-          SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0),
-              child: Column(
+              const SizedBox(height: 48),
+              
+              // 📝 Clean Input Fields
+              Text(
+                'Email Address',
+                style: GoogleFonts.outfit(
+                  color: AppColors.textBlack,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 10),
+              _buildTextField(
+                controller: _emailController,
+                hint: 'name@example.com',
+                icon: Icons.email_outlined,
+                focusNode: _emailFocus,
+                isFocused: _emailFocus.hasFocus,
+                keyboardType: TextInputType.emailAddress,
+              ),
+              const SizedBox(height: 24),
+              
+              Text(
+                'Password',
+                style: GoogleFonts.outfit(
+                  color: AppColors.textBlack,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 10),
+              _buildTextField(
+                controller: _passwordController,
+                hint: '••••••••',
+                icon: Icons.lock_outline,
+                focusNode: _passwordFocus,
+                isFocused: _passwordFocus.hasFocus,
+                isPassword: true,
+                obscureText: !_isPasswordVisible,
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _isPasswordVisible ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                    color: AppColors.textGrey,
+                    size: 20,
+                  ),
+                  onPressed: () => setState(() => _isPasswordVisible = !_isPasswordVisible),
+                ),
+              ),
+              
+              const SizedBox(height: 12),
+              Align(
+                alignment: Alignment.centerRight,
+                child: Text(
+                  'Forgot Password?',
+                  style: GoogleFonts.outfit(
+                    color: AppColors.primaryGreen,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+              
+              const SizedBox(height: 48),
+              
+              // 🚀 Sign In Button
+              SizedBox(
+                width: double.infinity,
+                height: 56,
+                child: ElevatedButton(
+                  onPressed: _isLoading ? null : _handleLogin,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primaryGreen,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    elevation: 0,
+                  ),
+                  child: _isLoading
+                      ? const SizedBox(
+                          height: 24,
+                          width: 24,
+                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                        )
+                      : Text(
+                          'Sign In',
+                          style: GoogleFonts.outfit(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                ),
+              ),
+              
+              const SizedBox(height: 32),
+              
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const SizedBox(height: 60),
-                  
-                  // 🧩 Top Area (Brand Section)
-                  Column(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: AppColors.brandPrimary.withOpacity(0.1),
-                        ),
-                        child: const Icon(
-                          Icons.account_balance_wallet_rounded,
-                          color: AppColors.accentAction,
-                          size: 40,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      RichText(
-                        text: TextSpan(
-                          style: GoogleFonts.montserrat(
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 1.0,
-                          ),
-                          children: const [
-                            TextSpan(text: 'Pocket', style: TextStyle(color: Colors.white)),
-                            TextSpan(text: 'Ledger', style: TextStyle(color: AppColors.accentAction)),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Secure access to your money data',
-                        style: GoogleFonts.montserrat(
-                          color: AppColors.secondaryText.withOpacity(0.7),
-                          fontSize: 14,
-                        ),
-                      ),
-                    ],
+                  Text(
+                    "Don't have an account? ",
+                    style: GoogleFonts.outfit(color: AppColors.textGrey),
                   ),
-                  
-                  const SizedBox(height: 60),
-                  
-                  // 🧾 Middle Area (Main Login Box / Glass Card)
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(24),
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                      child: Container(
-                        padding: const EdgeInsets.all(24),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.03),
-                          borderRadius: BorderRadius.circular(24),
-                          border: Border.all(
-                            color: AppColors.accentAction.withOpacity(0.2),
-                            width: 1,
-                          ),
-                        ),
-                        child: Column(
-                          children: [
-                            // Email Field
-                            _buildTextField(
-                              controller: _emailController,
-                              hint: 'Email Address',
-                              icon: Icons.email_outlined,
-                              focusNode: _emailFocus,
-                              isFocused: _isEmailFocused,
-                            ),
-                            const SizedBox(height: 20),
-                            
-                            // Password Field
-                            _buildTextField(
-                              controller: _passwordController,
-                              hint: 'Password',
-                              icon: Icons.lock_outline,
-                              isPassword: true,
-                              isPasswordVisible: _isPasswordVisible,
-                              onToggleVisibility: () {
-                                setState(() => _isPasswordVisible = !_isPasswordVisible);
-                              },
-                              focusNode: _passwordFocus,
-                              isFocused: _isPasswordFocused,
-                            ),
-                            
-                            const SizedBox(height: 32),
-                            
-                            // 🔘 Login Button
-                            SizedBox(
-                              width: double.infinity,
-                              height: 56,
-                              child: ElevatedButton(
-                                onPressed: _isLoading ? null : _handleLogin,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.brandPrimary,
-                                  foregroundColor: Colors.white,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                  elevation: 8,
-                                  shadowColor: AppColors.brandPrimary.withOpacity(0.5),
-                                ),
-                                child: _isLoading 
-                                  ? const CircularProgressIndicator(color: Colors.white)
-                                  : Text(
-                                      'Login to PocketLedger',
-                                      style: GoogleFonts.montserrat(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  
-                  const SizedBox(height: 24),
-                  
-                  // ⚙️ Small Options
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        'New user? ',
-                        style: GoogleFonts.montserrat(color: AppColors.secondaryText, fontSize: 14),
-                      ),
-                      GestureDetector(
-                        onTap: () {},
-                        child: Text(
-                          'Create account',
-                          style: GoogleFonts.montserrat(
-                            color: AppColors.accentAction,
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  TextButton(
-                    onPressed: () {},
+                  GestureDetector(
+                    onTap: () => Navigator.pushNamed(context, '/signup'),
                     child: Text(
-                      'Forgot password?',
-                      style: GoogleFonts.montserrat(
-                        color: AppColors.secondaryText,
-                        fontSize: 13,
+                      'Create Account',
+                      style: GoogleFonts.outfit(
+                        color: AppColors.primaryGreen,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
-                  
-                  const SizedBox(height: 40),
-                  
-                  // 🔒 Bottom Area
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.lock_rounded, size: 14, color: AppColors.secondaryText.withOpacity(0.5)),
-                      const SizedBox(width: 6),
-                      Text(
-                        'Secured with Firebase Authentication',
-                        style: GoogleFonts.montserrat(
-                          color: AppColors.secondaryText.withOpacity(0.5),
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
                 ],
               ),
-            ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -284,51 +207,22 @@ class _LoginScreenState extends State<LoginScreen> {
     required TextEditingController controller,
     required String hint,
     required IconData icon,
-    bool isPassword = false,
-    bool isPasswordVisible = false,
-    VoidCallback? onToggleVisibility,
     required FocusNode focusNode,
     required bool isFocused,
+    bool isPassword = false,
+    bool? obscureText,
+    Widget? suffixIcon,
+    TextInputType? keyboardType,
   }) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isFocused ? AppColors.accentAction : Colors.transparent,
-          width: 1.5,
-        ),
-        boxShadow: isFocused ? [
-          BoxShadow(
-            color: AppColors.accentAction.withOpacity(0.1),
-            blurRadius: 10,
-            spreadRadius: 1,
-          )
-        ] : [],
-      ),
-      child: TextField(
-        controller: controller,
-        focusNode: focusNode,
-        obscureText: isPassword && !isPasswordVisible,
-        style: const TextStyle(color: Colors.white),
-        decoration: InputDecoration(
-          hintText: hint,
-          hintStyle: TextStyle(color: AppColors.secondaryText.withOpacity(0.5)),
-          prefixIcon: Icon(icon, color: isFocused ? AppColors.accentAction : AppColors.secondaryText),
-          suffixIcon: isPassword
-              ? IconButton(
-                  icon: Icon(
-                    isPasswordVisible ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                    color: AppColors.secondaryText,
-                  ),
-                  onPressed: onToggleVisibility,
-                )
-              : null,
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(vertical: 16),
-        ),
-      ),
+    return CustomTextField(
+      controller: controller,
+      hintText: hint,
+      icon: icon,
+      focusNode: focusNode,
+      isFocused: isFocused,
+      obscureText: obscureText,
+      suffixIcon: suffixIcon,
+      keyboardType: keyboardType ?? TextInputType.text,
     );
   }
 }

@@ -1,40 +1,55 @@
 import 'package:flutter/material.dart';
 
 class AppColors {
-  // Primary Background: Deep Midnight Navy for Scaffolds and Splash.
-  static const Color primaryBackground = Color(0xFF0B1E2B);
+  // 💎 Premium Re-Design Palette
+  static const Color primaryGreen = Color(0xFF005B41);  // Deep Premium Green
+  static const Color accentGold = Color(0xFFFFB800);   // Vibrant QuickPay Gold
+  static const Color background = Colors.white;        // Pure White Background
   
-  // Brand Primary: Forest Green for headers and main wallet UI.
-  static const Color brandPrimary = Color(0xFF2D6A4F);
+  // Text Colors
+  static const Color textBlack = Color(0xFF1A1A1A);    // Crisp Bold Black
+  static const Color textGrey = Color(0xFF757575);     // Soft Subtle Grey
   
-  // Accent / Action: Sea-foam Green for buttons and progress bars.
-  static const Color accentAction = Color(0xFF52B788);
+  // Cards & Surfaces
+  static const Color surfaceLight = Color(0xFFF8FAF9); // Ultra-light Mint/Grey
+  static const Color borderLight = Color(0xFFEEEEEE);  // Subtle Borders
   
-  // Currency Highlight: Taka Gold for balance and premium features.
-  static const Color currencyHighlight = Color(0xFFFFB703);
-  
-  // Primary Text: Off-white for high readability on dark backgrounds.
-  static const Color primaryText = Color(0xFFF8F9FA);
-  
-  // Secondary Text: Slate Gray for taglines and timestamps.
-  static const Color secondaryText = Color(0xFF6C757D);
+  // Feedback
+  static const Color error = Color(0xFFE53935);
+  static const Color success = Color(0xFF00A859);
+
+  // Legacy mappings
+  static const Color brandPrimary = primaryGreen;
+  static const Color accentAction = accentGold;
+  static const Color primaryBackground = background;
+  static const Color cardBackground = Colors.white;
+  static const Color primaryText = textBlack;
+  static const Color secondaryText = textGrey;
 }
 
 final ThemeData appTheme = ThemeData(
   useMaterial3: true,
-  brightness: Brightness.dark,
-  colorScheme: ColorScheme.fromSeed(
-    seedColor: AppColors.brandPrimary,
-    brightness: Brightness.dark,
-    primary: AppColors.brandPrimary,
-    secondary: AppColors.accentAction,
-    surface: AppColors.primaryBackground,
-    error: Colors.redAccent,
+  brightness: Brightness.light,
+  colorScheme: ColorScheme.light(
+    primary: AppColors.primaryGreen,
+    secondary: AppColors.accentGold,
+    surface: AppColors.background,
+    error: AppColors.error,
   ),
-  scaffoldBackgroundColor: AppColors.primaryBackground,
+  scaffoldBackgroundColor: AppColors.background,
+  fontFamily: 'Outfit', // High-end Sans-serif
   textTheme: const TextTheme(
-    bodyLarge: TextStyle(color: AppColors.primaryText),
-    bodyMedium: TextStyle(color: AppColors.primaryText),
-    displayLarge: TextStyle(color: AppColors.primaryText, fontWeight: FontWeight.bold),
+    displayLarge: TextStyle(color: AppColors.textBlack, fontWeight: FontWeight.w700, fontSize: 32),
+    headlineMedium: TextStyle(color: AppColors.textBlack, fontWeight: FontWeight.w600, fontSize: 20),
+    bodyLarge: TextStyle(color: AppColors.textBlack, fontSize: 16),
+    bodyMedium: TextStyle(color: AppColors.textGrey, fontSize: 14),
+  ),
+  appBarTheme: const AppBarTheme(
+    backgroundColor: AppColors.background,
+    foregroundColor: AppColors.textBlack,
+    elevation: 0,
+    centerTitle: true,
+    iconTheme: IconThemeData(color: AppColors.textBlack),
+    titleTextStyle: TextStyle(color: AppColors.textBlack, fontWeight: FontWeight.bold, fontSize: 18),
   ),
 );
