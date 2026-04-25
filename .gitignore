@@ -57,9 +57,10 @@ migrate_working_dir/
 /macos/Flutter/ephemeral/
 /macos/Flutter/GeneratedPluginRegistrant.swift
 
-# Firebase related (Optional: uncomment if you want to keep your config private)
-# android/app/google-services.json
-# ios/Runner/GoogleService-Info.plist
+# Firebase related
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
+lib/firebase_options.dart
 
 # Symbolication related
 app.*.symbols
