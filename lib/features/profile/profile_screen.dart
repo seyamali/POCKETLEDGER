@@ -4,37 +4,32 @@ import 'package:pocketledger/app/theme.dart';
 import 'package:pocketledger/services/auth_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final AuthService authService = AuthService();
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
 
+class _ProfileScreenState extends State<ProfileScreen> {
+  final AuthService _authService = AuthService();
+
+  String _fmt(double v) => v.toInt().toString().replaceAllMapped(
+    RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},');
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.primaryBackground,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text(
-          'My Profile',
-          style: GoogleFonts.montserrat(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-      ),
+      backgroundColor: const Color(0xFFF4F6F5),
       body: StreamBuilder<DocumentSnapshot>(
-        stream: authService.getUserProfile(),
+        stream: _authService.getUserProfile(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: CircularProgressIndicator(color: AppColors.primaryGreen));
           }
 
-          // If profile is missing, handle it gracefully
           if (!snapshot.hasData || !snapshot.data!.exists) {
-            return _buildMissingProfileState(context, authService);
+            return _buildMissingProfileState();
           }
 
           final userData = snapshot.data!.data() as Map<String, dynamic>;
@@ -42,212 +37,256 @@ class ProfileScreen extends StatelessWidget {
           final String email = userData['email'] ?? 'No email';
           final String? profilePic = userData['profilePic'];
 
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              children: [
-                const SizedBox(height: 20),
-                
-                // Profile Image Header
-                Center(
-                  child: Stack(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(color: AppColors.brandPrimary, width: 2),
-                        ),
-                        child: CircleAvatar(
-                          radius: 60,
-                          backgroundColor: AppColors.cardBackground,
-                          backgroundImage: (profilePic != null && profilePic.isNotEmpty)
-                              ? NetworkImage(profilePic)
-                              : null,
-                          child: (profilePic == null || profilePic.isEmpty)
-                              ? const Icon(Icons.person, size: 60, color: AppColors.accentAction)
-                              : null,
-                        ),
-                      ),
-                      Positioned(
-                        bottom: 0,
-                        right: 0,
-                        child: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: const BoxDecoration(
-                            color: AppColors.brandPrimary,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(Icons.camera_alt_outlined, color: Colors.white, size: 20),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                
-                const SizedBox(height: 30),
-                
-                // Profile Info Card
-                Container(
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: AppColors.cardBackground,
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: Colors.white.withOpacity(0.05)),
-                  ),
+          return CustomScrollView(
+            physics: const BouncingScrollPhysics(),
+            slivers: [
+              // ── Premium Profile Header ──
+              SliverToBoxAdapter(child: _buildHeader(name, email, profilePic)),
+
+              // ── Settings List ──
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 32, 20, 40),
                   child: Column(
                     children: [
-                      _buildProfileItem(Icons.person_outline, 'Full Name', name),
-                      const Divider(color: Colors.white10, height: 32),
-                      _buildProfileItem(Icons.email_outlined, 'Email', email),
-                    ],
-                  ),
-                ),
-                
-                const SizedBox(height: 24),
-                
-                // Actions Card
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: AppColors.cardBackground,
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: Colors.white.withOpacity(0.05)),
-                  ),
-                  child: Column(
-                    children: [
-                      _buildActionItem(
-                        icon: Icons.edit_outlined,
+                      _buildSectionTitle('Account Management'),
+                      const SizedBox(height: 16),
+                      _buildSettingItem(
+                        icon: Icons.edit_rounded,
                         title: 'Edit Profile',
-                        onTap: () => _showEditProfileDialog(context, authService, name, profilePic),
+                        subtitle: 'Change your name and avatar',
+                        onTap: () => _showEditProfile(name, profilePic),
                       ),
-                      _buildActionItem(
-                        icon: Icons.security_outlined,
+                      _buildSettingItem(
+                        icon: Icons.security_rounded,
                         title: 'Privacy & Security',
+                        subtitle: 'Manage your passwords',
                         onTap: () {},
                       ),
-                      _buildActionItem(
-                        icon: Icons.help_outline,
-                        title: 'Help & Support',
+                      
+                      const SizedBox(height: 32),
+                      _buildSectionTitle('Preferences'),
+                      const SizedBox(height: 16),
+                      _buildSettingItem(
+                        icon: Icons.notifications_active_rounded,
+                        title: 'Notifications',
+                        subtitle: 'Alerts and reminders',
                         onTap: () {},
+                      ),
+                      _buildSettingItem(
+                        icon: Icons.language_rounded,
+                        title: 'Language',
+                        subtitle: 'English (US)',
+                        onTap: () {},
+                      ),
+
+                      const SizedBox(height: 48),
+                      // Logout Button
+                      GestureDetector(
+                        onTap: () async {
+                          await _authService.signOut();
+                          if (mounted) Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+                        },
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          decoration: BoxDecoration(
+                            color: Colors.red.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: Colors.red.withOpacity(0.2)),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.logout_rounded, color: Colors.red, size: 20),
+                              const SizedBox(width: 10),
+                              Text('Sign Out', style: GoogleFonts.outfit(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 16)),
+                            ],
+                          ),
+                        ),
                       ),
                     ],
                   ),
                 ),
-                
-                const SizedBox(height: 40),
-                
-                // Logout Button
-                SizedBox(
-                  width: double.infinity,
-                  height: 56,
-                  child: OutlinedButton.icon(
-                    onPressed: () async {
-                      await authService.signOut();
-                      if (context.mounted) {
-                        Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
-                      }
-                    },
-                    icon: const Icon(Icons.logout_rounded, color: Colors.redAccent),
-                    label: const Text('Logout', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Colors.redAccent, width: 1),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           );
         },
       ),
     );
   }
 
-  void _showEditProfileDialog(BuildContext context, AuthService authService, String currentName, String? currentPic) {
-    final nameController = TextEditingController(text: currentName);
-    final picController = TextEditingController(text: currentPic);
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.cardBackground,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: Text('Edit Profile', style: GoogleFonts.montserrat(color: Colors.white, fontWeight: FontWeight.bold)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameController,
-              style: const TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                labelText: 'Full Name',
-                labelStyle: const TextStyle(color: AppColors.secondaryText),
-                enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white.withOpacity(0.1))),
-              ),
+  Widget _buildHeader(String name, String email, String? profilePic) {
+    return Container(
+      width: double.infinity,
+      decoration: const BoxDecoration(
+        color: AppColors.primaryGreen,
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(40)),
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            top: -40, right: -40,
+            child: Container(
+              width: 180, height: 180,
+              decoration: BoxDecoration(color: Colors.white.withOpacity(0.04), shape: BoxShape.circle),
             ),
-            const SizedBox(height: 20),
-            TextField(
-              controller: picController,
-              style: const TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                labelText: 'Profile Picture URL',
-                labelStyle: const TextStyle(color: AppColors.secondaryText),
-                enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white.withOpacity(0.1))),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.secondaryText)),
           ),
-          ElevatedButton(
-            onPressed: () async {
-              await authService.updateProfile(
-                name: nameController.text,
-                profilePic: picController.text,
-              );
-              if (context.mounted) Navigator.pop(context);
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.brandPrimary),
-            child: const Text('Save Changes'),
+          SafeArea(
+            bottom: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 40),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
+                      ),
+                      Text('Profile', style: GoogleFonts.outfit(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                      const SizedBox(width: 48), // Spacer to center title
+                    ],
+                  ),
+                  const SizedBox(height: 32),
+                  // Avatar
+                  Center(
+                    child: Stack(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(color: AppColors.accentGold, width: 2),
+                          ),
+                          child: CircleAvatar(
+                            radius: 60,
+                            backgroundColor: Colors.white.withOpacity(0.1),
+                            backgroundImage: (profilePic != null && profilePic.isNotEmpty) ? NetworkImage(profilePic) : null,
+                            child: (profilePic == null || profilePic.isEmpty)
+                                ? const Icon(Icons.person_rounded, size: 60, color: Colors.white)
+                                : null,
+                          ),
+                        ),
+                        Positioned(
+                          bottom: 4, right: 4,
+                          child: GestureDetector(
+                            onTap: () => _showEditProfile(name, profilePic),
+                            child: Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: const BoxDecoration(color: AppColors.accentGold, shape: BoxShape.circle),
+                              child: const Icon(Icons.edit_rounded, color: AppColors.primaryGreen, size: 20),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Text(name, style: GoogleFonts.outfit(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
+                  Text(email, style: GoogleFonts.outfit(color: Colors.white70, fontSize: 14)),
+                ],
+              ),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildMissingProfileState(BuildContext context, AuthService authService) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+  Widget _buildSectionTitle(String title) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Text(title, style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textGrey, letterSpacing: 0.5)),
+    );
+  }
+
+  Widget _buildSettingItem({required IconData icon, required String title, required String subtitle, required VoidCallback onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4))],
+        ),
+        child: Row(
           children: [
-            Icon(Icons.person_off_outlined, size: 80, color: Colors.white.withOpacity(0.1)),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(color: AppColors.primaryGreen.withOpacity(0.08), borderRadius: BorderRadius.circular(14)),
+              child: Icon(icon, color: AppColors.primaryGreen, size: 22),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textBlack)),
+                  Text(subtitle, style: GoogleFonts.outfit(fontSize: 13, color: AppColors.textGrey)),
+                ],
+              ),
+            ),
+            Icon(Icons.arrow_forward_ios_rounded, color: AppColors.textGrey.withOpacity(0.3), size: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showEditProfile(String currentName, String? currentPic) {
+    final nameController = TextEditingController(text: currentName);
+    final picController = TextEditingController(text: currentPic);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.of(context).viewInsets.bottom + 32),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40, height: 4,
+                decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
+              ),
+            ),
             const SizedBox(height: 24),
-            Text(
-              'Profile Not Found',
-              style: GoogleFonts.montserrat(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
-            ),
+            Text('Edit Profile', style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textBlack)),
             const SizedBox(height: 8),
-            Text(
-              'Your account profile hasn\'t been initialized yet.',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.montserrat(color: AppColors.secondaryText),
-            ),
+            Text('Update your personal information', style: GoogleFonts.outfit(fontSize: 14, color: AppColors.textGrey)),
+            const SizedBox(height: 32),
+            _buildTextField(nameController, 'Full Name', Icons.person_outline_rounded),
+            const SizedBox(height: 20),
+            _buildTextField(picController, 'Profile Image URL', Icons.image_outlined),
             const SizedBox(height: 32),
             SizedBox(
               width: double.infinity,
               height: 56,
               child: ElevatedButton(
                 onPressed: () async {
-                  await authService.createProfile(name: 'Pocket User');
+                  await _authService.updateProfile(
+                    name: nameController.text.trim(),
+                    profilePic: picController.text.trim(),
+                  );
+                  if (context.mounted) Navigator.pop(context);
                 },
-                style: ElevatedButton.styleFrom(backgroundColor: AppColors.brandPrimary),
-                child: const Text('Initialize Profile', style: TextStyle(fontWeight: FontWeight.bold)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primaryGreen,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  elevation: 0,
+                ),
+                child: Text('Save Changes', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
               ),
             ),
           ],
@@ -256,36 +295,40 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildProfileItem(IconData icon, String label, String value) {
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: AppColors.brandPrimary.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Icon(icon, color: AppColors.brandPrimary, size: 20),
+  Widget _buildTextField(TextEditingController controller, String label, IconData icon) {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFF4F6F5),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: TextField(
+        controller: controller,
+        decoration: InputDecoration(
+          labelText: label,
+          labelStyle: GoogleFonts.outfit(color: AppColors.textGrey, fontSize: 14),
+          prefixIcon: Icon(icon, color: AppColors.primaryGreen, size: 20),
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         ),
-        const SizedBox(width: 16),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(label, style: GoogleFonts.montserrat(color: AppColors.secondaryText, fontSize: 12)),
-            Text(value, style: GoogleFonts.montserrat(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
-          ],
-        ),
-      ],
+      ),
     );
   }
 
-  Widget _buildActionItem({required IconData icon, required String title, required VoidCallback onTap}) {
-    return ListTile(
-      leading: Icon(icon, color: AppColors.secondaryText),
-      title: Text(title, style: GoogleFonts.montserrat(color: Colors.white, fontWeight: FontWeight.w500)),
-      trailing: const Icon(Icons.arrow_forward_ios, color: AppColors.secondaryText, size: 16),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      onTap: onTap,
+  Widget _buildMissingProfileState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.person_off_rounded, size: 80, color: Colors.grey),
+          const SizedBox(height: 24),
+          Text('No Profile Data', style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 32),
+          ElevatedButton(
+            onPressed: () => _authService.createProfile(name: 'User'),
+            child: const Text('Create Profile'),
+          ),
+        ],
+      ),
     );
   }
 }

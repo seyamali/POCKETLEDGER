@@ -14,11 +14,14 @@ class AddAccountScreen extends StatefulWidget {
 class _AddAccountScreenState extends State<AddAccountScreen> {
   final AccountService _accountService = AccountService();
   final _nameController = TextEditingController();
-  final _balanceController = TextEditingController();
   
   String _selectedType = 'Bank';
-  String _selectedOwner = 'Self';
   bool _isLoading = false;
+
+  // New state for multiple owners
+  final List<Map<String, dynamic>> _ownerBalances = [
+    {'owner': 'Self', 'controller': TextEditingController(text: '0')}
+  ];
 
   final List<String> _owners = ['Self', 'Father', 'Mother', 'Others'];
 
@@ -28,28 +31,50 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
     'Cash': Icons.payments_outlined,
   };
 
+  void _addOwnerRow() {
+    if (_ownerBalances.length < _owners.length) {
+      setState(() {
+        _ownerBalances.add({
+          'owner': _owners.firstWhere((o) => !_ownerBalances.any((ob) => ob['owner'] == o)),
+          'controller': TextEditingController(text: '0')
+        });
+      });
+    }
+  }
+
+  void _removeOwnerRow(int index) {
+    if (_ownerBalances.length > 1) {
+      setState(() {
+        _ownerBalances.removeAt(index);
+      });
+    }
+  }
+
   void _handleCreate() async {
-    if (_nameController.text.isEmpty || _balanceController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill all fields')),
-      );
+    if (_nameController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter account name')));
       return;
     }
 
     setState(() => _isLoading = true);
     try {
+      final Map<String, double> breakdown = {};
+      for (var row in _ownerBalances) {
+        final balance = double.tryParse(row['controller'].text) ?? 0;
+        if (balance >= 0) {
+          breakdown[row['owner']] = balance;
+        }
+      }
+
       await _accountService.createAccount(
         name: _nameController.text,
         type: _selectedType,
-        initialOwner: _selectedOwner,
-        initialBalance: double.parse(_balanceController.text),
+        breakdown: breakdown,
       );
       if (mounted) Navigator.pop(context);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -74,8 +99,7 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('CHOOSE ACCOUNT TYPE', 
-              style: GoogleFonts.montserrat(color: AppColors.secondaryText, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+            _buildSectionHeader('CHOOSE ACCOUNT TYPE'),
             const SizedBox(height: 16),
             Row(
               children: _typeIcons.entries.map((entry) => Expanded(
@@ -84,94 +108,97 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
             ),
             
             const SizedBox(height: 32),
-            Text('ACCOUNT DETAILS', 
-              style: GoogleFonts.montserrat(color: AppColors.secondaryText, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+            _buildSectionHeader('ACCOUNT NAME'),
             const SizedBox(height: 16),
-            
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: AppColors.cardBackground,
                 borderRadius: BorderRadius.circular(24),
-                boxShadow: [
-                  BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 15, offset: const Offset(0, 8)),
-                ],
               ),
-              child: Column(
-                children: [
-                  CustomTextField(
-                    controller: _nameController,
-                    hintText: 'Account Name (e.g. DBBL, bKash)',
-                    icon: Icons.edit_note_outlined,
-                  ),
-                  const SizedBox(height: 20),
-                  CustomTextField(
-                    controller: _balanceController,
-                    hintText: 'Initial Balance (Tk)',
-                    icon: Icons.account_balance_wallet_outlined,
-                    keyboardType: TextInputType.number,
-                  ),
-                ],
+              child: CustomTextField(
+                controller: _nameController,
+                hintText: 'e.g. DBBL, bKash, My Wallet',
+                icon: Icons.edit_note_outlined,
               ),
             ),
             
             const SizedBox(height: 32),
-            Text('ASSIGN INITIAL OWNER', 
-              style: GoogleFonts.montserrat(color: AppColors.secondaryText, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _buildSectionHeader('INITIAL BALANCES BY OWNER'),
+                if (_ownerBalances.length < _owners.length)
+                  IconButton(
+                    onPressed: _addOwnerRow,
+                    icon: const Icon(Icons.add_circle_outline, color: AppColors.brandPrimary),
+                  ),
+              ],
+            ),
             const SizedBox(height: 16),
             
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-              decoration: BoxDecoration(
-                color: AppColors.cardBackground,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: AppColors.brandPrimary.withOpacity(0.1)),
-              ),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<String>(
-                  value: _selectedOwner,
-                  isExpanded: true,
-                  icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.brandPrimary),
-                  dropdownColor: AppColors.cardBackground,
-                  style: GoogleFonts.montserrat(color: AppColors.primaryText, fontWeight: FontWeight.w600),
-                  items: _owners.map((String owner) {
-                    return DropdownMenuItem<String>(
-                      value: owner,
-                      child: Row(
-                        children: [
-                          const Icon(Icons.person_outline, size: 18, color: AppColors.secondaryText),
-                          const SizedBox(width: 12),
-                          Text(owner),
-                        ],
-                      ),
-                    );
-                  }).toList(),
-                  onChanged: (val) => setState(() => _selectedOwner = val!),
-                ),
-              ),
-            ),
+            ...List.generate(_ownerBalances.length, (index) => _buildOwnerBalanceRow(index)),
             
             const SizedBox(height: 48),
-            SizedBox(
-              width: double.infinity,
-              height: 60,
-              child: ElevatedButton(
-                onPressed: _isLoading ? null : _handleCreate,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.brandPrimary,
-                  foregroundColor: Colors.white,
-                  elevation: 8,
-                  shadowColor: AppColors.brandPrimary.withOpacity(0.4),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-                ),
-                child: _isLoading 
-                  ? const CircularProgressIndicator(color: Colors.white)
-                  : Text('Create Account', style: GoogleFonts.montserrat(fontWeight: FontWeight.bold, fontSize: 16)),
-              ),
-            ),
+            _buildCreateButton(),
             const SizedBox(height: 40),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title) {
+    return Text(title, 
+      style: GoogleFonts.montserrat(color: AppColors.secondaryText, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.2));
+  }
+
+  Widget _buildOwnerBalanceRow(int index) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.cardBackground,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.brandPrimary.withOpacity(0.05)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            flex: 2,
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: _ownerBalances[index]['owner'],
+                items: _owners.where((o) => !_ownerBalances.any((ob) => ob['owner'] == o) || o == _ownerBalances[index]['owner']).map((String owner) {
+                  return DropdownMenuItem<String>(value: owner, child: Text(owner, style: GoogleFonts.montserrat(fontSize: 14, fontWeight: FontWeight.w600)));
+                }).toList(),
+                onChanged: (val) => setState(() => _ownerBalances[index]['owner'] = val!),
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            flex: 3,
+            child: TextField(
+              controller: _ownerBalances[index]['controller'],
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                hintText: '0.00',
+                prefixText: '৳ ',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                filled: true,
+                fillColor: AppColors.primaryBackground,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              ),
+              style: GoogleFonts.montserrat(fontWeight: FontWeight.bold),
+            ),
+          ),
+          if (_ownerBalances.length > 1)
+            IconButton(
+              onPressed: () => _removeOwnerRow(index),
+              icon: const Icon(Icons.remove_circle_outline, color: Colors.redAccent, size: 20),
+            ),
+        ],
       ),
     );
   }
@@ -181,37 +208,38 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
     return GestureDetector(
       onTap: () => setState(() => _selectedType = type),
       child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 6),
+        margin: const EdgeInsets.symmetric(horizontal: 4),
         padding: const EdgeInsets.symmetric(vertical: 20),
         decoration: BoxDecoration(
           color: isSelected ? AppColors.brandPrimary : AppColors.cardBackground,
           borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: isSelected ? AppColors.brandPrimary.withOpacity(0.3) : Colors.black.withOpacity(0.02),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-          border: Border.all(
-            color: isSelected ? AppColors.brandPrimary : Colors.transparent,
-            width: 2,
-          ),
         ),
         child: Column(
           children: [
-            Icon(icon, color: isSelected ? Colors.white : AppColors.secondaryText, size: 28),
+            Icon(icon, color: isSelected ? Colors.white : AppColors.secondaryText, size: 24),
             const SizedBox(height: 8),
-            Text(
-              type,
-              style: GoogleFonts.montserrat(
-                color: isSelected ? Colors.white : AppColors.secondaryText,
-                fontSize: 12,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-              ),
-            ),
+            Text(type, style: GoogleFonts.montserrat(color: isSelected ? Colors.white : AppColors.secondaryText, fontSize: 11, fontWeight: FontWeight.bold)),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildCreateButton() {
+    return SizedBox(
+      width: double.infinity,
+      height: 60,
+      child: ElevatedButton(
+        onPressed: _isLoading ? null : _handleCreate,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.brandPrimary,
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          elevation: 0,
+        ),
+        child: _isLoading 
+          ? const CircularProgressIndicator(color: Colors.white)
+          : Text('Create Account', style: GoogleFonts.montserrat(fontWeight: FontWeight.bold, fontSize: 16)),
       ),
     );
   }

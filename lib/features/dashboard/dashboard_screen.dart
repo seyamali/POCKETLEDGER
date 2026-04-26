@@ -1,10 +1,20 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:pocketledger/app/theme.dart';
 import 'package:pocketledger/services/account_service.dart';
 import 'package:pocketledger/services/auth_service.dart';
 import 'package:pocketledger/models/account_model.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:pocketledger/features/goals/monthly_goal_screen.dart';
+import 'package:pocketledger/features/savings/savings_screen.dart';
+import 'package:pocketledger/features/loans/loans_screen.dart';
+import 'package:pocketledger/features/accounts/accounts_screen.dart';
+import 'package:pocketledger/features/transactions/transactions_screen.dart';
+import 'package:pocketledger/models/transaction_model.dart';
+import 'package:pocketledger/services/transaction_service.dart';
+import 'package:pocketledger/services/loan_service.dart';
+import 'package:pocketledger/models/loan_model.dart';
+import 'package:pocketledger/features/profile/profile_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -16,103 +26,535 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   final AccountService _accountService = AccountService();
   final AuthService _authService = AuthService();
+  final LoanService _loanService = LoanService();
+
+  String _fmt(double v) => v.toInt().toString().replaceAllMapped(
+    RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},');
+
+  void _go(Widget screen) =>
+      Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: _buildAppBar(),
-      body: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.symmetric(horizontal: 24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 32),
-            _buildBalanceHeader(),
-            const SizedBox(height: 40),
-            _buildQuickActionsGrid(),
-            const SizedBox(height: 32),
-            _buildSectionHeader('Accounts', onAdd: () {}),
-            const SizedBox(height: 16),
-            _buildAccountsCarousel(),
-            const SizedBox(height: 32),
-            _buildSectionHeader('Recent Transection', onAdd: null, actionLabel: 'See all'),
-            const SizedBox(height: 16),
-            _buildTransactionList(),
-            const SizedBox(height: 120), // Space for floating nav
-          ],
-        ),
+      backgroundColor: const Color(0xFFF4F6F5),
+      body: StreamBuilder<List<AccountModel>>(
+        stream: _accountService.getAccounts(),
+        builder: (context, accSnapshot) {
+          return StreamBuilder<List<LoanModel>>(
+            stream: _loanService.getLoans(),
+            builder: (context, loanSnapshot) {
+              final accounts = accSnapshot.data ?? [];
+              final loans = loanSnapshot.data ?? [];
+
+              double grandTotal = 0;
+              double savingsTotal = 0;
+              Map<String, double> ownerTotals = {};
+              // Per owner: list of (accountName, amount)
+              Map<String, List<Map<String, dynamic>>> ownerAccounts = {};
+
+              for (var acc in accounts) {
+                if (acc.type == 'Savings') {
+                  savingsTotal += acc.totalBalance;
+                } else {
+                  grandTotal += acc.totalBalance;
+                  acc.breakdown.forEach((owner, amt) {
+                    if (amt > 0) {
+                      ownerTotals[owner] = (ownerTotals[owner] ?? 0) + amt;
+                      ownerAccounts[owner] = (ownerAccounts[owner] ?? [])..add({'name': acc.name, 'amount': amt});
+                    }
+                  });
+                }
+              }
+
+              double loanGiven = loans.where((l) => l.type == LoanType.given).fold(0, (s, l) => s + l.remainingAmount);
+              double loanTaken = loans.where((l) => l.type == LoanType.taken).fold(0, (s, l) => s + l.remainingAmount);
+
+              return CustomScrollView(
+                physics: const BouncingScrollPhysics(),
+                slivers: [
+                  // ── Sticky Header ──
+                  SliverPersistentHeader(
+                    pinned: true,
+                    delegate: _StickyHeaderDelegate(),
+                  ),
+
+                  // ── Premium Balance & Owners ──
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 0), // Removed extra top padding
+                      child: _buildBalancePanel(grandTotal, ownerTotals, ownerAccounts),
+                    ),
+                  ),
+
+                  // ── Quick Actions ──
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 28, 20, 0),
+                      child: _buildQuickActions(),
+                    ),
+                  ),
+
+                  // ── Savings & Loans ──
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 28, 20, 0),
+                      child: _buildSavingsLoansSection(savingsTotal, loanGiven, loanTaken),
+                    ),
+                  ),
+
+                  // ── Accounts Preview ──
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 28, 20, 0),
+                      child: _buildAccountsSection(accounts),
+                    ),
+                  ),
+
+                  // ── Goals Banner ──
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 28, 20, 0),
+                      child: _buildGoalsBanner(),
+                    ),
+                  ),
+
+                  // ── Recent Transactions ──
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 28, 20, 0),
+                      child: _buildSectionRow('Recent Transactions', onTap: () => _go(const TransactionsScreen())),
+                    ),
+                  ),
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 12, 20, 40),
+                      child: _buildTransactionList(),
+                    ),
+                  ),
+                ],
+              );
+            },
+          );
+        },
       ),
-      extendBody: true,
-      bottomNavigationBar: null,
     );
   }
 
-  PreferredSizeWidget _buildAppBar() {
-    return AppBar(
-      backgroundColor: Colors.white,
-      elevation: 0,
-      leading: const Icon(Icons.menu, color: AppColors.textBlack, size: 28),
-      title: Image.asset('assets/images/logo.png', height: 32),
-      centerTitle: true,
-      actions: [
-        Stack(
-          alignment: Alignment.topRight,
-          children: [
-            const Icon(Icons.notifications_none_outlined, color: AppColors.textBlack, size: 28),
-            Positioned(
-              right: 2,
-              top: 2,
-              child: Container(
-                width: 8,
-                height: 8,
-                decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+  // ─────────────────── FINANCIAL PANEL ───────────────────
+  Widget _buildBalancePanel(double grandTotal, Map<String, double> ownerTotals, Map<String, List<Map<String, dynamic>>> ownerAccounts) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(32),
+        child: Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: AppColors.primaryGreen.withOpacity(0.92),
+            borderRadius: BorderRadius.circular(32),
+            border: Border.all(color: AppColors.accentGold.withOpacity(0.4), width: 1.5),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.primaryGreen.withOpacity(0.2),
+                blurRadius: 25,
+                offset: const Offset(0, 12),
+              ),
+            ],
+          ),
+          child: Stack(
+            children: [
+              // Subtle background glow/patterns
+              Positioned(
+                top: -60, right: -60,
+                child: Container(
+                  width: 180, height: 180,
+                  decoration: BoxDecoration(
+                    color: AppColors.accentGold.withOpacity(0.08),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
+              
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Total Balance', 
+                              style: GoogleFonts.outfit(color: Colors.white.withOpacity(0.7), fontSize: 13, fontWeight: FontWeight.w500)),
+                            const SizedBox(height: 4),
+                            Text('৳ ${_fmt(grandTotal)}',
+                              style: GoogleFonts.outfit(color: Colors.white, fontSize: 36, fontWeight: FontWeight.bold, letterSpacing: -0.5)),
+                          ],
+                        ),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.1),
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white.withOpacity(0.1)),
+                          ),
+                          child: const Icon(Icons.account_balance_wallet_rounded, color: AppColors.accentGold, size: 24),
+                        ),
+                      ],
+                    ),
+                    
+                    const SizedBox(height: 24),
+                    
+                    // Glassy separator
+                    Container(height: 1, color: Colors.white.withOpacity(0.12)),
+                    const SizedBox(height: 20),
+
+                    Row(
+                      children: [
+                        Icon(Icons.people_outline_rounded, color: AppColors.accentGold.withOpacity(0.8), size: 14),
+                        const SizedBox(width: 8),
+                        Text('BALANCE BY PERSON', 
+                          style: GoogleFonts.outfit(color: Colors.white.withOpacity(0.6), fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      children: ownerTotals.entries.map((e) {
+                        final label = e.key == 'Self' ? 'Mine' : e.key;
+                        final accs = ownerAccounts[e.key] ?? [];
+                        return GestureDetector(
+                          onTap: () => _showOwnerBreakdown(label, e.value, accs),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.08),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: Colors.white.withOpacity(0.15)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(label, style: GoogleFonts.outfit(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
+                                const SizedBox(width: 8),
+                                Text('৳ ${_fmt(e.value)}', style: GoogleFonts.outfit(color: AppColors.accentGold, fontSize: 13, fontWeight: FontWeight.bold)),
+                                const SizedBox(width: 6),
+                                Icon(Icons.keyboard_arrow_down_rounded, color: Colors.white38, size: 14),
+                              ],
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ─────────────────── QUICK ACTIONS ───────────────────
+  Widget _buildQuickActions() {
+    final actions = [
+      {'label': 'Accounts',   'icon': Icons.account_balance_wallet_outlined, 'screen': const AccountsScreen()},
+      {'label': 'Records',    'icon': Icons.receipt_long_outlined,            'screen': const TransactionsScreen()},
+      {'label': 'Loans',      'icon': Icons.handshake_outlined,               'screen': const LoansScreen()},
+      {'label': 'Savings',    'icon': Icons.savings_outlined,                 'screen': const SavingsScreen()},
+      {'label': 'Goals',      'icon': Icons.track_changes_rounded,            'screen': const MonthlyGoalScreen()},
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _sectionTitle('Quick Actions'),
+        const SizedBox(height: 16),
+        Wrap(
+          spacing: (MediaQuery.of(context).size.width - 40 - (58 * 5)) / 4 > 0 
+            ? (MediaQuery.of(context).size.width - 40 - (58 * 5)) / 4 
+            : 16,
+          runSpacing: 16,
+          alignment: WrapAlignment.spaceBetween,
+          children: actions.map((a) => GestureDetector(
+            onTap: () => _go(a['screen'] as Widget),
+            child: SizedBox(
+              width: 58,
+              child: Column(
+                children: [
+                  Container(
+                    width: 58,
+                    height: 58,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      boxShadow: [BoxShadow(color: AppColors.primaryGreen.withOpacity(0.12), blurRadius: 12, offset: const Offset(0, 4))],
+                    ),
+                    child: Icon(a['icon'] as IconData, color: AppColors.primaryGreen, size: 26),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(a['label'] as String,
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textBlack)),
+                ],
               ),
             ),
-          ],
+          )).toList(),
         ),
-        const SizedBox(width: 20),
       ],
     );
   }
 
-  Widget _buildBalanceHeader() {
+  // ─────────────────── SAVINGS & LOANS ───────────────────
+  Widget _buildSavingsLoansSection(double savings, double given, double taken) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        _sectionTitle('Savings & Loans'),
+        const SizedBox(height: 14),
+        // Savings — gold card
+        GestureDetector(
+          onTap: () => _go(const SavingsScreen()),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [AppColors.accentGold, AppColors.accentGold.withOpacity(0.75)],
+                begin: Alignment.topLeft, end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [BoxShadow(color: AppColors.accentGold.withOpacity(0.3), blurRadius: 12, offset: const Offset(0, 6))],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(color: Colors.white.withOpacity(0.25), shape: BoxShape.circle),
+                  child: const Icon(Icons.savings_rounded, color: Colors.white, size: 22),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('My Savings', style: GoogleFonts.outfit(color: Colors.white.withOpacity(0.85), fontSize: 12, fontWeight: FontWeight.w600)),
+                      Text('৳ ${_fmt(savings)}', style: GoogleFonts.outfit(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white70, size: 16),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        // Loans row
         Row(
           children: [
-            Text('Total Balance', style: GoogleFonts.outfit(color: AppColors.textGrey, fontSize: 16, fontWeight: FontWeight.w400)),
-            const SizedBox(width: 8),
-            const Icon(Icons.visibility_outlined, size: 20, color: AppColors.textGrey),
+            Expanded(child: GestureDetector(
+              onTap: () => _go(const LoansScreen()),
+              child: _loanCard('Loan Given', given, AppColors.primaryGreen, Icons.arrow_upward_rounded),
+            )),
+            const SizedBox(width: 12),
+            Expanded(child: GestureDetector(
+              onTap: () => _go(const LoansScreen()),
+              child: _loanCard('Loan Taken', taken, const Color(0xFFE67E22), Icons.arrow_downward_rounded),
+            )),
           ],
         ),
-        const SizedBox(height: 8),
-        StreamBuilder<List<AccountModel>>(
-          stream: _accountService.getAccounts(),
-          builder: (context, snapshot) {
-            double total = 0;
-            if (snapshot.hasData) for (var acc in snapshot.data!) total += acc.totalBalance;
-            return Text(
-              total.toStringAsFixed(2).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => "${m[1]},"),
-              style: GoogleFonts.outfit(color: AppColors.textBlack, fontSize: 48, fontWeight: FontWeight.bold, letterSpacing: -1),
-            );
-          },
-        ),
-        const SizedBox(height: 16),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          decoration: BoxDecoration(
-            color: AppColors.primaryGreen.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(30),
+      ],
+    );
+  }
+
+  Widget _loanCard(String label, double value, Color color, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4))],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(color: color.withOpacity(0.1), shape: BoxShape.circle),
+            child: Icon(icon, color: color, size: 18),
           ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: GoogleFonts.outfit(color: AppColors.textGrey, fontSize: 11, fontWeight: FontWeight.w600)),
+                Text('৳ ${_fmt(value)}', style: GoogleFonts.outfit(color: color, fontSize: 15, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ─────────────────── ACCOUNTS ───────────────────
+  Widget _buildAccountsSection(List<AccountModel> accounts) {
+    final regular = accounts.where((a) => a.type != 'Savings').take(3).toList();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionRow('Accounts', onTap: () => _go(const AccountsScreen())),
+        const SizedBox(height: 14),
+        ...regular.map((acc) => GestureDetector(
+          onTap: () => _go(const AccountsScreen()),
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(18),
+              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4))],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(9),
+                  decoration: BoxDecoration(color: AppColors.primaryGreen.withOpacity(0.08), shape: BoxShape.circle),
+                  child: Icon(Icons.account_balance_outlined, color: AppColors.primaryGreen, size: 18),
+                ),
+                const SizedBox(width: 14),
+                Expanded(child: Text(acc.name, style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.textBlack))),
+                Text('৳ ${_fmt(acc.totalBalance)}', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.primaryGreen)),
+                const SizedBox(width: 4),
+                Icon(Icons.chevron_right_rounded, color: AppColors.textGrey.withOpacity(0.5), size: 18),
+              ],
+            ),
+          ),
+        )),
+      ],
+    );
+  }
+
+  // ─────────────────── GOALS BANNER ───────────────────
+  Widget _buildGoalsBanner() {
+    return GestureDetector(
+      onTap: () => _go(const MonthlyGoalScreen()),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: AppColors.primaryGreen,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [BoxShadow(color: AppColors.primaryGreen.withOpacity(0.2), blurRadius: 12, offset: const Offset(0, 6))],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), shape: BoxShape.circle),
+              child: const Icon(Icons.track_changes_rounded, color: Colors.white, size: 24),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Monthly Goals', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                  Text('Track your income & expense targets', style: GoogleFonts.outfit(color: Colors.white70, fontSize: 12)),
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), shape: BoxShape.circle),
+              child: const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 18),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showOwnerBreakdown(String label, double total, List<Map<String, dynamic>> accounts) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(24),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40, height: 4,
+                decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
+              ),
+            ),
+            const SizedBox(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('$label\'s Balance', style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textBlack)),
+                Text('৳ ${_fmt(total)}', style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.primaryGreen)),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text('Account-wise distribution', style: GoogleFonts.outfit(fontSize: 14, color: AppColors.textGrey)),
+            const SizedBox(height: 24),
+            ...accounts.map((acc) => Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.primaryGreen.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(color: AppColors.primaryGreen.withOpacity(0.1), shape: BoxShape.circle),
+                    child: const Icon(Icons.account_balance_outlined, color: AppColors.primaryGreen, size: 18),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(child: Text(acc['name'] as String, style: GoogleFonts.outfit(fontWeight: FontWeight.w600, fontSize: 15, color: AppColors.textBlack))),
+                  Text('৳ ${_fmt(acc['amount'] as double)}', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.primaryGreen)),
+                ],
+              ),
+            )).toList(),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ─────────────────── HELPERS ───────────────────
+  Widget _sectionTitle(String title) =>
+    Text(title, style: GoogleFonts.outfit(fontSize: 17, fontWeight: FontWeight.bold, color: AppColors.textBlack));
+
+  Widget _buildSectionRow(String title, {required VoidCallback onTap}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(title, style: GoogleFonts.outfit(fontSize: 17, fontWeight: FontWeight.bold, color: AppColors.textBlack)),
+        GestureDetector(
+          onTap: onTap,
           child: Row(
-            mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.auto_graph_rounded, size: 18, color: AppColors.primaryGreen),
-              const SizedBox(width: 8),
-              Text('View stats', style: GoogleFonts.outfit(color: AppColors.primaryGreen, fontWeight: FontWeight.w600, fontSize: 14)),
+              Text('See all', style: GoogleFonts.outfit(fontSize: 13, color: AppColors.primaryGreen, fontWeight: FontWeight.w600)),
+              const SizedBox(width: 4),
+              Icon(Icons.arrow_forward_ios_rounded, size: 12, color: AppColors.primaryGreen),
             ],
           ),
         ),
@@ -120,162 +562,145 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildQuickActionsGrid() {
-    return Column(
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            _actionItem('Add\nMoney', Icons.account_balance_wallet_outlined),
-            _actionItem('Found\nTransfer', Icons.swap_horiz_outlined),
-            _actionItem('Mobile\nTop Up', Icons.smartphone_outlined),
-            _actionItem('Buy\nTicket', Icons.confirmation_number_outlined),
-          ],
-        ),
-        const SizedBox(height: 16),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text('See more', style: GoogleFonts.outfit(color: AppColors.textBlack, fontWeight: FontWeight.w500, fontSize: 14)),
-            const Icon(Icons.keyboard_arrow_down, size: 20, color: AppColors.textBlack),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _actionItem(String label, IconData icon) {
-    return Container(
-      width: 78,
-      padding: const EdgeInsets.symmetric(vertical: 20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.borderLight, width: 1),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: AppColors.primaryGreen, size: 28),
-          const SizedBox(height: 10),
-          Text(label, 
-            textAlign: TextAlign.center,
-            style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.textBlack, height: 1.2)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSectionHeader(String title, {VoidCallback? onAdd, String? actionLabel}) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(title, style: GoogleFonts.outfit(color: AppColors.textBlack, fontSize: 20, fontWeight: FontWeight.bold)),
-        if (onAdd != null) 
-          GestureDetector(
-            onTap: onAdd,
-            child: Row(
-              children: [
-                const Icon(Icons.add, size: 16, color: AppColors.textGrey),
-                const SizedBox(width: 4),
-                Text('Add', style: GoogleFonts.outfit(color: AppColors.textGrey, fontSize: 14, fontWeight: FontWeight.w500)),
-              ],
-            ),
-          )
-        else if (actionLabel != null)
-          Text(actionLabel, style: GoogleFonts.outfit(color: AppColors.textGrey, fontSize: 14, fontWeight: FontWeight.w500)),
-      ],
-    );
-  }
-
-  Widget _buildAccountsCarousel() {
-    return StreamBuilder<List<AccountModel>>(
-      stream: _accountService.getAccounts(),
+  // ─────────────────── TRANSACTIONS ───────────────────
+  Widget _buildTransactionList() {
+    final TransactionService txService = TransactionService();
+    return StreamBuilder<List<TransactionModel>>(
+      stream: txService.getRecentTransactions(limit: 4),
       builder: (context, snapshot) {
-        if (!snapshot.hasData || snapshot.data!.isEmpty) return const SizedBox();
-        return SizedBox(
-          height: 120,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            physics: const BouncingScrollPhysics(),
-            itemCount: snapshot.data!.length,
-            itemBuilder: (context, index) {
-              final acc = snapshot.data![index];
-              return Container(
-                width: 200,
-                margin: const EdgeInsets.only(right: 16),
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [AppColors.surfaceLight, Colors.white],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator(color: AppColors.primaryGreen));
+        }
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return Center(child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24),
+            child: Text('No recent transactions', style: GoogleFonts.outfit(color: AppColors.textGrey)),
+          ));
+        }
+
+        return Column(
+          children: snapshot.data!.map((tx) {
+            final isIncome = tx.type == TransactionType.income;
+            final isTransfer = tx.type == TransactionType.transfer;
+            final Color color = isIncome ? AppColors.primaryGreen : (isTransfer ? Colors.blue : Colors.redAccent);
+            final IconData icon = isIncome ? Icons.arrow_downward_rounded : (isTransfer ? Icons.swap_horiz_rounded : Icons.arrow_upward_rounded);
+            final String prefix = isIncome ? '+' : (isTransfer ? '' : '-');
+
+            return Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(18),
+                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 8, offset: const Offset(0, 3))],
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 44, height: 44,
+                    decoration: BoxDecoration(color: color.withOpacity(0.1), shape: BoxShape.circle),
+                    child: Icon(icon, color: color, size: 20),
                   ),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: AppColors.primaryGreen.withOpacity(0.08)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('***** BDT', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.textBlack)),
-                        Icon(Icons.credit_card, size: 18, color: AppColors.primaryGreen.withOpacity(0.7)),
+                        Text(tx.category, style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.textBlack), overflow: TextOverflow.ellipsis),
+                        Text(isTransfer ? '${tx.accountName} → ${tx.toAccountName}' : tx.accountName,
+                          style: GoogleFonts.outfit(color: AppColors.textGrey, fontSize: 12), overflow: TextOverflow.ellipsis),
                       ],
                     ),
-                    const SizedBox(height: 8),
-                    Text('Current - ${acc.name}', style: GoogleFonts.outfit(color: AppColors.textGrey, fontSize: 12)),
-                    const Spacer(),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text('Open', style: GoogleFonts.outfit(color: AppColors.primaryGreen, fontWeight: FontWeight.bold, fontSize: 13)),
-                        const Icon(Icons.call_made, size: 14, color: AppColors.textBlack),
-                      ],
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text('${tx.date.day}/${tx.date.month}', style: GoogleFonts.outfit(color: AppColors.textGrey, fontSize: 11)),
+                      Text('$prefix${_fmt(tx.amount)}', style: GoogleFonts.outfit(color: color, fontWeight: FontWeight.bold, fontSize: 14)),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          }).toList(),
         );
       },
     );
   }
+}
 
-  Widget _buildTransactionList() {
-    return Column(
-      children: List.generate(3, (index) => Container(
-        margin: const EdgeInsets.only(bottom: 24),
-        child: Row(
-          children: [
-            Container(
-              width: 50,
-              height: 50,
-              decoration: BoxDecoration(color: AppColors.surfaceLight, borderRadius: BorderRadius.circular(12)),
-              child: const Icon(Icons.swap_horiz_rounded, color: AppColors.primaryGreen),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+class _StickyHeaderDelegate extends SliverPersistentHeaderDelegate {
+  @override
+  double get minExtent => 65.0 + 32.0; // Icon height + Status bar approx
+  @override
+  double get maxExtent => 65.0 + 32.0;
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    // Dynamic color: turns from transparent/scaffold color to blurry gold when scrolled
+    final isScrolled = shrinkOffset > 0;
+    
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          color: isScrolled 
+            ? const Color(0xFF007855).withOpacity(0.9) // Lighter premium green blurry when scroll
+            : const Color(0xFFF4F6F5).withOpacity(0.5), // Transparent/Scaffold when at top
+          alignment: Alignment.center,
+          child: SafeArea(
+            bottom: false,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Transfer', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.textBlack)),
-                  Text('Cr by FRSD @****5876', style: GoogleFonts.outfit(color: AppColors.textGrey, fontSize: 13)),
+                  Row(
+                    children: [
+                    GestureDetector(
+                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen())),
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: isScrolled ? Colors.white.withOpacity(0.2) : AppColors.primaryGreen.withOpacity(0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(Icons.person_rounded, 
+                          color: isScrolled ? Colors.white : AppColors.primaryGreen, size: 20),
+                      ),
+                    ),
+                      const SizedBox(width: 12),
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Welcome back,', 
+                            style: GoogleFonts.outfit(color: isScrolled ? Colors.white70 : AppColors.textGrey, fontSize: 10)),
+                          Text('Seyam Ali', 
+                            style: GoogleFonts.outfit(color: isScrolled ? Colors.white : AppColors.textBlack, fontSize: 14, fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                    ],
+                  ),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: isScrolled ? Colors.white.withOpacity(0.2) : AppColors.primaryGreen.withOpacity(0.05),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.notifications_none_rounded, 
+                      color: isScrolled ? Colors.white : AppColors.primaryGreen, size: 22),
+                  ),
                 ],
               ),
             ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text('07/08/2023', style: GoogleFonts.outfit(color: AppColors.textGrey, fontSize: 12)),
-                const SizedBox(height: 4),
-                Text('+40,345.00', style: GoogleFonts.outfit(color: AppColors.primaryGreen, fontWeight: FontWeight.bold, fontSize: 16)),
-              ],
-            ),
-          ],
+          ),
         ),
-      )),
+      ),
     );
   }
+
+  @override
+  bool shouldRebuild(covariant SliverPersistentHeaderDelegate oldDelegate) => true;
 }

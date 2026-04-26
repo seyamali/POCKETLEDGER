@@ -6,6 +6,7 @@ import 'package:pocketledger/features/auth/signup_screen.dart';
 import 'package:pocketledger/features/auth/splash_screen.dart';
 import 'package:pocketledger/features/profile/profile_screen.dart';
 import 'package:pocketledger/app/main_nav_wrapper.dart';
+import 'package:pocketledger/features/transactions/add_transaction_screen.dart';
 
 class AppRoutes {
   static const String splash = '/';
@@ -15,6 +16,7 @@ class AppRoutes {
   static const String addAccount = '/add-account';
   static const String dashboard = '/dashboard';
   static const String profile = '/profile';
+  static const String addTransaction = '/add-transaction';
 
   static Map<String, WidgetBuilder> get routes => {
     splash: (context) => const SplashScreen(),
@@ -24,5 +26,6 @@ class AppRoutes {
     addAccount: (context) => const AddAccountScreen(),
     dashboard: (context) => const MainNavWrapper(),
     profile: (context) => const ProfileScreen(),
+    addTransaction: (context) => const AddTransactionScreen(),
   };
 }
