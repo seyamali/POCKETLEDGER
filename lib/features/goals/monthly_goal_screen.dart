@@ -34,16 +34,16 @@ class _MonthlyGoalScreenState extends State<MonthlyGoalScreen> {
 
   void _showSetGoalModal(GoalModel? currentGoal) {
     final incomeCtrl = TextEditingController(text: currentGoal?.incomeTarget.toInt().toString() ?? '');
+    final expenseCtrl = TextEditingController(text: currentGoal?.expenseLimit.toInt().toString() ?? '');
+    final savingsCtrl = TextEditingController(text: currentGoal?.savingsTarget.toInt().toString() ?? '');
     
     final categoryCtrls = {
-      'Expense': TextEditingController(text: currentGoal?.categoryLimits['Expense']?.toInt().toString() ?? ''),
       'Home': TextEditingController(text: currentGoal?.categoryLimits['Home']?.toInt().toString() ?? ''),
-      'Wife Expense': TextEditingController(text: currentGoal?.categoryLimits['Wife Expense']?.toInt().toString() ?? ''),
-      'My Expense': TextEditingController(text: currentGoal?.categoryLimits['My Expense']?.toInt().toString() ?? ''),
-      'Other Expense': TextEditingController(text: currentGoal?.categoryLimits['Other Expense']?.toInt().toString() ?? ''),
+      'Food': TextEditingController(text: currentGoal?.categoryLimits['Food']?.toInt().toString() ?? ''),
+      'Wife': TextEditingController(text: currentGoal?.categoryLimits['Wife']?.toInt().toString() ?? ''),
+      'Myself': TextEditingController(text: currentGoal?.categoryLimits['Myself']?.toInt().toString() ?? ''),
+      'Other': TextEditingController(text: currentGoal?.categoryLimits['Other']?.toInt().toString() ?? ''),
     };
-
-    bool isLoading = false;
 
     showModalBottomSheet(
       context: context,
@@ -51,84 +51,122 @@ class _MonthlyGoalScreenState extends State<MonthlyGoalScreen> {
       backgroundColor: Colors.transparent,
       builder: (context) => StatefulBuilder(
         builder: (context, setModalState) {
+          bool isLoading = false;
           return Container(
             padding: EdgeInsets.only(
-              bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-              top: 32, left: 24, right: 24,
+              bottom: MediaQuery.of(context).viewInsets.bottom + 30,
+              top: 15, left: 24, right: 24,
             ),
             decoration: const BoxDecoration(
-              color: AppColors.primaryBackground,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+              color: Color(0xFFF4F6F5),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(40)),
             ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text('Set Goals for $_monthName ${_currentMonth.year}', 
-                  style: GoogleFonts.montserrat(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primaryText)),
-                const SizedBox(height: 24),
-                
-                CustomTextField(
-                  controller: incomeCtrl,
-                  hintText: 'Income Target (৳)',
-                  icon: Icons.arrow_downward_rounded,
-                  keyboardType: TextInputType.number,
-                ),
-                
-                const SizedBox(height: 24),
-                Align(alignment: Alignment.centerLeft, child: Text('EXPENSE CATEGORY LIMITS', style: GoogleFonts.montserrat(color: AppColors.secondaryText, fontSize: 11, fontWeight: FontWeight.bold))),
-                const SizedBox(height: 12),
-                
-                ...categoryCtrls.entries.map((entry) => Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: CustomTextField(
-                    controller: entry.value,
-                    hintText: '${entry.key} Limit (৳)',
-                    icon: Icons.pie_chart_outline_rounded,
-                    keyboardType: TextInputType.number,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Modal Header with Close Button
+                  Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2))),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: IconButton(
+                          onPressed: () => Navigator.pop(context),
+                          icon: const Icon(Icons.close_rounded, color: AppColors.textGrey),
+                        ),
+                      ),
+                    ],
                   ),
-                )).toList(),
-                
-                const SizedBox(height: 32),
-                SizedBox(
-                  width: double.infinity,
-                  height: 60,
-                  child: ElevatedButton(
-                    onPressed: isLoading ? null : () async {
-                      if (incomeCtrl.text.isEmpty) return;
-                      setModalState(() => isLoading = true);
-
-                      double totalExpenseLimit = 0;
-                      Map<String, double> categoryLimits = {};
-                      
-                      for (var entry in categoryCtrls.entries) {
-                        double limit = double.tryParse(entry.value.text) ?? 0;
-                        categoryLimits[entry.key] = limit;
-                        totalExpenseLimit += limit;
-                      }
-                      
-                      await _goalService.setGoal(
-                        monthYear: _monthYearKey,
-                        incomeTarget: double.parse(incomeCtrl.text),
-                        expenseLimit: totalExpenseLimit,
-                        savingsTarget: 0, // Unused
-                        categoryLimits: categoryLimits,
-                      );
-                      
-                      if (mounted) Navigator.pop(context);
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.brandPrimary,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  const SizedBox(height: 10),
+                  Text('Target Settings', style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold)),
+                  Text('Set your targets for $_monthName ${_currentMonth.year}', style: GoogleFonts.outfit(color: AppColors.textGrey, fontSize: 13)),
+                  const SizedBox(height: 32),
+                  
+                  _buildModalInput('Monthly Income Target', incomeCtrl, Icons.payments_rounded, AppColors.primaryGreen),
+                  const SizedBox(height: 16),
+                  _buildModalInput('Monthly Savings Target', savingsCtrl, Icons.savings_rounded, Colors.amber.shade600),
+                  const SizedBox(height: 16),
+                  _buildModalInput('Overall Expense Limit', expenseCtrl, Icons.money_off_rounded, Colors.redAccent),
+                  
+                  const SizedBox(height: 32),
+                  Align(alignment: Alignment.centerLeft, child: Text('CATEGORY LIMITS', style: GoogleFonts.outfit(color: AppColors.textGrey, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.5))),
+                  const SizedBox(height: 16),
+                  
+                  ...categoryCtrls.entries.map((entry) => Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: _buildModalInput('${entry.key} Limit', entry.value, Icons.pie_chart_rounded, Colors.orangeAccent, isSmall: true),
+                  )).toList(),
+                  
+                  const SizedBox(height: 32),
+                  Container(
+                    width: double.infinity,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(colors: [AppColors.primaryGreen, AppColors.primaryGreen.withOpacity(0.8)]),
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [BoxShadow(color: AppColors.primaryGreen.withOpacity(0.3), blurRadius: 15, offset: const Offset(0, 8))],
                     ),
-                    child: isLoading 
-                        ? const CircularProgressIndicator(color: Colors.white)
-                        : Text('Save Goals', style: GoogleFonts.montserrat(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
+                    child: ElevatedButton(
+                      onPressed: isLoading ? null : () async {
+                        if (incomeCtrl.text.isEmpty) return;
+                        setModalState(() => isLoading = true);
+
+                        Map<String, double> categoryLimits = {};
+                        for (var entry in categoryCtrls.entries) {
+                          categoryLimits[entry.key] = double.tryParse(entry.value.text) ?? 0;
+                        }
+                        
+                        await _goalService.setGoal(
+                          monthYear: _monthYearKey,
+                          incomeTarget: double.tryParse(incomeCtrl.text) ?? 0,
+                          expenseLimit: double.tryParse(expenseCtrl.text) ?? 0,
+                          savingsTarget: double.tryParse(savingsCtrl.text) ?? 0,
+                          categoryLimits: categoryLimits,
+                        );
+                        
+                        if (mounted) Navigator.pop(context);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        shadowColor: Colors.transparent,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                      ),
+                      child: isLoading 
+                          ? const CircularProgressIndicator(color: Colors.white)
+                          : Text('Update Targets', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           );
         }
+      ),
+    );
+  }
+
+  Widget _buildModalInput(String label, TextEditingController ctrl, IconData icon, Color color, {bool isSmall = false}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10)],
+      ),
+      child: TextField(
+        controller: ctrl,
+        keyboardType: TextInputType.number,
+        style: GoogleFonts.outfit(fontSize: isSmall ? 15 : 18, fontWeight: FontWeight.bold),
+        decoration: InputDecoration(
+          labelText: label,
+          labelStyle: GoogleFonts.outfit(color: AppColors.textGrey, fontSize: 12, fontWeight: FontWeight.w500),
+          prefixIcon: Icon(icon, color: color, size: 20),
+          border: InputBorder.none,
+          suffixText: '৳',
+          suffixStyle: GoogleFonts.outfit(color: color, fontWeight: FontWeight.bold),
+        ),
       ),
     );
   }
@@ -136,333 +174,391 @@ class _MonthlyGoalScreenState extends State<MonthlyGoalScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.primaryBackground,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.primaryText),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text('Monthly Goal', style: GoogleFonts.montserrat(color: AppColors.primaryText, fontWeight: FontWeight.bold)),
-        centerTitle: true,
-      ),
+      backgroundColor: const Color(0xFFF8FAF9),
       body: StreamBuilder<List<TransactionModel>>(
         stream: _goalService.getTransactionsForMonth(_currentMonth.month, _currentMonth.year),
         builder: (context, txSnapshot) {
           return StreamBuilder<GoalModel?>(
             stream: _goalService.getGoal(_monthYearKey),
             builder: (context, goalSnapshot) {
-              
               if (txSnapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator(color: AppColors.brandPrimary));
+                return const Center(child: CircularProgressIndicator(color: AppColors.primaryGreen));
               }
 
               final transactions = txSnapshot.data ?? [];
               final goal = goalSnapshot.data;
 
-              // Calculate actuals
               double actualIncome = 0;
               double actualExpense = 0;
-              double actualSaved = 0; // 'Savings' category — not a real expense
+              double actualSaved = 0;
               Map<String, double> expenseByCategory = {};
 
               for (var tx in transactions) {
-                // Exclude Opening Balance — account setup entries, not real income
                 if (tx.category == 'Opening Balance') continue;
-                
-                if (tx.type == TransactionType.income) actualIncome += tx.amount;
-                if (tx.type == TransactionType.expense) {
-                  actualExpense += tx.amount;
-                  expenseByCategory[tx.category] = (expenseByCategory[tx.category] ?? 0) + tx.amount;
-                }
-                // Track savings transfers from the Savings page
-                if (tx.type == TransactionType.transfer && tx.category == 'Savings Transfer') {
+
+                // Detect if this is a savings-related transaction
+                bool isSavings = tx.category.toLowerCase().contains('sav') || 
+                                 tx.toAccountName?.toLowerCase().contains('sav') == true;
+
+                if (isSavings) {
                   actualSaved += tx.amount;
+                } else {
+                  if (tx.type == TransactionType.income) actualIncome += tx.amount;
+                  if (tx.type == TransactionType.expense) {
+                    actualExpense += tx.amount;
+                    expenseByCategory[tx.category] = (expenseByCategory[tx.category] ?? 0) + tx.amount;
+                  }
                 }
               }
 
-              final passiveSavings = actualIncome - actualExpense - actualSaved;
+              final passiveRemaining = actualIncome - actualExpense - actualSaved;
 
-              return SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    _buildMonthSelector(),
-                    const SizedBox(height: 24),
-                    
-                    if (goal == null)
-                      _buildNoGoalCard()
-                    else
-                      Column(
+              return Column(
+                children: [
+                  _buildPremiumHeader(goal, actualIncome, actualExpense, actualSaved),
+                  
+                  Expanded(
+                    child: SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      padding: const EdgeInsets.fromLTRB(24, 20, 24, 40),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildMainProgressCard(goal, actualIncome, actualExpense, passiveSavings, expenseByCategory),
-                          const SizedBox(height: 24),
-                          _buildSummaryGrid(actualIncome, actualExpense, actualSaved, goal.expenseLimit),
+                          _buildSectionHeader('Financial Health', 'Live status for this month'),
+                          const SizedBox(height: 16),
+                          _buildHealthMeter(goal, actualExpense, actualIncome),
+                          
+                          const SizedBox(height: 32),
+                          _buildSectionHeader('Category Targets', 'Limits vs Actual spending'),
+                          const SizedBox(height: 16),
+                          _buildCategoryTargetGrid(goal, expenseByCategory),
+
+                          const SizedBox(height: 32),
+                          _buildSectionHeader('Month Summary', 'Key figures at a glance'),
+                          const SizedBox(height: 16),
+                          _buildSummaryStats(actualIncome, actualExpense, actualSaved, passiveRemaining),
+                          
+                          const SizedBox(height: 32),
+                          _buildSectionHeader('Recent Activity', 'Top movements this month'),
+                          const SizedBox(height: 16),
+                          _buildRecentActivity(transactions),
                         ],
                       ),
-
-                    const SizedBox(height: 32),
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text('TRANSACTIONS THIS MONTH', style: GoogleFonts.montserrat(color: AppColors.secondaryText, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
                     ),
-                    const SizedBox(height: 12),
-                    _buildTransactionSnapshot(transactions),
-                  ],
-                ),
+                  ),
+                ],
               );
-            }
+            },
           );
-        }
+        },
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _showSetGoalModal(null),
+        backgroundColor: AppColors.primaryGreen,
+        child: const Icon(Icons.track_changes_rounded, color: Colors.white),
       ),
     );
   }
 
-  Widget _buildMonthSelector() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        IconButton(
-          icon: const Icon(Icons.arrow_back_ios_rounded, color: AppColors.brandPrimary, size: 20),
-          onPressed: () => _changeMonth(-1),
-        ),
-        Text('$_monthName ${_currentMonth.year}', style: GoogleFonts.montserrat(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primaryText)),
-        IconButton(
-          icon: const Icon(Icons.arrow_forward_ios_rounded, color: AppColors.brandPrimary, size: 20),
-          onPressed: () => _changeMonth(1),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildNoGoalCard() {
+  Widget _buildPremiumHeader(GoalModel? goal, double income, double expense, double saved) {
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(32),
-      decoration: BoxDecoration(
-        color: AppColors.cardBackground,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppColors.brandPrimary.withOpacity(0.05)),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 15, offset: const Offset(0, 8))],
+      padding: EdgeInsets.fromLTRB(24, MediaQuery.of(context).padding.top + 5, 24, 20),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(35)),
+        boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 20, offset: Offset(0, 8))],
       ),
       child: Column(
-        children: [
-          Icon(Icons.track_changes_rounded, size: 64, color: AppColors.brandPrimary.withOpacity(0.5)),
-          const SizedBox(height: 16),
-          Text('No Goal Set', style: GoogleFonts.montserrat(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.primaryText)),
-          const SizedBox(height: 8),
-          Text('Set an income target and expense limit to track your financial health this month.', 
-            textAlign: TextAlign.center,
-            style: GoogleFonts.montserrat(color: AppColors.secondaryText, fontSize: 13, height: 1.5)),
-          const SizedBox(height: 24),
-          ElevatedButton(
-            onPressed: () => _showSetGoalModal(null),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.brandPrimary,
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            ),
-            child: Text('Set Goal', style: GoogleFonts.montserrat(fontWeight: FontWeight.bold, color: Colors.white)),
-          )
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMainProgressCard(GoalModel goal, double actualIncome, double actualExpense, double passiveSavings, Map<String, double> expenseByCategory) {
-    double incomeProgress = goal.incomeTarget > 0 ? (actualIncome / goal.incomeTarget) : 0;
-    double expenseProgress = goal.expenseLimit > 0 ? (actualExpense / goal.expenseLimit) : 0;
-    
-    // Cap progress at 1.0 for the UI bar
-    if (incomeProgress > 1.0) incomeProgress = 1.0;
-    if (expenseProgress > 1.0) expenseProgress = 1.0;
-
-    String statusText = '🟢 On Track';
-    Color statusColor = AppColors.brandPrimary;
-    
-    if (actualExpense > goal.expenseLimit) {
-      statusText = '🔴 Over Budget';
-      statusColor = Colors.redAccent;
-    } else if (actualExpense > (goal.expenseLimit * 0.8)) {
-      statusText = '🟡 Warning';
-      statusColor = Colors.orangeAccent;
-    }
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: AppColors.cardBackground,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppColors.brandPrimary.withOpacity(0.05)),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 15, offset: const Offset(0, 8))],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(statusText, style: GoogleFonts.montserrat(color: statusColor, fontWeight: FontWeight.bold, fontSize: 16)),
-              GestureDetector(
-                onTap: () => _showSetGoalModal(goal),
-                child: const Icon(Icons.settings_outlined, color: AppColors.secondaryText, size: 22),
-              )
+              IconButton(
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
+                constraints: const BoxConstraints(),
+                padding: EdgeInsets.zero,
+              ),
+              Text('Monthly Analytics', style: GoogleFonts.outfit(fontSize: 17, fontWeight: FontWeight.bold)),
+              IconButton(
+                onPressed: () => _showSetGoalModal(goal),
+                icon: const Icon(Icons.tune_rounded, size: 20, color: AppColors.primaryGreen),
+                constraints: const BoxConstraints(),
+                padding: EdgeInsets.zero,
+              ),
             ],
           ),
-          const SizedBox(height: 32),
-          
-          _buildProgressBar('Income Progress', actualIncome, goal.incomeTarget, AppColors.brandPrimary, incomeProgress),
-          const SizedBox(height: 24),
-          _buildProgressBar('Overall Expense Progress', actualExpense, goal.expenseLimit, Colors.redAccent, expenseProgress),
-          
-          if (goal.categoryLimits.keys.any((k) => (goal.categoryLimits[k] ?? 0) > 0)) ...[
-            const SizedBox(height: 32),
-            Text('CATEGORY BREAKDOWN', style: GoogleFonts.montserrat(color: AppColors.secondaryText, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
-            const SizedBox(height: 16),
-            ...goal.categoryLimits.entries.where((e) => e.value > 0).map((entry) {
-              double catActual = expenseByCategory[entry.key] ?? 0;
-              double catProgress = catActual / entry.value;
-              if (catProgress > 1.0) catProgress = 1.0;
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 16),
-                child: _buildProgressBar(entry.key, catActual, entry.value, Colors.redAccent.withOpacity(0.8), catProgress, isSmall: true),
-              );
-            }).toList(),
-          ],
-          
-          const SizedBox(height: 32),
-          Center(
-            child: Column(
-              children: [
-                Text('Passive Remaining Balance', style: GoogleFonts.montserrat(color: AppColors.secondaryText, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.5)),
-                const SizedBox(height: 4),
-                Text('৳ ${passiveSavings.toInt()}', style: GoogleFonts.montserrat(color: Colors.amber.shade600, fontSize: 32, fontWeight: FontWeight.bold)),
-              ],
-            ),
-          ),
+          const SizedBox(height: 16),
+          _buildHorizontalMonthSelector(),
+          const SizedBox(height: 20),
+          _buildMainCircleStats(goal, income, expense, saved),
         ],
       ),
     );
   }
 
-  Widget _buildProgressBar(String label, double actual, double limit, Color color, double progress, {bool isSmall = false}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildHorizontalMonthSelector() {
+    return SizedBox(
+      height: 40,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        itemCount: 12,
+        itemBuilder: (context, index) {
+          final monthDate = DateTime(_currentMonth.year, index + 1);
+          final isSelected = monthDate.month == _currentMonth.month;
+          return GestureDetector(
+            onTap: () => setState(() => _currentMonth = monthDate),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              margin: const EdgeInsets.only(right: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              decoration: BoxDecoration(
+                color: isSelected ? AppColors.primaryGreen : Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(15),
+              ),
+              alignment: Alignment.center,
+              child: Text(_getMonthName(index + 1), 
+                style: GoogleFonts.outfit(
+                  color: isSelected ? Colors.white : AppColors.textGrey,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                )),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildMainCircleStats(GoalModel? goal, double income, double expense, double saved) {
+    double progressIncome = goal != null && goal.incomeTarget > 0 ? (income / goal.incomeTarget) : 0;
+    double progressExpense = goal != null && goal.expenseLimit > 0 ? (expense / goal.expenseLimit) : 0;
+    double savingsRatio = goal != null && goal.savingsTarget > 0 
+        ? (saved / goal.savingsTarget) 
+        : (income > 0 ? (saved / income) : 0);
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceAround,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        _circleIndicator('Income', income, progressIncome.clamp(0, 1), AppColors.primaryGreen),
+        _circleIndicator('Savings', saved, savingsRatio.clamp(0, 1), Colors.amber.shade600),
+        _circleIndicator('Spent', expense, progressExpense.clamp(0, 1), Colors.redAccent),
+      ],
+    );
+  }
+
+  Widget _circleIndicator(String label, double value, double progress, Color color) {
+    return Column(
+      children: [
+        Stack(
+          alignment: Alignment.center,
           children: [
-            Flexible(
-              child: Text(label, 
-                style: GoogleFonts.montserrat(color: AppColors.primaryText, fontWeight: isSmall ? FontWeight.w500 : FontWeight.w600, fontSize: isSmall ? 11 : 13),
-                overflow: TextOverflow.ellipsis,
+            SizedBox(
+              width: 55, height: 55,
+              child: CircularProgressIndicator(
+                value: progress,
+                strokeWidth: 6,
+                backgroundColor: color.withOpacity(0.1),
+                valueColor: AlwaysStoppedAnimation<Color>(color),
+                strokeCap: StrokeCap.round,
               ),
             ),
-            const SizedBox(width: 8),
-            Text('${actual.toInt()} / ${limit.toInt()} Tk', 
-              style: GoogleFonts.montserrat(color: AppColors.secondaryText, fontWeight: isSmall ? FontWeight.w500 : FontWeight.w600, fontSize: isSmall ? 11 : 13)),
+            Text('${(progress * 100).toInt()}%', style: GoogleFonts.outfit(fontSize: 10, fontWeight: FontWeight.bold, color: color)),
           ],
         ),
         const SizedBox(height: 8),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(10),
-          child: LinearProgressIndicator(
-            value: progress,
-            backgroundColor: color.withOpacity(0.1),
-            color: color,
-            minHeight: isSmall ? 4 : 8,
-          ),
-        ),
+        Text(label, style: GoogleFonts.outfit(fontSize: 11, color: AppColors.textGrey, fontWeight: FontWeight.w500)),
+        Text('৳${value.toInt()}', style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textBlack)),
       ],
     );
   }
 
-  Widget _buildSummaryGrid(double actualIncome, double actualExpense, double actualSaved, double expenseLimit) {
-    double remaining = expenseLimit - actualExpense;
-    return Column(
-      children: [
-        Row(
-          children: [
-            Expanded(child: _miniCard('Income', actualIncome, AppColors.brandPrimary)),
-            const SizedBox(width: 12),
-            Expanded(child: _miniCard('Expense', actualExpense, Colors.redAccent)),
-            const SizedBox(width: 12),
-            Expanded(child: _miniCard('Remaining', remaining, remaining < 0 ? Colors.redAccent : AppColors.brandPrimary)),
-          ],
-        ),
-        if (actualSaved > 0) ...[
-          const SizedBox(height: 12),
-          _miniCard('Saved This Month 🏦', actualSaved, Colors.amber.shade600),
-        ],
-      ],
-    );
-  }
+  Widget _buildHealthMeter(GoalModel? goal, double expense, double income) {
+    if (goal == null) return _buildNoGoalPrompt();
+    
+    double ratio = expense / goal.expenseLimit;
+    String status = 'Excellent';
+    Color color = AppColors.primaryGreen;
 
-  Widget _miniCard(String title, double value, Color color) {
+    if (ratio > 1.0) { status = 'Critical'; color = Colors.redAccent; }
+    else if (ratio > 0.8) { status = 'Warning'; color = Colors.orangeAccent; }
+    else if (ratio > 0.5) { status = 'Good'; color = Colors.blueAccent; }
+
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 16),
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.cardBackground,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.brandPrimary.withOpacity(0.05)),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(25),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.01), blurRadius: 15)],
       ),
       child: Column(
         children: [
-          Text(title, style: GoogleFonts.montserrat(color: AppColors.secondaryText, fontSize: 11, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          Text('৳${value.toInt()}', style: GoogleFonts.montserrat(color: color, fontSize: 14, fontWeight: FontWeight.bold)),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Monthly Budget Health', style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.bold)),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                child: Text(status, style: GoogleFonts.outfit(color: color, fontSize: 11, fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: LinearProgressIndicator(
+              value: ratio.clamp(0, 1),
+              minHeight: 10,
+              backgroundColor: color.withOpacity(0.1),
+              valueColor: AlwaysStoppedAnimation<Color>(color),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text('You have utilized ${(ratio * 100).toInt()}% of your budget.', 
+            style: GoogleFonts.outfit(color: AppColors.textGrey, fontSize: 12)),
         ],
       ),
     );
   }
 
+  Widget _buildCategoryTargetGrid(GoalModel? goal, Map<String, double> actuals) {
+    if (goal == null || goal.categoryLimits.isEmpty) return const SizedBox();
+    
+    final limits = goal.categoryLimits.entries.where((e) => e.value > 0).toList();
 
-
-  Widget _buildTransactionSnapshot(List<TransactionModel> transactions) {
-    if (transactions.isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 24),
-        child: Text('No transactions recorded this month.', style: GoogleFonts.montserrat(color: AppColors.secondaryText)),
-      );
-    }
-
-    return Column(
-      children: transactions.take(5).map((tx) {
-        bool isIncome = tx.type == TransactionType.income;
-        bool isTransfer = tx.type == TransactionType.transfer;
-        
-        Color iconColor = isIncome ? AppColors.brandPrimary : (isTransfer ? Colors.blue : Colors.redAccent);
-        String prefix = isIncome ? '+' : (isTransfer ? '' : '-');
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2, crossAxisSpacing: 12, mainAxisSpacing: 12, childAspectRatio: 1.5,
+      ),
+      itemCount: limits.length,
+      itemBuilder: (context, i) {
+        final entry = limits[i];
+        final actual = actuals[entry.key] ?? 0;
+        final progress = (actual / entry.value).clamp(0.0, 1.0);
+        final isOver = actual > entry.value;
 
         return Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: AppColors.cardBackground,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.brandPrimary.withOpacity(0.05)),
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: isOver ? Colors.redAccent.withOpacity(0.1) : Colors.transparent),
           ),
-          child: Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(tx.category, style: GoogleFonts.montserrat(color: AppColors.primaryText, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis),
-                    Text('${tx.date.day}/${tx.date.month}/${tx.date.year}', style: GoogleFonts.montserrat(color: AppColors.secondaryText, fontSize: 11)),
-                  ],
-                ),
+              Text(entry.key, style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textBlack), overflow: TextOverflow.ellipsis),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('৳${actual.toInt()} / ৳${entry.value.toInt()}', style: GoogleFonts.outfit(fontSize: 10, color: AppColors.textGrey)),
+                  const SizedBox(height: 6),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(3),
+                    child: LinearProgressIndicator(
+                      value: progress,
+                      minHeight: 3,
+                      backgroundColor: Colors.grey.shade50,
+                      valueColor: AlwaysStoppedAnimation<Color>(isOver ? Colors.redAccent : AppColors.primaryGreen),
+                    ),
+                  ),
+                ],
               ),
-              Text('$prefix${tx.amount.toInt()}', style: GoogleFonts.montserrat(color: iconColor, fontWeight: FontWeight.bold, fontSize: 15)),
             ],
           ),
         );
-      }).toList(),
+      },
+    );
+  }
+
+  Widget _buildSummaryStats(double income, double expense, double saved, double remaining) {
+    return Row(
+      children: [
+        _statTile('Net Saved', saved, Colors.amber.shade600, Icons.savings_rounded),
+        const SizedBox(width: 12),
+        _statTile('Pass. Rem.', remaining, AppColors.primaryGreen, Icons.account_balance_wallet_rounded),
+      ],
+    );
+  }
+
+  Widget _statTile(String label, double val, Color color, IconData icon) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, color: color, size: 18),
+            const SizedBox(height: 12),
+            Text(label, style: GoogleFonts.outfit(color: AppColors.textGrey, fontSize: 11, fontWeight: FontWeight.w500)),
+            Text('৳${val.toInt()}', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textBlack)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRecentActivity(List<TransactionModel> transactions) {
+    if (transactions.isEmpty) return const SizedBox();
+    return Column(
+      children: transactions.take(3).map((tx) => Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18)),
+        child: Row(
+          children: [
+            Container(
+              width: 36, height: 36,
+              decoration: BoxDecoration(color: (tx.type == TransactionType.income ? AppColors.primaryGreen : Colors.redAccent).withOpacity(0.1), shape: BoxShape.circle),
+              child: Icon(tx.type == TransactionType.income ? Icons.add_rounded : Icons.remove_rounded, 
+                color: tx.type == TransactionType.income ? AppColors.primaryGreen : Colors.redAccent, size: 16),
+            ),
+            const SizedBox(width: 12),
+            Expanded(child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(tx.category, style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.bold)),
+                Text('${tx.date.day} ${_getMonthName(tx.date.month)}', style: GoogleFonts.outfit(fontSize: 11, color: AppColors.textGrey)),
+              ],
+            )),
+            Text('৳${tx.amount.toInt()}', style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold)),
+          ],
+        ),
+      )).toList(),
+    );
+  }
+
+  Widget _buildSectionHeader(String title, String subtitle) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: GoogleFonts.outfit(fontSize: 17, fontWeight: FontWeight.bold, color: AppColors.textBlack)),
+        Text(subtitle, style: GoogleFonts.outfit(fontSize: 11, color: AppColors.textGrey)),
+      ],
+    );
+  }
+
+  Widget _buildNoGoalPrompt() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(25)),
+      child: Column(
+        children: [
+          Icon(Icons.track_changes_rounded, size: 40, color: AppColors.primaryGreen.withOpacity(0.2)),
+          const SizedBox(height: 12),
+          Text('No targets set', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppColors.textBlack)),
+          const SizedBox(height: 4),
+          Text('Tap the target icon to set limits.', textAlign: TextAlign.center, style: GoogleFonts.outfit(color: AppColors.textGrey, fontSize: 12)),
+        ],
+      ),
     );
   }
 

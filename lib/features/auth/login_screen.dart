@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:pocketledger/services/auth_service.dart';
 import 'package:pocketledger/app/theme.dart';
 import 'package:pocketledger/features/auth/widgets/custom_text_field.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -13,13 +14,31 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final AuthService _authService = AuthService();
-  final TextEditingController _emailController = TextEditingController(text: 'Seyamhossain482@gmail.com');
-  final TextEditingController _passwordController = TextEditingController(text: 'Sey@mPocket');
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
   bool _isLoading = false;
   bool _isPasswordVisible = false;
+  bool _rememberMe = false;
 
   final FocusNode _emailFocus = FocusNode();
   final FocusNode _passwordFocus = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCredentials();
+    _emailFocus.addListener(() => setState(() {}));
+    _passwordFocus.addListener(() => setState(() {}));
+  }
+
+  void _loadCredentials() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _emailController.text = prefs.getString('remember_email') ?? '';
+      _passwordController.text = prefs.getString('remember_password') ?? '';
+      _rememberMe = prefs.getBool('remember_me') ?? false;
+    });
+  }
 
   void _handleLogin() async {
     if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
@@ -31,6 +50,17 @@ class _LoginScreenState extends State<LoginScreen> {
 
     setState(() => _isLoading = true);
     try {
+      final prefs = await SharedPreferences.getInstance();
+      if (_rememberMe) {
+        await prefs.setString('remember_email', _emailController.text);
+        await prefs.setString('remember_password', _passwordController.text);
+        await prefs.setBool('remember_me', true);
+      } else {
+        await prefs.remove('remember_email');
+        await prefs.remove('remember_password');
+        await prefs.setBool('remember_me', false);
+      }
+
       await _authService.signIn(_emailController.text, _passwordController.text);
       if (mounted) {
         Navigator.pushReplacementNamed(context, '/dashboard');
@@ -64,7 +94,7 @@ class _LoginScreenState extends State<LoginScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 20),
+              const SizedBox(height: 10),
               Center(child: Image.asset('assets/images/logo.png', height: 60)),
               const SizedBox(height: 40),
               Text(
@@ -83,9 +113,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   fontSize: 16,
                 ),
               ),
-              const SizedBox(height: 48),
+              const SizedBox(height: 40),
               
-              // 📝 Clean Input Fields
               Text(
                 'Email Address',
                 style: GoogleFonts.outfit(
@@ -103,7 +132,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 isFocused: _emailFocus.hasFocus,
                 keyboardType: TextInputType.emailAddress,
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
               
               Text(
                 'Password',
@@ -132,22 +161,48 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
               
-              const SizedBox(height: 12),
-              Align(
-                alignment: Alignment.centerRight,
-                child: Text(
-                  'Forgot Password?',
-                  style: GoogleFonts.outfit(
-                    color: AppColors.primaryGreen,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  GestureDetector(
+                    onTap: () => setState(() => _rememberMe = !_rememberMe),
+                    child: Row(
+                      children: [
+                        SizedBox(
+                          height: 24, width: 24,
+                          child: Checkbox(
+                            value: _rememberMe,
+                            activeColor: AppColors.primaryGreen,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                            onChanged: (v) => setState(() => _rememberMe = v ?? false),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Remember Me',
+                          style: GoogleFonts.outfit(
+                            color: AppColors.textBlack,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
+                  Text(
+                    'Forgot Password?',
+                    style: GoogleFonts.outfit(
+                      color: AppColors.primaryGreen,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
               ),
               
-              const SizedBox(height: 48),
+              const SizedBox(height: 40),
               
-              // 🚀 Sign In Button
               SizedBox(
                 width: double.infinity,
                 height: 56,

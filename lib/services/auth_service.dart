@@ -1,10 +1,13 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:pocketledger/utils/hash_helper.dart';
+import 'dart:typed_data';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _db = FirebaseFirestore.instance;
+  final FirebaseStorage _storage = FirebaseStorage.instance;
 
   // Get current user UID
   String? get currentUserUid => _auth.currentUser?.uid;
@@ -74,13 +77,27 @@ class AuthService {
   }
 
   // Update Profile
-  Future<void> updateProfile({required String name, required String profilePic}) async {
+  Future<void> updateProfile({required String name, String? profilePic}) async {
     final uid = currentUserUid;
     if (uid != null) {
-      await _db.collection('users').doc(uid).update({
-        'name': name,
-        'profilePic': profilePic,
-      });
+      final updates = <String, dynamic>{'name': name};
+      if (profilePic != null) updates['profilePic'] = profilePic;
+      
+      await _db.collection('users').doc(uid).update(updates);
+    }
+  }
+
+  // Upload Profile Image (Web & Mobile Compatible)
+  Future<String?> uploadProfileImage(Uint8List imageBytes) async {
+    try {
+      final uid = currentUserUid;
+      if (uid == null) return null;
+
+      final ref = _storage.ref().child('profile_pics').child('$uid.jpg');
+      await ref.putData(imageBytes, SettableMetadata(contentType: 'image/jpeg'));
+      return await ref.getDownloadURL();
+    } catch (e) {
+      return null;
     }
   }
 

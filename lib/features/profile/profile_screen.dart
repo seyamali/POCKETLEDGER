@@ -3,6 +3,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:pocketledger/app/theme.dart';
 import 'package:pocketledger/services/auth_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:typed_data';
+import 'package:flutter/foundation.dart'; // For kIsWeb
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -46,7 +49,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               // ── Settings List ──
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 32, 20, 40),
+                  padding: const EdgeInsets.fromLTRB(20, 24, 20, 40),
                   child: Column(
                     children: [
                       _buildSectionTitle('Account Management'),
@@ -117,81 +120,95 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildHeader(String name, String email, String? profilePic) {
-    return Container(
-      width: double.infinity,
-      decoration: const BoxDecoration(
-        color: AppColors.primaryGreen,
-        borderRadius: BorderRadius.vertical(bottom: Radius.circular(40)),
-      ),
-      child: Stack(
-        children: [
-          Positioned(
-            top: -40, right: -40,
-            child: Container(
-              width: 180, height: 180,
-              decoration: BoxDecoration(color: Colors.white.withOpacity(0.04), shape: BoxShape.circle),
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        // Background with Gradient and Shape
+        Container(
+          width: double.infinity,
+          height: 180,
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [AppColors.primaryGreen, Color(0xFF2D6A4F)],
+              begin: Alignment.topLeft, end: Alignment.bottomRight,
             ),
+            borderRadius: BorderRadius.vertical(bottom: Radius.circular(32)),
           ),
-          SafeArea(
-            bottom: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 40),
-              child: Column(
-                children: [
-                  Row(
+          child: Stack(
+            children: [
+              Positioned(
+                top: -20, right: -20,
+                child: Container(
+                  width: 140, height: 140,
+                  decoration: BoxDecoration(color: Colors.white.withOpacity(0.05), shape: BoxShape.circle),
+                ),
+              ),
+              SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       IconButton(
                         onPressed: () => Navigator.pop(context),
-                        icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
+                        icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 18),
                       ),
                       Text('Profile', style: GoogleFonts.outfit(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-                      const SizedBox(width: 48), // Spacer to center title
+                      const SizedBox(width: 48),
                     ],
                   ),
-                  const SizedBox(height: 32),
-                  // Avatar
-                  Center(
-                    child: Stack(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(color: AppColors.accentGold, width: 2),
-                          ),
-                          child: CircleAvatar(
-                            radius: 60,
-                            backgroundColor: Colors.white.withOpacity(0.1),
-                            backgroundImage: (profilePic != null && profilePic.isNotEmpty) ? NetworkImage(profilePic) : null,
-                            child: (profilePic == null || profilePic.isEmpty)
-                                ? const Icon(Icons.person_rounded, size: 60, color: Colors.white)
-                                : null,
-                          ),
-                        ),
-                        Positioned(
-                          bottom: 4, right: 4,
-                          child: GestureDetector(
-                            onTap: () => _showEditProfile(name, profilePic),
-                            child: Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: const BoxDecoration(color: AppColors.accentGold, shape: BoxShape.circle),
-                              child: const Icon(Icons.edit_rounded, color: AppColors.primaryGreen, size: 20),
-                            ),
-                          ),
-                        ),
-                      ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        // Overlapping Avatar and Info
+        Positioned(
+          top: 100,
+          left: 0, right: 0,
+          child: Column(
+            children: [
+              Stack(
+                alignment: Alignment.center,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                    child: CircleAvatar(
+                      radius: 50,
+                      backgroundColor: Colors.grey.shade100,
+                      backgroundImage: (profilePic != null && profilePic.isNotEmpty) ? NetworkImage(profilePic) : null,
+                      child: (profilePic == null || profilePic.isEmpty)
+                          ? const Icon(Icons.person_rounded, size: 50, color: AppColors.primaryGreen)
+                          : null,
                     ),
                   ),
-                  const SizedBox(height: 24),
-                  Text(name, style: GoogleFonts.outfit(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
-                  Text(email, style: GoogleFonts.outfit(color: Colors.white70, fontSize: 14)),
+                  Positioned(
+                    bottom: 0, right: 0,
+                    child: GestureDetector(
+                      onTap: () => _showEditProfile(name, profilePic),
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: AppColors.accentGold,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2),
+                        ),
+                        child: const Icon(Icons.edit_rounded, color: AppColors.primaryGreen, size: 16),
+                      ),
+                    ),
+                  ),
                 ],
               ),
-            ),
+              const SizedBox(height: 12),
+              Text(name, style: GoogleFonts.outfit(color: AppColors.textBlack, fontSize: 22, fontWeight: FontWeight.bold)),
+              Text(email, style: GoogleFonts.outfit(color: AppColors.textGrey, fontSize: 13, fontWeight: FontWeight.w500)),
+            ],
           ),
-        ],
-      ),
+        ),
+        // Spacer to account for overlapping content
+        const SizedBox(height: 260),
+      ],
     );
   }
 
@@ -206,8 +223,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(16),
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
@@ -239,58 +256,192 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   void _showEditProfile(String currentName, String? currentPic) {
     final nameController = TextEditingController(text: currentName);
-    final picController = TextEditingController(text: currentPic);
+    Uint8List? pickedImageBytes;
+    bool isUploading = false;
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.of(context).viewInsets.bottom + 32),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 40, height: 4,
-                decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
-              ),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) {
+          return Container(
+            padding: EdgeInsets.fromLTRB(24, 12, 24, MediaQuery.of(context).viewInsets.bottom + 32),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(40)),
+              boxShadow: [
+                BoxShadow(color: Colors.black12, blurRadius: 20, spreadRadius: 5),
+              ],
             ),
-            const SizedBox(height: 24),
-            Text('Edit Profile', style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textBlack)),
-            const SizedBox(height: 8),
-            Text('Update your personal information', style: GoogleFonts.outfit(fontSize: 14, color: AppColors.textGrey)),
-            const SizedBox(height: 32),
-            _buildTextField(nameController, 'Full Name', Icons.person_outline_rounded),
-            const SizedBox(height: 20),
-            _buildTextField(picController, 'Profile Image URL', Icons.image_outlined),
-            const SizedBox(height: 32),
-            SizedBox(
-              width: double.infinity,
-              height: 56,
-              child: ElevatedButton(
-                onPressed: () async {
-                  await _authService.updateProfile(
-                    name: nameController.text.trim(),
-                    profilePic: picController.text.trim(),
-                  );
-                  if (context.mounted) Navigator.pop(context);
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryGreen,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  elevation: 0,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 50, height: 5,
+                    margin: const EdgeInsets.only(bottom: 24),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
                 ),
-                child: Text('Save Changes', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
-              ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Edit Profile', style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textBlack)),
+                        const SizedBox(height: 4),
+                        Text('Personalize your account', style: GoogleFonts.outfit(fontSize: 14, color: AppColors.textGrey)),
+                      ],
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(color: Colors.grey.shade100, shape: BoxShape.circle),
+                        child: const Icon(Icons.close_rounded, size: 20, color: AppColors.textBlack),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 32),
+                
+                // Premium Avatar Picker
+                Center(
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      // Outer Glow
+                      Container(
+                        width: 130, height: 130,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.primaryGreen.withOpacity(0.15),
+                              blurRadius: 30, spreadRadius: 5,
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Avatar Container
+                      Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: const LinearGradient(
+                            colors: [AppColors.accentGold, AppColors.primaryGreen],
+                            begin: Alignment.topLeft, end: Alignment.bottomRight,
+                          ),
+                        ),
+                        child: Container(
+                          padding: const EdgeInsets.all(3),
+                          decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                          child: CircleAvatar(
+                            radius: 55,
+                            backgroundColor: Colors.grey.shade50,
+                            backgroundImage: pickedImageBytes != null 
+                                ? MemoryImage(pickedImageBytes!) 
+                                : (currentPic != null && currentPic.isNotEmpty ? NetworkImage(currentPic) : null) as ImageProvider?,
+                            child: (pickedImageBytes == null && (currentPic == null || currentPic.isEmpty))
+                                ? Icon(Icons.person_rounded, size: 55, color: AppColors.primaryGreen.withOpacity(0.3))
+                                : null,
+                          ),
+                        ),
+                      ),
+                      // Camera Button
+                      Positioned(
+                        bottom: 4, right: 4,
+                        child: GestureDetector(
+                          onTap: () async {
+                            final picker = ImagePicker();
+                            final image = await picker.pickImage(source: ImageSource.gallery, imageQuality: 70);
+                            if (image != null) {
+                              final bytes = await image.readAsBytes();
+                              setModalState(() {
+                                pickedImageBytes = bytes;
+                              });
+                            }
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: AppColors.primaryGreen,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 3),
+                              boxShadow: [
+                                BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 4)),
+                              ],
+                            ),
+                            child: const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 20),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 40),
+                
+                Text('User Details', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textBlack)),
+                const SizedBox(height: 16),
+                _buildTextField(nameController, 'Your Full Name', Icons.person_outline_rounded),
+                
+                const SizedBox(height: 40),
+                
+                // Gradient Save Button
+                Container(
+                  width: double.infinity,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20),
+                    gradient: const LinearGradient(
+                      colors: [AppColors.primaryGreen, Color(0xFF2D6A4F)],
+                      begin: Alignment.centerLeft, end: Alignment.centerRight,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.primaryGreen.withOpacity(0.3),
+                        blurRadius: 20, offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: ElevatedButton(
+                    onPressed: isUploading ? null : () async {
+                      setModalState(() => isUploading = true);
+                      
+                      String? imageUrl = currentPic;
+                      if (pickedImageBytes != null) {
+                        imageUrl = await _authService.uploadProfileImage(pickedImageBytes!);
+                      }
+
+                      await _authService.updateProfile(
+                        name: nameController.text.trim(),
+                        profilePic: imageUrl,
+                      );
+                      
+                      if (context.mounted) Navigator.pop(context);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.transparent,
+                      foregroundColor: Colors.white,
+                      shadowColor: Colors.transparent,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                      elevation: 0,
+                    ),
+                    child: isUploading 
+                      ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                      : Text('Save Changes', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
+          );
+        }
       ),
     );
   }
@@ -298,17 +449,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _buildTextField(TextEditingController controller, String label, IconData icon) {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFFF4F6F5),
-        borderRadius: BorderRadius.circular(16),
+        color: const Color(0xFFF8FAF9),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.grey.shade200),
       ),
       child: TextField(
         controller: controller,
+        style: GoogleFonts.outfit(fontSize: 16, color: AppColors.textBlack, fontWeight: FontWeight.w500),
         decoration: InputDecoration(
           labelText: label,
           labelStyle: GoogleFonts.outfit(color: AppColors.textGrey, fontSize: 14),
-          prefixIcon: Icon(icon, color: AppColors.primaryGreen, size: 20),
+          prefixIcon: Icon(icon, color: AppColors.primaryGreen, size: 22),
           border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          floatingLabelBehavior: FloatingLabelBehavior.auto,
         ),
       ),
     );

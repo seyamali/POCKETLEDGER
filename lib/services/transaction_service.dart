@@ -233,4 +233,56 @@ class TransactionService {
       return list.take(limit).toList();
     });
   }
+  // Add a manual adjustment (doesn't affect a source account)
+  Future<void> addManualBalanceAdjustment({
+    required String accountId,
+    required String accountName,
+    required double amount,
+    required String category,
+    required DateTime date,
+    required bool isAddition,
+  }) async {
+    if (_uid == null) return;
+
+    await _db.runTransaction((tx) async {
+      final accountRef = _db.collection('accounts').doc(accountId);
+      final accountDoc = await tx.get(accountRef);
+
+      if (!accountDoc.exists) throw Exception('Account not found');
+
+      final accountData = accountDoc.data() as Map<String, dynamic>;
+      double currentTotal = (accountData['totalBalance'] ?? 0).toDouble();
+      Map<String, double> breakdown = Map<String, double>.from(
+        (accountData['breakdown'] ?? {}).map((key, value) => MapEntry(key, value.toDouble())),
+      );
+
+      if (isAddition) {
+        currentTotal += amount;
+        breakdown['Self'] = (breakdown['Self'] ?? 0) + amount;
+      } else {
+        currentTotal -= amount;
+        breakdown['Self'] = (breakdown['Self'] ?? 0) - amount;
+      }
+
+      tx.update(accountRef, {
+        'totalBalance': currentTotal,
+        'breakdown': breakdown,
+      });
+
+      final transRef = _db.collection('transactions').doc();
+      final adjustment = TransactionModel(
+        id: transRef.id,
+        accountId: accountId,
+        accountName: accountName,
+        owner: 'Self',
+        amount: amount,
+        type: isAddition ? TransactionType.income : TransactionType.expense,
+        category: category,
+        note: 'Manual entry (Already paid)',
+        date: date,
+        userId: _uid!,
+      );
+      tx.set(transRef, adjustment.toFirestore());
+    });
+  }
 }

@@ -1,4 +1,4 @@
-package com.example.pocketledger
+package com.seyam.pocketledger
 
 import io.flutter.embedding.android.FlutterActivity
 

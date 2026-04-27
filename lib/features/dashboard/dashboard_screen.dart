@@ -15,6 +15,7 @@ import 'package:pocketledger/services/transaction_service.dart';
 import 'package:pocketledger/services/loan_service.dart';
 import 'package:pocketledger/models/loan_model.dart';
 import 'package:pocketledger/features/profile/profile_screen.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -31,12 +32,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
   String _fmt(double v) => v.toInt().toString().replaceAllMapped(
     RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},');
 
+  static String getGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'Good Morning';
+    if (hour < 17) return 'Good Afternoon';
+    return 'Good Evening';
+  }
+
   void _go(Widget screen) =>
       Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBody: true,
       backgroundColor: const Color(0xFFF4F6F5),
       body: StreamBuilder<List<AccountModel>>(
         stream: _accountService.getAccounts(),
@@ -132,12 +141,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       child: _buildTransactionList(),
                     ),
                   ),
+                  const SliverToBoxAdapter(child: SizedBox(height: 100)),
                 ],
               );
             },
           );
         },
       ),
+      bottomNavigationBar: _buildBottomNavBar(),
     );
   }
 
@@ -145,110 +156,144 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _buildBalancePanel(double grandTotal, Map<String, double> ownerTotals, Map<String, List<Map<String, dynamic>>> ownerAccounts) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(32),
-        child: Container(
-          width: double.infinity,
-          decoration: BoxDecoration(
-            color: AppColors.primaryGreen.withOpacity(0.92),
-            borderRadius: BorderRadius.circular(32),
-            border: Border.all(color: AppColors.accentGold.withOpacity(0.4), width: 1.5),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.primaryGreen.withOpacity(0.2),
-                blurRadius: 25,
-                offset: const Offset(0, 12),
-              ),
-            ],
+      child: Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(32),
+          gradient: const LinearGradient(
+            colors: [Color(0xFF005F41), Color(0xFF008967)],
+            begin: Alignment.topLeft, end: Alignment.bottomRight,
           ),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.primaryGreen.withOpacity(0.3),
+              blurRadius: 30, offset: const Offset(0, 15),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(32),
           child: Stack(
             children: [
-              // Subtle background glow/patterns
+              // Abstract Geometric Shapes for "Smart" look
               Positioned(
-                top: -60, right: -60,
+                top: -50, right: -30,
+                child: Transform.rotate(
+                  angle: 0.4,
+                  child: Container(
+                    width: 200, height: 200,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [Colors.white.withOpacity(0.1), Colors.transparent],
+                        begin: Alignment.topCenter, end: Alignment.bottomCenter,
+                      ),
+                      borderRadius: BorderRadius.circular(40),
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                bottom: -80, left: -40,
                 child: Container(
-                  width: 180, height: 180,
+                  width: 200, height: 200,
                   decoration: BoxDecoration(
-                    color: AppColors.accentGold.withOpacity(0.08),
+                    color: AppColors.accentGold.withOpacity(0.05),
                     shape: BoxShape.circle,
                   ),
                 ),
               ),
               
               Padding(
-                padding: const EdgeInsets.all(24),
+                padding: const EdgeInsets.all(28),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Total Balance', 
-                              style: GoogleFonts.outfit(color: Colors.white.withOpacity(0.7), fontSize: 13, fontWeight: FontWeight.w500)),
-                            const SizedBox(height: 4),
-                            Text('৳ ${_fmt(grandTotal)}',
-                              style: GoogleFonts.outfit(color: Colors.white, fontSize: 36, fontWeight: FontWeight.bold, letterSpacing: -0.5)),
-                          ],
-                        ),
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.1),
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white.withOpacity(0.1)),
-                          ),
-                          child: const Icon(Icons.account_balance_wallet_rounded, color: AppColors.accentGold, size: 24),
-                        ),
-                      ],
-                    ),
-                    
-                    const SizedBox(height: 24),
-                    
-                    // Glassy separator
-                    Container(height: 1, color: Colors.white.withOpacity(0.12)),
-                    const SizedBox(height: 20),
-
-                    Row(
-                      children: [
-                        Icon(Icons.people_outline_rounded, color: AppColors.accentGold.withOpacity(0.8), size: 14),
-                        const SizedBox(width: 8),
-                        Text('BALANCE BY PERSON', 
-                          style: GoogleFonts.outfit(color: Colors.white.withOpacity(0.6), fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    
-                    Wrap(
-                      spacing: 10,
-                      runSpacing: 10,
-                      children: ownerTotals.entries.map((e) {
-                        final label = e.key == 'Self' ? 'Mine' : e.key;
-                        final accs = ownerAccounts[e.key] ?? [];
-                        return GestureDetector(
-                          onTap: () => _showOwnerBreakdown(label, e.value, accs),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.08),
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: Colors.white.withOpacity(0.15)),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
+                            Text('TOTAL ASSETS', 
+                              style: GoogleFonts.outfit(color: Colors.white.withOpacity(0.6), fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.5)),
+                            const SizedBox(height: 8),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
-                                Text(label, style: GoogleFonts.outfit(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
+                                Text('৳', style: GoogleFonts.outfit(color: AppColors.accentGold, fontSize: 24, fontWeight: FontWeight.w600)),
                                 const SizedBox(width: 8),
-                                Text('৳ ${_fmt(e.value)}', style: GoogleFonts.outfit(color: AppColors.accentGold, fontSize: 13, fontWeight: FontWeight.bold)),
-                                const SizedBox(width: 6),
-                                Icon(Icons.keyboard_arrow_down_rounded, color: Colors.white38, size: 14),
+                                Text(_fmt(grandTotal),
+                                  style: GoogleFonts.outfit(color: Colors.white, fontSize: 38, fontWeight: FontWeight.bold, letterSpacing: -1)),
                               ],
                             ),
+                          ],
+                        ),
+                        // NFC/Chip Icon for Card Feel
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
                           ),
-                        );
-                      }).toList(),
+                          child: const Icon(Icons.nfc_rounded, color: AppColors.accentGold, size: 24),
+                        ),
+                      ],
+                    ),
+                    
+                    const SizedBox(height: 40),
+                    
+                    // Glassmorphic Member Breakdown
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.06),
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(color: Colors.white.withOpacity(0.1)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.analytics_outlined, color: AppColors.accentGold, size: 16),
+                              const SizedBox(width: 8),
+                              Text('MEMBER BREAKDOWN', 
+                                style: GoogleFonts.outfit(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1)),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            physics: const BouncingScrollPhysics(),
+                            child: Row(
+                              children: ownerTotals.entries.map((e) {
+                                final label = e.key == 'Self' ? 'Me' : e.key;
+                                final accs = ownerAccounts[e.key] ?? [];
+                                return GestureDetector(
+                                  onTap: () => _showOwnerBreakdown(label, e.value, accs),
+                                  child: Container(
+                                    margin: const EdgeInsets.only(right: 12),
+                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(label, style: GoogleFonts.outfit(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w500)),
+                                        const SizedBox(height: 4),
+                                        Text('৳${_fmt(e.value)}', style: GoogleFonts.outfit(color: AppColors.accentGold, fontSize: 13, fontWeight: FontWeight.bold)),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
@@ -627,6 +672,81 @@ class _DashboardScreenState extends State<DashboardScreen> {
       },
     );
   }
+
+  // ─────────────────── BOTTOM NAV BAR ───────────────────
+  Widget _buildBottomNavBar() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+      color: Colors.transparent,
+      child: Container(
+        height: 70,
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.95),
+          borderRadius: BorderRadius.circular(30),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.primaryGreen.withOpacity(0.12),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            _navItem(Icons.home_filled, 'Home', true),
+            _navItem(Icons.account_balance_wallet_rounded, 'Wallet', false, onTap: () => _go(const AccountsScreen())),
+            
+            // Central Add Button
+            Transform.translate(
+              offset: const Offset(0, -15),
+              child: Container(
+                width: 60, height: 60,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [AppColors.primaryGreen, Color(0xFF003829)],
+                    begin: Alignment.topLeft, end: Alignment.bottomRight,
+                  ),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.primaryGreen.withOpacity(0.35),
+                      blurRadius: 15,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: const Icon(Icons.add_rounded, color: Colors.white, size: 32),
+              ),
+            ),
+            
+            _navItem(Icons.analytics_rounded, 'Stats', false, onTap: () => _go(const TransactionsScreen())),
+            _navItem(Icons.person_rounded, 'Profile', false, onTap: () => _go(const ProfileScreen())),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _navItem(IconData icon, String label, bool isActive, {VoidCallback? onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, 
+            color: isActive ? AppColors.primaryGreen : Colors.grey.shade400, 
+            size: 26),
+          const SizedBox(height: 4),
+          if (isActive)
+            Container(
+              width: 4, height: 4,
+              decoration: const BoxDecoration(color: AppColors.primaryGreen, shape: BoxShape.circle),
+            ),
+        ],
+      ),
+    );
+  }
 }
 
 class _StickyHeaderDelegate extends SliverPersistentHeaderDelegate {
@@ -637,60 +757,107 @@ class _StickyHeaderDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
-    // Dynamic color: turns from transparent/scaffold color to blurry gold when scrolled
     final isScrolled = shrinkOffset > 0;
     
     return ClipRect(
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          color: isScrolled 
-            ? const Color(0xFF007855).withOpacity(0.9) // Lighter premium green blurry when scroll
-            : const Color(0xFFF4F6F5).withOpacity(0.5), // Transparent/Scaffold when at top
+          duration: const Duration(milliseconds: 300),
+          decoration: BoxDecoration(
+            color: isScrolled 
+              ? const Color(0xFF003829).withOpacity(0.85) 
+              : const Color(0xFFF4F6F5).withOpacity(0.7),
+            border: Border(
+              bottom: BorderSide(
+                color: isScrolled ? Colors.white.withOpacity(0.05) : Colors.transparent,
+                width: 1,
+              ),
+            ),
+          ),
           alignment: Alignment.center,
           child: SafeArea(
             bottom: false,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Row(
                     children: [
-                    GestureDetector(
-                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen())),
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: isScrolled ? Colors.white.withOpacity(0.2) : AppColors.primaryGreen.withOpacity(0.1),
-                          shape: BoxShape.circle,
+                      GestureDetector(
+                        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen())),
+                        child: StreamBuilder<DocumentSnapshot>(
+                          stream: AuthService().getUserProfile(),
+                          builder: (context, snapshot) {
+                            String? profilePic;
+                            if (snapshot.hasData && snapshot.data!.exists) {
+                              profilePic = (snapshot.data!.data() as Map<String, dynamic>)['profilePic'];
+                            }
+                            return Container(
+                              padding: const EdgeInsets.all(2),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                gradient: LinearGradient(
+                                  colors: isScrolled ? [Colors.white30, Colors.white10] : [AppColors.primaryGreen, AppColors.accentGold],
+                                ),
+                              ),
+                              child: CircleAvatar(
+                                radius: 20,
+                                backgroundColor: Colors.white,
+                                backgroundImage: (profilePic != null && profilePic.isNotEmpty) ? NetworkImage(profilePic) : null,
+                                child: (profilePic == null || profilePic.isEmpty)
+                                    ? Icon(Icons.person_rounded, color: AppColors.primaryGreen, size: 20)
+                                    : null,
+                              ),
+                            );
+                          }
                         ),
-                        child: Icon(Icons.person_rounded, 
-                          color: isScrolled ? Colors.white : AppColors.primaryGreen, size: 20),
                       ),
-                    ),
                       const SizedBox(width: 12),
                       Column(
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Welcome back,', 
-                            style: GoogleFonts.outfit(color: isScrolled ? Colors.white70 : AppColors.textGrey, fontSize: 10)),
+                          Text(_DashboardScreenState.getGreeting(), 
+                            style: GoogleFonts.outfit(
+                              color: isScrolled ? Colors.white70 : AppColors.textGrey, 
+                              fontSize: 11, 
+                              fontWeight: FontWeight.w500,
+                              letterSpacing: 0.5,
+                            )),
                           Text('Seyam Ali', 
-                            style: GoogleFonts.outfit(color: isScrolled ? Colors.white : AppColors.textBlack, fontSize: 14, fontWeight: FontWeight.bold)),
+                            style: GoogleFonts.outfit(
+                              color: isScrolled ? Colors.white : AppColors.textBlack, 
+                              fontSize: 16, 
+                              fontWeight: FontWeight.bold,
+                            )),
                         ],
                       ),
                     ],
                   ),
                   Container(
-                    padding: const EdgeInsets.all(8),
+                    padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: isScrolled ? Colors.white.withOpacity(0.2) : AppColors.primaryGreen.withOpacity(0.05),
+                      color: isScrolled ? Colors.white.withOpacity(0.15) : Colors.white,
                       shape: BoxShape.circle,
+                      boxShadow: isScrolled ? [] : [
+                        BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4)),
+                      ],
                     ),
-                    child: Icon(Icons.notifications_none_rounded, 
-                      color: isScrolled ? Colors.white : AppColors.primaryGreen, size: 22),
+                    child: Stack(
+                      children: [
+                        Icon(Icons.notifications_none_rounded, 
+                          color: isScrolled ? Colors.white : AppColors.primaryGreen, size: 24),
+                        Positioned(
+                          right: 2, top: 2,
+                          child: Container(
+                            width: 8, height: 8,
+                            decoration: const BoxDecoration(color: Colors.redAccent, shape: BoxShape.circle),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),

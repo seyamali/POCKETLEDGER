@@ -98,80 +98,225 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final Color accentColor = _selectedType == TransactionType.income 
+        ? AppColors.primaryGreen 
+        : (_selectedType == TransactionType.expense ? Colors.redAccent : Colors.blueAccent);
+
     return Scaffold(
-      backgroundColor: AppColors.primaryBackground,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.close_rounded, color: AppColors.primaryText, size: 28),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text('New Record', style: GoogleFonts.montserrat(color: AppColors.primaryText, fontWeight: FontWeight.bold)),
-        centerTitle: true,
-      ),
+      backgroundColor: const Color(0xFFF4F6F5),
       body: StreamBuilder<List<AccountModel>>(
         stream: _accountService.getAccounts(),
         builder: (context, snapshot) {
-          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator(color: AppColors.brandPrimary));
+          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator(color: AppColors.primaryGreen));
           final accounts = snapshot.data!;
 
-          return SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                _buildTypeSelector(),
-                const SizedBox(height: 40),
-                
-                Text('AMOUNT', style: GoogleFonts.montserrat(color: AppColors.secondaryText, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.5)),
-                const SizedBox(height: 8),
-                _buildAmountInput(),
-                
-                const SizedBox(height: 48),
-                _buildSectionLabel(_selectedType == TransactionType.transfer ? 'FROM ACCOUNT' : 'ACCOUNT'),
-                const SizedBox(height: 12),
-                _buildAccountDropdown(accounts, isSource: true),
-                
-                const SizedBox(height: 24),
-                _buildSectionLabel(_selectedType == TransactionType.transfer ? 'FROM OWNER' : 'OWNER'),
-                const SizedBox(height: 12),
-                _buildOwnerDropdown(isSource: true),
-
-                if (_selectedType == TransactionType.transfer) ...[
-                  const SizedBox(height: 32),
+          return Stack(
+            children: [
+              Column(
+                children: [
+                  // ── Premium Header ──
                   Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(color: AppColors.brandPrimary.withOpacity(0.1), shape: BoxShape.circle),
-                    child: const Icon(Icons.arrow_downward_rounded, color: AppColors.brandPrimary, size: 28),
+                    padding: EdgeInsets.fromLTRB(20, MediaQuery.of(context).padding.top + 10, 20, 20),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: const BorderRadius.vertical(bottom: Radius.circular(40)),
+                      boxShadow: [
+                        BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 20, offset: const Offset(0, 10)),
+                      ],
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            IconButton(
+                              onPressed: () => Navigator.pop(context),
+                              icon: const Icon(Icons.close_rounded, color: AppColors.textBlack, size: 28),
+                            ),
+                            _buildTypeSwitch(),
+                            const SizedBox(width: 48),
+                          ],
+                        ),
+                        const SizedBox(height: 30),
+                        _buildMassiveAmountInput(accentColor),
+                        const SizedBox(height: 10),
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: 32),
-                  
-                  _buildSectionLabel('TO ACCOUNT'),
-                  const SizedBox(height: 12),
-                  _buildAccountDropdown(accounts, isSource: false),
-                  
-                  const SizedBox(height: 24),
-                  _buildSectionLabel('TO OWNER'),
-                  const SizedBox(height: 12),
-                  _buildOwnerDropdown(isSource: false),
+
+                  Expanded(
+                    child: SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 30),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildStepTitle('Source', 'Where is this from?'),
+                          const SizedBox(height: 16),
+                          _buildHorizontalAccountSelector(accounts),
+                          
+                          const SizedBox(height: 32),
+                          _buildStepTitle('Member', 'Who is involved?'),
+                          const SizedBox(height: 16),
+                          _buildMemberChips(),
+
+                          if (_selectedType == TransactionType.transfer) ...[
+                            const SizedBox(height: 32),
+                            Center(
+                              child: Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(color: Colors.blueAccent.withOpacity(0.1), shape: BoxShape.circle),
+                                child: const Icon(Icons.swap_vert_rounded, color: Colors.blueAccent, size: 24),
+                              ),
+                            ),
+                            const SizedBox(height: 32),
+                            _buildStepTitle('Destination', 'Where is it going?'),
+                            const SizedBox(height: 16),
+                            _buildHorizontalAccountSelector(accounts, isSource: false),
+                          ],
+
+                          const SizedBox(height: 32),
+                          _buildStepTitle('Category', 'What kind of transaction?'),
+                          const SizedBox(height: 16),
+                          _buildCategoryGrid(accentColor),
+
+                          const SizedBox(height: 32),
+                          _buildStepTitle('Notes', 'Add extra details'),
+                          const SizedBox(height: 16),
+                          _buildNoteInput(),
+                          
+                          const SizedBox(height: 120),
+                        ],
+                      ),
+                    ),
+                  ),
                 ],
+              ),
 
-                const SizedBox(height: 36),
-                _buildSectionLabel('CATEGORY'),
-                const SizedBox(height: 12),
-                _buildCategoryDropdown(),
+              // ── Confirm Button ──
+              Positioned(
+                bottom: 30, left: 24, right: 24,
+                child: _buildActionBtn(accentColor),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
 
-                const SizedBox(height: 24),
-                _buildSectionLabel('DETAILS'),
-                const SizedBox(height: 12),
-                _buildDetailsInputs(),
+  Widget _buildStepTitle(String title, String subtitle) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: GoogleFonts.outfit(color: AppColors.textBlack, fontSize: 18, fontWeight: FontWeight.bold)),
+        Text(subtitle, style: GoogleFonts.outfit(color: AppColors.textGrey, fontSize: 12)),
+      ],
+    );
+  }
 
-                const SizedBox(height: 48),
-                _buildSaveButton(),
-                const SizedBox(height: 40),
-              ],
+  Widget _buildTypeSwitch() {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF4F6F5),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _typeIcon(TransactionType.expense, Icons.remove_rounded, Colors.redAccent),
+          _typeIcon(TransactionType.income, Icons.add_rounded, AppColors.primaryGreen),
+          _typeIcon(TransactionType.transfer, Icons.swap_horiz_rounded, Colors.blueAccent),
+        ],
+      ),
+    );
+  }
+
+  Widget _typeIcon(TransactionType type, IconData icon, Color color) {
+    bool isSelected = _selectedType == type;
+    return GestureDetector(
+      onTap: () => setState(() {
+        _selectedType = type;
+        _selectedCategory = null;
+      }),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? color : Colors.transparent,
+          borderRadius: BorderRadius.circular(15),
+        ),
+        child: Icon(icon, color: isSelected ? Colors.white : AppColors.textGrey, size: 20),
+      ),
+    );
+  }
+
+  Widget _buildMassiveAmountInput(Color color) {
+    return Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Text('৳', style: GoogleFonts.outfit(color: color, fontSize: 32, fontWeight: FontWeight.bold)),
+            const SizedBox(width: 8),
+            IntrinsicWidth(
+              child: TextField(
+                controller: _amountController,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                textAlign: TextAlign.center,
+                style: GoogleFonts.outfit(color: AppColors.textBlack, fontSize: 56, fontWeight: FontWeight.bold, letterSpacing: -1),
+                cursorColor: color,
+                decoration: const InputDecoration(
+                  hintText: '0',
+                  hintStyle: TextStyle(color: Color(0xFFE0E0E0)),
+                  border: InputBorder.none,
+                ),
+              ),
+            ),
+          ],
+        ),
+        Text(_selectedType.toString().split('.').last.toUpperCase(), 
+          style: GoogleFonts.outfit(color: color.withOpacity(0.5), fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 2)),
+      ],
+    );
+  }
+
+  Widget _buildHorizontalAccountSelector(List<AccountModel> accounts, {bool isSource = true}) {
+    final selected = isSource ? _selectedAccount : _toAccount;
+    return SizedBox(
+      height: 54,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        itemCount: accounts.length,
+        itemBuilder: (context, i) {
+          final acc = accounts[i];
+          final isSelected = selected?.id == acc.id;
+          return GestureDetector(
+            onTap: () => setState(() {
+              if (isSource) _selectedAccount = acc;
+              else _toAccount = acc;
+            }),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              margin: const EdgeInsets.only(right: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 22),
+              decoration: BoxDecoration(
+                color: isSelected ? AppColors.primaryGreen : Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: isSelected 
+                  ? [BoxShadow(color: AppColors.primaryGreen.withOpacity(0.2), blurRadius: 10, offset: const Offset(0, 4))]
+                  : [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 5, offset: const Offset(0, 2))],
+              ),
+              alignment: Alignment.center,
+              child: Text(acc.name, 
+                style: GoogleFonts.outfit(
+                  color: isSelected ? Colors.white : AppColors.textBlack, 
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                )),
             ),
           );
         },
@@ -179,223 +324,136 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     );
   }
 
-  Widget _buildSectionLabel(String label) {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Text(label, 
-        style: GoogleFonts.montserrat(color: AppColors.secondaryText, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
-    );
-  }
-
-  Widget _buildTypeSelector() {
-    return Container(
-      padding: const EdgeInsets.all(6),
-      decoration: BoxDecoration(
-        color: AppColors.cardBackground,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4))],
-      ),
-      child: Row(
-        children: [
-          _typeButton(TransactionType.expense, 'Expense'),
-          _typeButton(TransactionType.income, 'Income'),
-          _typeButton(TransactionType.transfer, 'Transfer'),
-        ],
-      ),
-    );
-  }
-
-  Widget _typeButton(TransactionType type, String label) {
-    bool isSelected = _selectedType == type;
-    Color activeColor = AppColors.brandPrimary;
-    
-    return Expanded(
-      child: GestureDetector(
-        onTap: () {
-          setState(() {
-            _selectedType = type;
-            _selectedCategory = null; // Reset category when type changes
-          });
-        },
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          decoration: BoxDecoration(
-            color: isSelected ? activeColor : Colors.transparent,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: isSelected ? [BoxShadow(color: activeColor.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 4))] : [],
+  Widget _buildMemberChips() {
+    return Wrap(
+      spacing: 10,
+      runSpacing: 10,
+      children: _owners.map((owner) {
+        final isSelected = _selectedOwner == owner;
+        return GestureDetector(
+          onTap: () => setState(() => _selectedOwner = owner),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            decoration: BoxDecoration(
+              color: isSelected ? AppColors.accentGold : Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 5)],
+            ),
+            child: Text(owner, 
+              style: GoogleFonts.outfit(
+                color: isSelected ? Colors.white : AppColors.textBlack, 
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+              )),
           ),
-          child: Text(label, 
-            textAlign: TextAlign.center,
-            style: GoogleFonts.montserrat(
-              color: isSelected ? Colors.white : AppColors.secondaryText,
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
-            )),
-        ),
-      ),
+        );
+      }).toList(),
     );
   }
 
-  Widget _buildAmountInput() {
-    Color activeColor = AppColors.brandPrimary;
-
-    return IntrinsicWidth(
-      child: TextField(
-        controller: _amountController,
-        keyboardType: TextInputType.number,
-        textAlign: TextAlign.center,
-        style: GoogleFonts.montserrat(fontSize: 54, fontWeight: FontWeight.bold, color: AppColors.primaryText),
-        decoration: InputDecoration(
-          border: InputBorder.none,
-          hintText: '0',
-          hintStyle: TextStyle(color: AppColors.secondaryText.withOpacity(0.3)),
-          prefixText: '৳ ',
-          prefixStyle: TextStyle(color: activeColor, fontSize: 32, fontWeight: FontWeight.bold),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAccountDropdown(List<AccountModel> accounts, {required bool isSource}) {
-    final value = isSource ? _selectedAccount : _toAccount;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 6),
-      decoration: BoxDecoration(
-        color: AppColors.cardBackground,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.brandPrimary.withOpacity(0.05)),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4))],
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<AccountModel>(
-          value: value != null && accounts.any((a) => a.id == value.id) 
-              ? accounts.firstWhere((a) => a.id == value.id) 
-              : null,
-          isExpanded: true,
-          icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.secondaryText),
-          hint: Text('Select Account', style: GoogleFonts.montserrat(color: AppColors.secondaryText, fontSize: 15)),
-          items: accounts.map((acc) => DropdownMenuItem(
-            value: acc,
-            child: Text(acc.name, style: GoogleFonts.montserrat(fontWeight: FontWeight.w600, fontSize: 16)),
-          )).toList(),
-          onChanged: (val) => setState(() {
-            if (isSource) _selectedAccount = val;
-            else _toAccount = val;
-          }),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildOwnerDropdown({required bool isSource}) {
-    final value = isSource ? _selectedOwner : _toOwner;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 6),
-      decoration: BoxDecoration(
-        color: AppColors.cardBackground,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.brandPrimary.withOpacity(0.05)),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4))],
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: value,
-          isExpanded: true,
-          icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.secondaryText),
-          items: _owners.map((owner) => DropdownMenuItem(
-            value: owner,
-            child: Text(owner, style: GoogleFonts.montserrat(fontWeight: FontWeight.w600, fontSize: 16)),
-          )).toList(),
-          onChanged: (val) => setState(() {
-            if (isSource) _selectedOwner = val!;
-            else _toOwner = val!;
-          }),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCategoryDropdown() {
-    List<String> categories = [];
+  Widget _buildCategoryGrid(Color color) {
+    List<Map<String, dynamic>> categories = [];
     if (_selectedType == TransactionType.income) {
-      categories = ['Income', 'Salary', 'Business', 'Other Income'];
+      categories = [
+        {'name': 'Income', 'icon': Icons.payments_rounded},
+        {'name': 'Salary', 'icon': Icons.work_rounded},
+        {'name': 'Business', 'icon': Icons.store_rounded},
+        {'name': 'Other', 'icon': Icons.more_horiz_rounded},
+      ];
     } else if (_selectedType == TransactionType.expense) {
-      categories = ['Expense', 'Home', 'Wife Expense', 'My Expense', 'Other Expense'];
+      categories = [
+        {'name': 'Home', 'icon': Icons.home_rounded},
+        {'name': 'Food', 'icon': Icons.restaurant_rounded},
+        {'name': 'Transport', 'icon': Icons.directions_bus_rounded},
+        {'name': 'Wife', 'icon': Icons.favorite_rounded},
+        {'name': 'Myself', 'icon': Icons.person_rounded},
+        {'name': 'Other', 'icon': Icons.grid_view_rounded},
+      ];
     } else {
-      categories = ['Transfer', 'Monthly Savings', 'Other Transfer'];
+      categories = [
+        {'name': 'Transfer', 'icon': Icons.swap_horiz_rounded},
+        {'name': 'Savings', 'icon': Icons.savings_rounded},
+      ];
     }
 
-    // Ensure the selected category is valid for the current type
-    if (_selectedCategory != null && !categories.contains(_selectedCategory)) {
-      _selectedCategory = null;
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 6),
-      decoration: BoxDecoration(
-        color: AppColors.cardBackground,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.brandPrimary.withOpacity(0.05)),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4))],
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3, crossAxisSpacing: 12, mainAxisSpacing: 12, childAspectRatio: 1.1,
       ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: _selectedCategory ?? categories.first,
-          isExpanded: true,
-          icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.secondaryText),
-          items: categories.map((cat) => DropdownMenuItem(
-            value: cat,
-            child: Text(cat, style: GoogleFonts.montserrat(fontWeight: FontWeight.w600, fontSize: 16)),
-          )).toList(),
-          onChanged: (val) => setState(() => _selectedCategory = val),
+      itemCount: categories.length,
+      itemBuilder: (context, i) {
+        final cat = categories[i];
+        final isSelected = (_selectedCategory ?? categories.first['name']) == cat['name'];
+        return GestureDetector(
+          onTap: () => setState(() => _selectedCategory = cat['name']),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            decoration: BoxDecoration(
+              color: isSelected ? color : Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: isSelected 
+                ? [BoxShadow(color: color.withOpacity(0.2), blurRadius: 8)]
+                : [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 4)],
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(cat['icon'], color: isSelected ? Colors.white : color.withOpacity(0.6), size: 24),
+                const SizedBox(height: 8),
+                Text(cat['name'], style: GoogleFonts.outfit(color: isSelected ? Colors.white : AppColors.textBlack, fontSize: 11, fontWeight: FontWeight.bold)),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildNoteInput() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10)],
+      ),
+      child: TextField(
+        controller: _noteController,
+        style: GoogleFonts.outfit(color: AppColors.textBlack, fontSize: 15),
+        decoration: InputDecoration(
+          hintText: 'Add a note...',
+          hintStyle: TextStyle(color: Colors.grey.shade400),
+          border: InputBorder.none,
+          icon: Icon(Icons.sticky_note_2_rounded, color: AppColors.primaryGreen.withOpacity(0.5), size: 20),
         ),
       ),
     );
   }
 
-  Widget _buildDetailsInputs() {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: AppColors.cardBackground,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppColors.brandPrimary.withOpacity(0.05)),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 15, offset: const Offset(0, 8))],
-      ),
-      child: Column(
-        children: [
-          CustomTextField(
-            controller: _noteController,
-            hintText: 'Note (optional)',
-            icon: Icons.notes_rounded,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSaveButton() {
-    Color activeColor = AppColors.brandPrimary;
-                      
+  Widget _buildActionBtn(Color color) {
     return Container(
       width: double.infinity,
-      height: 64,
+      height: 60,
       decoration: BoxDecoration(
+        gradient: LinearGradient(colors: [color, color.withOpacity(0.8)]),
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: activeColor.withOpacity(0.3), blurRadius: 15, offset: const Offset(0, 8))],
+        boxShadow: [BoxShadow(color: color.withOpacity(0.3), blurRadius: 15, offset: const Offset(0, 8))],
       ),
       child: ElevatedButton(
         onPressed: _isLoading ? null : _handleSave,
         style: ElevatedButton.styleFrom(
-          backgroundColor: activeColor,
+          backgroundColor: Colors.transparent,
           foregroundColor: Colors.white,
+          shadowColor: Colors.transparent,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           elevation: 0,
         ),
         child: _isLoading 
           ? const CircularProgressIndicator(color: Colors.white)
-          : Text('Save Record', style: GoogleFonts.montserrat(fontWeight: FontWeight.bold, fontSize: 18, letterSpacing: 0.5)),
+          : Text('Save Transaction', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold)),
       ),
     );
   }
