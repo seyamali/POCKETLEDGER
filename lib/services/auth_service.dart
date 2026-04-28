@@ -1,13 +1,13 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_storage/firebase_storage.dart';
+import 'dart:convert';
 import 'package:pocketledger/utils/hash_helper.dart';
 import 'dart:typed_data';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _db = FirebaseFirestore.instance;
-  final FirebaseStorage _storage = FirebaseStorage.instance;
+  // Firebase Storage removed for Spark Plan compatibility
 
   // Get current user UID
   String? get currentUserUid => _auth.currentUser?.uid;
@@ -83,20 +83,21 @@ class AuthService {
       final updates = <String, dynamic>{'name': name};
       if (profilePic != null) updates['profilePic'] = profilePic;
       
-      await _db.collection('users').doc(uid).update(updates);
+      await _db.collection('users').doc(uid).set(updates, SetOptions(merge: true));
     }
   }
 
-  // Upload Profile Image (Web & Mobile Compatible)
+  // Upload Profile Image (Converted to Base64 for Firestore)
   Future<String?> uploadProfileImage(Uint8List imageBytes) async {
     try {
-      final uid = currentUserUid;
-      if (uid == null) return null;
-
-      final ref = _storage.ref().child('profile_pics').child('$uid.jpg');
-      await ref.putData(imageBytes, SettableMetadata(contentType: 'image/jpeg'));
-      return await ref.getDownloadURL();
+      // 1. Convert bytes to Base64 string
+      String base64Image = base64Encode(imageBytes);
+      
+      // 2. Format as a Data URL so Image.network can't use it, but MemoryImage can
+      // We prefix it so we know it's a base64 string
+      return "base64:$base64Image";
     } catch (e) {
+      print('DEBUG: Base64 conversion error: $e');
       return null;
     }
   }

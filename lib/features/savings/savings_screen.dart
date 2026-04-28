@@ -6,6 +6,7 @@ import 'package:pocketledger/models/transaction_model.dart';
 import 'package:pocketledger/services/account_service.dart';
 import 'package:pocketledger/services/transaction_service.dart';
 import 'package:pocketledger/features/auth/widgets/custom_text_field.dart';
+import 'package:pocketledger/core/constants/app_constants.dart';
 
 class SavingsScreen extends StatefulWidget {
   const SavingsScreen({super.key});
@@ -43,9 +44,9 @@ class _SavingsScreenState extends State<SavingsScreen> {
               children: [
                 _modalHeader(context, 'New Savings Account'),
                 const SizedBox(height: 24),
-                _buildModalInput('Account Name (e.g. DPS, bKash)', nameCtrl, Icons.edit_note_rounded, Colors.amber.shade600),
+                _buildModalInput('Account Name (e.g. DPS, bKash)', nameCtrl, Icons.edit_note_rounded, Colors.amber.shade600, isNumeric: false),
                 const SizedBox(height: 16),
-                _buildModalInput('Opening Balance', balanceCtrl, Icons.savings_rounded, Colors.amber.shade600),
+                _buildModalInput('Opening Balance', balanceCtrl, Icons.savings_rounded, Colors.amber.shade600, isNumeric: true),
                 const SizedBox(height: 32),
                 _primaryBtn('Create Account', isLoading, () async {
                   if (nameCtrl.text.isEmpty || balanceCtrl.text.isEmpty) return;
@@ -53,7 +54,7 @@ class _SavingsScreenState extends State<SavingsScreen> {
                   await _accountService.createAccount(
                     name: nameCtrl.text,
                     type: 'Savings',
-                    breakdown: {'Self': double.parse(balanceCtrl.text)},
+                    breakdown: {AppConstants.ownerSelf: double.parse(balanceCtrl.text)},
                   );
                   if (mounted) Navigator.pop(context);
                 }),
@@ -118,7 +119,7 @@ class _SavingsScreenState extends State<SavingsScreen> {
                   ),
                   const SizedBox(height: 20),
 
-                  _buildModalInput('Amount to Save', amountCtrl, Icons.add_circle_rounded, AppColors.primaryGreen),
+                  _buildModalInput('Amount to Save', amountCtrl, Icons.add_circle_rounded, AppColors.primaryGreen, isNumeric: true),
                   const SizedBox(height: 16),
                   
                   // Toggle for "Already Paid"
@@ -167,7 +168,15 @@ class _SavingsScreenState extends State<SavingsScreen> {
                     if (amountCtrl.text.isEmpty || toSavingsAccount == null || (!alreadyPaid && fromAccount == null)) return;
                     setModalState(() => isLoading = true);
                     
-                    final txDate = DateTime(selectedMonth.year, selectedMonth.month, 15);
+                    final now = DateTime.now();
+                    final isCurrentMonth = selectedMonth.year == now.year && selectedMonth.month == now.month;
+                    
+                    // Use exact 'now' for current month entries so they show at the top
+                    // Use 15th of the month for past/future entries
+                    final txDate = isCurrentMonth 
+                        ? now 
+                        : DateTime(selectedMonth.year, selectedMonth.month, 15);
+                        
                     final amount = double.parse(amountCtrl.text);
 
                     if (alreadyPaid) {
@@ -185,10 +194,10 @@ class _SavingsScreenState extends State<SavingsScreen> {
                       await _transactionService.addTransferWithDate(
                         fromAccountId: fromAccount!.id,
                         fromAccountName: fromAccount!.name,
-                        fromOwner: 'Self',
+                        fromOwner: AppConstants.ownerSelf,
                         toAccountId: toSavingsAccount!.id,
                         toAccountName: toSavingsAccount!.name,
-                        toOwner: 'Self',
+                        toOwner: AppConstants.ownerSelf,
                         amount: amount,
                         note: 'Monthly savings contribution',
                         category: 'Savings Transfer',
@@ -220,20 +229,20 @@ class _SavingsScreenState extends State<SavingsScreen> {
     );
   }
 
-  Widget _buildModalInput(String label, TextEditingController ctrl, IconData icon, Color color) {
+  Widget _buildModalInput(String label, TextEditingController ctrl, IconData icon, Color color, {bool isNumeric = false}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
       child: TextField(
         controller: ctrl,
-        keyboardType: TextInputType.number,
+        keyboardType: isNumeric ? TextInputType.number : TextInputType.text,
         style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold),
         decoration: InputDecoration(
           labelText: label,
           labelStyle: GoogleFonts.outfit(color: AppColors.textGrey, fontSize: 12),
           prefixIcon: Icon(icon, color: color, size: 20),
           border: InputBorder.none,
-          suffixText: '৳',
+          suffixText: isNumeric ? '৳' : null,
         ),
       ),
     );

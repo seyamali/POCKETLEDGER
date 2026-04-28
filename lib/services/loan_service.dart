@@ -5,188 +5,196 @@ import 'package:pocketledger/models/transaction_model.dart';
 
 class LoanService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-
-  String? get _uid => _auth.currentUser?.uid;
+  final String? _uid = FirebaseAuth.instance.currentUser?.uid;
 
   // Add a new loan
-  Future<void> addLoan({
-    required String personName,
-    required double amount,
-    required LoanType type,
-    String? linkedAccountId,
-    String? linkedAccountName,
-    required String note,
-  }) async {
+  Future<void> addLoan(LoanModel loan) async {
     if (_uid == null) return;
 
-    await _db.runTransaction((tx) async {
-      // 1. Create the Loan document
-      final loanRef = _db.collection('loans').doc();
-      final loan = LoanModel(
-        id: loanRef.id,
-        personName: personName,
-        amount: amount,
-        remainingAmount: amount,
-        type: type,
-        status: LoanStatus.pending,
-        linkedAccountId: linkedAccountId,
-        date: DateTime.now(),
-        note: note,
-        userId: _uid!,
-        repayments: [],
-      );
-      
-      tx.set(loanRef, loan.toFirestore());
+    final loanRef = _db.collection('loans').doc();
+    await _db.runTransaction((transaction) async {
+      // 1. Save Loan Document
+      transaction.set(loanRef, loan.toFirestore()..addAll({'userId': _uid}));
 
-      // 2. If a linked account is provided, affect the account balance and add a transaction
-      if (linkedAccountId != null && linkedAccountName != null) {
-        final accountRef = _db.collection('accounts').doc(linkedAccountId);
-        final accountDoc = await tx.get(accountRef);
+      // 2. Adjust Linked Account Balance if provided
+      if (loan.linkedAccountId != null) {
+        final accountRef = _db.collection('accounts').doc(loan.linkedAccountId);
+        final accountDoc = await transaction.get(accountRef);
+        
+        if (accountDoc.exists) {
+          final accountData = accountDoc.data() as Map<String, dynamic>;
+          double currentTotal = (accountData['totalBalance'] ?? 0).toDouble();
+          Map<String, double> breakdown = Map<String, double>.from(
+            (accountData['breakdown'] ?? {}).map((key, value) => MapEntry(key, value.toDouble())),
+          );
 
-        if (!accountDoc.exists) throw Exception('Linked account not found');
+          double ownerBalance = breakdown[loan.owner] ?? 0;
 
-        final accountData = accountDoc.data() as Map<String, dynamic>;
-        double currentTotal = (accountData['totalBalance'] ?? 0).toDouble();
-        Map<String, double> breakdown = Map<String, double>.from(
-          (accountData['breakdown'] ?? {}).map((key, value) => MapEntry(key, value.toDouble())),
-        );
+          if (loan.type == LoanType.taken) {
+            // Taking loan adds money to account
+            currentTotal += loan.amount;
+            ownerBalance += loan.amount;
+          } else {
+            // Giving loan subtracts money from account
+            currentTotal -= loan.amount;
+            ownerBalance -= loan.amount;
+          }
 
-        // Assume the loan is tied to 'Self' owner for simplicity, or we could ask for owner.
-        // We will default to 'Self'.
-        String owner = 'Self';
-        double ownerBalance = breakdown[owner] ?? 0;
+          breakdown[loan.owner] = ownerBalance;
 
-        TransactionType transType;
-        if (type == LoanType.given) {
-          // Money is going out of the account
-          currentTotal -= amount;
-          ownerBalance -= amount;
-          transType = TransactionType.expense;
-        } else {
-          // Money is coming into the account
-          currentTotal += amount;
-          ownerBalance += amount;
-          transType = TransactionType.income;
+          transaction.update(accountRef, {
+            'totalBalance': currentTotal,
+            'breakdown': breakdown,
+          });
+
+          // 3. Add initial transaction record
+          final transRef = _db.collection('transactions').doc();
+          transaction.set(transRef, TransactionModel(
+            id: transRef.id,
+            accountId: loan.linkedAccountId!,
+            accountName: loan.linkedAccountName ?? 'Account',
+            owner: loan.owner,
+            amount: loan.amount,
+            type: loan.type == LoanType.taken ? TransactionType.income : TransactionType.expense,
+            category: 'Loan (${loan.type == LoanType.taken ? 'Taken' : 'Given'})',
+            note: 'Loan with ${loan.personName}',
+            date: loan.date,
+            userId: _uid!,
+            loanId: loanRef.id,
+          ).toFirestore());
         }
-
-        breakdown[owner] = ownerBalance;
-
-        tx.update(accountRef, {
-          'totalBalance': currentTotal,
-          'breakdown': breakdown,
-        });
-
-        // Add a normal transaction to reflect this change
-        final transRef = _db.collection('transactions').doc();
-        final transaction = TransactionModel(
-          id: transRef.id,
-          accountId: linkedAccountId,
-          accountName: linkedAccountName,
-          owner: owner,
-          amount: amount,
-          type: transType,
-          category: type == LoanType.given ? 'Loan Given' : 'Loan Taken',
-          note: 'Loan with $personName',
-          date: DateTime.now(),
-          userId: _uid!,
-        );
-        tx.set(transRef, transaction.toFirestore());
       }
     });
   }
 
-  // Add a repayment to a loan
+  // Add a repayment (Two-way transfer)
   Future<void> addRepayment({
     required String loanId,
     required double paymentAmount,
-    String? linkedAccountId,
-    String? linkedAccountName,
-    required String note,
+    String? sourceAccountId,
+    String? sourceAccountName,
+    String sourceOwner = 'Self',
+    String? destAccountId,
+    String? destAccountName,
+    String? destOwner,
+    String note = '',
   }) async {
     if (_uid == null) return;
 
     await _db.runTransaction((tx) async {
       final loanRef = _db.collection('loans').doc(loanId);
       final loanDoc = await tx.get(loanRef);
-
-      if (!loanDoc.exists) throw Exception('Loan not found');
+      if (!loanDoc.exists) return;
 
       final loan = LoanModel.fromFirestore(loanDoc);
+      final repaymentId = DateTime.now().millisecondsSinceEpoch.toString();
       
-      if (loan.remainingAmount < paymentAmount) {
-        throw Exception('Payment amount cannot exceed remaining balance');
-      }
-
-      double newRemaining = loan.remainingAmount - paymentAmount;
-      LoanStatus newStatus = newRemaining <= 0 ? LoanStatus.paid : LoanStatus.pending;
-
       final repayment = RepaymentModel(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        id: repaymentId,
         amount: paymentAmount,
         date: DateTime.now(),
         note: note,
+        sourceAccountId: sourceAccountId,
+        sourceAccountName: sourceAccountName,
+        sourceOwner: sourceOwner,
+        destAccountId: destAccountId,
+        destAccountName: destAccountName,
+        destOwner: destOwner,
       );
 
-      final updatedRepayments = List<RepaymentModel>.from(loan.repayments)..add(repayment);
-
+      // 1. UPDATE LOAN RECORD
+      List<RepaymentModel> newRepayments = List.from(loan.repayments)..add(repayment);
+      double newRemaining = loan.remainingAmount - paymentAmount;
+      
       tx.update(loanRef, {
+        'repayments': newRepayments.map((r) => r.toMap()).toList(),
         'remainingAmount': newRemaining,
-        'status': newStatus == LoanStatus.paid ? 'paid' : 'pending',
-        'repayments': updatedRepayments.map((r) => r.toMap()).toList(),
+        'status': newRemaining <= 0 ? 'paid' : 'pending',
       });
 
-      // If tied to an account, adjust balances
-      if (linkedAccountId != null && linkedAccountName != null) {
-        final accountRef = _db.collection('accounts').doc(linkedAccountId);
+      // 2. ADJUST SOURCE ACCOUNT (Where money is coming from, e.g. My Bank)
+      if (sourceAccountId != null && sourceAccountName != null) {
+        final accountRef = _db.collection('accounts').doc(sourceAccountId);
         final accountDoc = await tx.get(accountRef);
+        if (accountDoc.exists) {
+          final accountData = accountDoc.data() as Map<String, dynamic>;
+          double currentTotal = (accountData['totalBalance'] ?? 0).toDouble();
+          Map<String, double> breakdown = Map<String, double>.from(
+            (accountData['breakdown'] ?? {}).map((key, value) => MapEntry(key, value.toDouble())),
+          );
 
-        if (!accountDoc.exists) throw Exception('Linked account not found');
+          double ownerBalance = breakdown[sourceOwner] ?? 0;
 
-        final accountData = accountDoc.data() as Map<String, dynamic>;
-        double currentTotal = (accountData['totalBalance'] ?? 0).toDouble();
-        Map<String, double> breakdown = Map<String, double>.from(
-          (accountData['breakdown'] ?? {}).map((key, value) => MapEntry(key, value.toDouble())),
-        );
-
-        String owner = 'Self';
-        double ownerBalance = breakdown[owner] ?? 0;
-
-        TransactionType transType;
-        if (loan.type == LoanType.given) {
-          // Receiving money back (Income)
-          currentTotal += paymentAmount;
-          ownerBalance += paymentAmount;
-          transType = TransactionType.income;
-        } else {
-          // Paying money back (Expense)
+          // Deduct from source
           currentTotal -= paymentAmount;
           ownerBalance -= paymentAmount;
-          transType = TransactionType.expense;
+          breakdown[sourceOwner] = ownerBalance;
+
+          tx.update(accountRef, {
+            'totalBalance': currentTotal,
+            'breakdown': breakdown,
+          });
+
+          // Record Transaction for Source
+          final transRef = _db.collection('transactions').doc();
+          tx.set(transRef, TransactionModel(
+            id: transRef.id,
+            accountId: sourceAccountId,
+            accountName: sourceAccountName,
+            owner: sourceOwner,
+            amount: paymentAmount,
+            type: TransactionType.expense,
+            category: 'Loan Repayment (Sent)',
+            note: 'Paid to ${loan.personName} from $sourceOwner portion',
+            date: DateTime.now(),
+            userId: _uid!,
+            loanId: loanId,
+            repaymentId: repaymentId,
+          ).toFirestore());
         }
+      }
 
-        breakdown[owner] = ownerBalance;
+      // 3. ADJUST DESTINATION ACCOUNT (Where money is going back to, e.g. Mother's bKash)
+      if (destAccountId != null && destAccountName != null) {
+        final accountRef = _db.collection('accounts').doc(destAccountId);
+        final accountDoc = await tx.get(accountRef);
+        if (accountDoc.exists) {
+          final accountData = accountDoc.data() as Map<String, dynamic>;
+          double currentTotal = (accountData['totalBalance'] ?? 0).toDouble();
+          Map<String, double> breakdown = Map<String, double>.from(
+            (accountData['breakdown'] ?? {}).map((key, value) => MapEntry(key, value.toDouble())),
+          );
 
-        tx.update(accountRef, {
-          'totalBalance': currentTotal,
-          'breakdown': breakdown,
-        });
+          String owner = destOwner ?? loan.personName; 
+          double ownerBalance = breakdown[owner] ?? 0;
 
-        // Record the transaction
-        final transRef = _db.collection('transactions').doc();
-        final transaction = TransactionModel(
-          id: transRef.id,
-          accountId: linkedAccountId,
-          accountName: linkedAccountName,
-          owner: owner,
-          amount: paymentAmount,
-          type: transType,
-          category: loan.type == LoanType.given ? 'Loan Repayment Received' : 'Loan Repayment Paid',
-          note: 'Repayment from/to ${loan.personName}',
-          date: DateTime.now(),
-          userId: _uid!,
-        );
-        tx.set(transRef, transaction.toFirestore());
+          // Add back to destination
+          currentTotal += paymentAmount;
+          ownerBalance += paymentAmount;
+          breakdown[owner] = ownerBalance;
+
+          tx.update(accountRef, {
+            'totalBalance': currentTotal,
+            'breakdown': breakdown,
+          });
+
+          // Record Transaction for Destination
+          final transRef = _db.collection('transactions').doc();
+          tx.set(transRef, TransactionModel(
+            id: transRef.id,
+            accountId: destAccountId,
+            accountName: destAccountName,
+            owner: owner,
+            amount: paymentAmount,
+            type: TransactionType.income,
+            category: 'Loan Repayment (Received)',
+            note: 'Received back into $owner portion',
+            date: DateTime.now(),
+            userId: _uid!,
+            loanId: loanId,
+            repaymentId: repaymentId,
+          ).toFirestore());
+        }
       }
     });
   }
@@ -198,12 +206,126 @@ class LoanService {
     return _db
         .collection('loans')
         .where('userId', isEqualTo: _uid)
+        .orderBy('date', descending: true)
         .snapshots()
         .map((snapshot) {
-      var list = snapshot.docs.map((doc) => LoanModel.fromFirestore(doc)).toList();
-      // Sort locally to bypass Firebase composite index requirements
-      list.sort((a, b) => b.date.compareTo(a.date));
-      return list;
+      return snapshot.docs.map((doc) => LoanModel.fromFirestore(doc)).toList();
+    });
+  }
+
+  // DELETE A FULL LOAN (AND REVERT BALANCES)
+  Future<void> deleteLoan(LoanModel loan) async {
+    await _db.runTransaction((tx) async {
+      if (loan.linkedAccountId != null) {
+        final accRef = _db.collection('accounts').doc(loan.linkedAccountId);
+        final accSnap = await tx.get(accRef);
+        
+        if (accSnap.exists) {
+          final data = accSnap.data() as Map<String, dynamic>;
+          Map<String, double> breakdown = Map<String, double>.from(
+            (data['breakdown'] ?? {}).map((k, v) => MapEntry(k.toString(), (v as num).toDouble()))
+          );
+          
+          double ownerBalance = breakdown[loan.owner] ?? 0;
+          double totalBalance = (data['totalBalance'] ?? 0).toDouble();
+          
+          if (loan.type == LoanType.taken) {
+            ownerBalance -= loan.amount;
+            totalBalance -= loan.amount;
+          } else {
+            ownerBalance += loan.amount;
+            totalBalance += loan.amount;
+          }
+          
+          breakdown[loan.owner] = ownerBalance;
+          tx.update(accRef, {
+            'breakdown': breakdown,
+            'totalBalance': totalBalance,
+          });
+        }
+      }
+
+      for (var rep in loan.repayments) {
+        if (rep.sourceAccountId != null) {
+          final srcRef = _db.collection('accounts').doc(rep.sourceAccountId);
+          final srcSnap = await tx.get(srcRef);
+          if (srcSnap.exists) {
+            final data = srcSnap.data() as Map<String, dynamic>;
+            Map<String, double> bd = Map<String, double>.from((data['breakdown'] ?? {}).map((k, v) => MapEntry(k.toString(), (v as num).toDouble())));
+            double tot = (data['totalBalance'] ?? 0).toDouble();
+            bd[rep.sourceOwner] = (bd[rep.sourceOwner] ?? 0) + rep.amount;
+            tx.update(srcRef, {'breakdown': bd, 'totalBalance': tot + rep.amount});
+          }
+        }
+        if (rep.destAccountId != null) {
+          final dstRef = _db.collection('accounts').doc(rep.destAccountId);
+          final dstSnap = await tx.get(dstRef);
+          if (dstSnap.exists) {
+            final data = dstSnap.data() as Map<String, dynamic>;
+            Map<String, double> bd = Map<String, double>.from((data['breakdown'] ?? {}).map((k, v) => MapEntry(k.toString(), (v as num).toDouble())));
+            double tot = (data['totalBalance'] ?? 0).toDouble();
+            bd[rep.destOwner ?? 'Other'] = (bd[rep.destOwner ?? 'Other'] ?? 0) - rep.amount;
+            tx.update(dstRef, {'breakdown': bd, 'totalBalance': tot - rep.amount});
+          }
+        }
+      }
+
+      final transQuery = await _db.collection('transactions').where('loanId', isEqualTo: loan.id).get();
+      for (var doc in transQuery.docs) {
+        tx.delete(doc.reference);
+      }
+
+      tx.delete(_db.collection('loans').doc(loan.id));
+    });
+  }
+
+  // DELETE A SINGLE REPAYMENT
+  Future<void> deleteRepayment(String loanId, RepaymentModel repayment) async {
+    await _db.runTransaction((tx) async {
+      final loanRef = _db.collection('loans').doc(loanId);
+      final loanSnap = await tx.get(loanRef);
+      if (!loanSnap.exists) return;
+      
+      final loan = LoanModel.fromFirestore(loanSnap);
+      
+      if (repayment.sourceAccountId != null) {
+        final srcRef = _db.collection('accounts').doc(repayment.sourceAccountId);
+        final srcSnap = await tx.get(srcRef);
+        if (srcSnap.exists) {
+          final data = srcSnap.data() as Map<String, dynamic>;
+          Map<String, double> bd = Map<String, double>.from((data['breakdown'] ?? {}).map((k, v) => MapEntry(k.toString(), (v as num).toDouble())));
+          double tot = (data['totalBalance'] ?? 0).toDouble();
+          bd[repayment.sourceOwner] = (bd[repayment.sourceOwner] ?? 0) + repayment.amount;
+          tx.update(srcRef, {'breakdown': bd, 'totalBalance': tot + repayment.amount});
+        }
+      }
+
+      if (repayment.destAccountId != null) {
+        final dstRef = _db.collection('accounts').doc(repayment.destAccountId);
+        final dstSnap = await tx.get(dstRef);
+        if (dstSnap.exists) {
+          final data = dstSnap.data() as Map<String, dynamic>;
+          Map<String, double> bd = Map<String, double>.from((data['breakdown'] ?? {}).map((k, v) => MapEntry(k.toString(), (v as num).toDouble())));
+          double tot = (data['totalBalance'] ?? 0).toDouble();
+          bd[repayment.destOwner ?? 'Other'] = (bd[repayment.destOwner ?? 'Other'] ?? 0) - repayment.amount;
+          tx.update(dstRef, {'breakdown': bd, 'totalBalance': tot - repayment.amount});
+        }
+      }
+
+      List<RepaymentModel> reps = List.from(loan.repayments);
+      reps.removeWhere((r) => r.id == repayment.id);
+      double newRemaining = loan.remainingAmount + repayment.amount;
+      
+      tx.update(loanRef, {
+        'repayments': reps.map((r) => r.toMap()).toList(),
+        'remainingAmount': newRemaining,
+        'status': newRemaining <= 0 ? 'paid' : 'pending',
+      });
+
+      final transQuery = await _db.collection('transactions').where('repaymentId', isEqualTo: repayment.id).get();
+      for (var doc in transQuery.docs) {
+        tx.delete(doc.reference);
+      }
     });
   }
 }

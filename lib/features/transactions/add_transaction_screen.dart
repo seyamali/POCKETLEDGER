@@ -6,6 +6,7 @@ import 'package:pocketledger/models/transaction_model.dart';
 import 'package:pocketledger/services/account_service.dart';
 import 'package:pocketledger/services/transaction_service.dart';
 import 'package:pocketledger/features/auth/widgets/custom_text_field.dart';
+import 'package:pocketledger/core/constants/app_constants.dart';
 
 class AddTransactionScreen extends StatefulWidget {
   final TransactionType initialType;
@@ -22,15 +23,15 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   late TransactionType _selectedType;
   AccountModel? _selectedAccount;
   AccountModel? _toAccount; // For transfers
-  String _selectedOwner = 'Self';
-  String _toOwner = 'Self'; // For transfers
+  String _selectedOwner = AppConstants.ownerSelf;
+  String _toOwner = AppConstants.ownerSelf; // For transfers
   
   final _amountController = TextEditingController();
   final _noteController = TextEditingController();
   String? _selectedCategory;
   
   bool _isLoading = false;
-  final List<String> _owners = ['Self', 'Father', 'Mother', 'Others'];
+  final List<String> _owners = AppConstants.allowedOwners;
 
   @override
   void initState() {

@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:pocketledger/models/transaction_model.dart';
+import 'package:pocketledger/core/utils/error_logger.dart';
 
 class TransactionService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -12,12 +13,13 @@ class TransactionService {
   Future<void> addTransaction(TransactionModel transaction) async {
     if (_uid == null) return;
 
-    await _db.runTransaction((tx) async {
+    try {
+      await _db.runTransaction((tx) async {
       final accountRef = _db.collection('accounts').doc(transaction.accountId);
       final accountDoc = await tx.get(accountRef);
 
       if (!accountDoc.exists) {
-        throw Exception('Account not found');
+        throw AppException('Account not found');
       }
 
       final accountData = accountDoc.data() as Map<String, dynamic>;
@@ -62,7 +64,11 @@ class TransactionService {
         toOwner: transaction.toOwner,
       );
       tx.set(transRef, transactionWithUserId.toFirestore());
-    });
+      });
+    } catch (e, stackTrace) {
+      ErrorLogger.logError(e, stackTrace, 'addTransaction');
+      rethrow;
+    }
   }
 
   // Add Transfer
@@ -79,7 +85,8 @@ class TransactionService {
   }) async {
     if (_uid == null) return;
 
-    await _db.runTransaction((tx) async {
+    try {
+      await _db.runTransaction((tx) async {
       final fromRef = _db.collection('accounts').doc(fromAccountId);
       final toRef = _db.collection('accounts').doc(toAccountId);
 
@@ -87,7 +94,7 @@ class TransactionService {
       final toDoc = await tx.get(toRef);
 
       if (!fromDoc.exists || !toDoc.exists) {
-        throw Exception('One or more accounts not found');
+        throw AppException('One or more accounts not found');
       }
 
       // Update Source Account
@@ -136,7 +143,11 @@ class TransactionService {
         toOwner: toOwner,
       );
       tx.set(transRef, transfer.toFirestore());
-    });
+      });
+    } catch (e, stackTrace) {
+      ErrorLogger.logError(e, stackTrace, 'addTransfer');
+      rethrow;
+    }
   }
 
   // Add Transfer with a specific date (used by Savings page for month selection)
@@ -154,14 +165,15 @@ class TransactionService {
   }) async {
     if (_uid == null) return;
 
-    await _db.runTransaction((tx) async {
+    try {
+      await _db.runTransaction((tx) async {
       final fromRef = _db.collection('accounts').doc(fromAccountId);
       final toRef = _db.collection('accounts').doc(toAccountId);
 
       final fromDoc = await tx.get(fromRef);
       final toDoc = await tx.get(toRef);
 
-      if (!fromDoc.exists || !toDoc.exists) throw Exception('Account not found');
+      if (!fromDoc.exists || !toDoc.exists) throw AppException('Account not found');
 
       final fromData = fromDoc.data() as Map<String, dynamic>;
       double fromTotal = (fromData['totalBalance'] ?? 0).toDouble();
@@ -198,7 +210,11 @@ class TransactionService {
         toOwner: toOwner,
       );
       tx.set(transRef, transfer.toFirestore());
-    });
+      });
+    } catch (e, stackTrace) {
+      ErrorLogger.logError(e, stackTrace, 'addTransferWithDate');
+      rethrow;
+    }
   }
 
   // Get stream of recent transactions
@@ -208,29 +224,29 @@ class TransactionService {
     return _db
         .collection('transactions')
         .where('userId', isEqualTo: _uid)
+        .orderBy('date', descending: true)
+        .limit(limit)
         .snapshots()
         .map((snapshot) {
-      var list = snapshot.docs.map((doc) => TransactionModel.fromFirestore(doc)).toList();
-      // Sort locally to avoid needing a Firebase Composite Index!
-      list.sort((a, b) => b.date.compareTo(a.date));
-      return list.take(limit).toList();
+      return snapshot.docs.map((doc) => TransactionModel.fromFirestore(doc)).toList();
     });
   }
 
-  // Get stream of transactions for a specific account
+  // Get stream of transactions for a specific account (Updated to show transfers in both accounts)
   Stream<List<TransactionModel>> getTransactionsByAccount(String accountId, {int limit = 20}) {
     if (_uid == null) return Stream.value([]);
-
+    
+    // We use array-contains to find transactions where this account is involved
+    // either as a primary account (accountId) or a target account (toAccountId)
     return _db
         .collection('transactions')
         .where('userId', isEqualTo: _uid)
-        .where('accountId', isEqualTo: accountId)
+        .where('involvedAccountIds', arrayContains: accountId)
+        .orderBy('date', descending: true)
+        .limit(limit)
         .snapshots()
         .map((snapshot) {
-      var list = snapshot.docs.map((doc) => TransactionModel.fromFirestore(doc)).toList();
-      // Sort locally to avoid needing a Firebase Composite Index!
-      list.sort((a, b) => b.date.compareTo(a.date));
-      return list.take(limit).toList();
+      return snapshot.docs.map((doc) => TransactionModel.fromFirestore(doc)).toList();
     });
   }
   // Add a manual adjustment (doesn't affect a source account)
@@ -244,11 +260,12 @@ class TransactionService {
   }) async {
     if (_uid == null) return;
 
-    await _db.runTransaction((tx) async {
+    try {
+      await _db.runTransaction((tx) async {
       final accountRef = _db.collection('accounts').doc(accountId);
       final accountDoc = await tx.get(accountRef);
 
-      if (!accountDoc.exists) throw Exception('Account not found');
+      if (!accountDoc.exists) throw AppException('Account not found');
 
       final accountData = accountDoc.data() as Map<String, dynamic>;
       double currentTotal = (accountData['totalBalance'] ?? 0).toDouble();
@@ -283,6 +300,10 @@ class TransactionService {
         userId: _uid!,
       );
       tx.set(transRef, adjustment.toFirestore());
-    });
+      });
+    } catch (e, stackTrace) {
+      ErrorLogger.logError(e, stackTrace, 'addManualBalanceAdjustment');
+      rethrow;
+    }
   }
 }

@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:pocketledger/core/constants/app_constants.dart';
 
 enum TransactionType { income, expense, transfer }
 
@@ -19,6 +20,10 @@ class TransactionModel {
   final String? toAccountName;
   final String? toOwner;
 
+  // For loans
+  final String? loanId;
+  final String? repaymentId;
+
   TransactionModel({
     required this.id,
     required this.accountId,
@@ -33,6 +38,8 @@ class TransactionModel {
     this.toAccountId,
     this.toAccountName,
     this.toOwner,
+    this.loanId,
+    this.repaymentId,
   });
 
   factory TransactionModel.fromFirestore(DocumentSnapshot doc) {
@@ -41,7 +48,7 @@ class TransactionModel {
       id: doc.id,
       accountId: data['accountId'] ?? '',
       accountName: data['accountName'] ?? '',
-      owner: data['owner'] ?? 'Self',
+      owner: data['owner'] ?? AppConstants.ownerSelf,
       amount: (data['amount'] ?? 0).toDouble(),
       type: TransactionType.values.firstWhere(
         (e) => e.toString() == 'TransactionType.${data['type']}',
@@ -54,6 +61,8 @@ class TransactionModel {
       toAccountId: data['toAccountId'],
       toAccountName: data['toAccountName'],
       toOwner: data['toOwner'],
+      loanId: data['loanId'],
+      repaymentId: data['repaymentId'],
     );
   }
 
@@ -68,9 +77,15 @@ class TransactionModel {
       'note': note,
       'date': Timestamp.fromDate(date),
       'userId': userId,
+      'involvedAccountIds': [
+        accountId,
+        if (toAccountId != null) toAccountId,
+      ],
       if (toAccountId != null) 'toAccountId': toAccountId,
       if (toAccountName != null) 'toAccountName': toAccountName,
       if (toOwner != null) 'toOwner': toOwner,
+      if (loanId != null) 'loanId': loanId,
+      if (repaymentId != null) 'repaymentId': repaymentId,
     };
   }
 }

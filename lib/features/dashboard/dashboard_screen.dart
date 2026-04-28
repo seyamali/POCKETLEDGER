@@ -11,6 +11,9 @@ import 'package:pocketledger/features/loans/loans_screen.dart';
 import 'package:pocketledger/features/accounts/accounts_screen.dart';
 import 'package:pocketledger/features/transactions/transactions_screen.dart';
 import 'package:pocketledger/models/transaction_model.dart';
+import 'package:pocketledger/features/auth/widgets/custom_text_field.dart';
+import 'package:pocketledger/core/constants/app_constants.dart';
+import 'package:pocketledger/core/utils/image_utils.dart';
 import 'package:pocketledger/services/transaction_service.dart';
 import 'package:pocketledger/services/loan_service.dart';
 import 'package:pocketledger/models/loan_model.dart';
@@ -268,7 +271,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             physics: const BouncingScrollPhysics(),
                             child: Row(
                               children: ownerTotals.entries.map((e) {
-                                final label = e.key == 'Self' ? 'Me' : e.key;
+                                final label = e.key == AppConstants.ownerSelf ? 'Me' : e.key;
                                 final accs = ownerAccounts[e.key] ?? [];
                                 return GestureDetector(
                                   onTap: () => _showOwnerBreakdown(label, e.value, accs),
@@ -676,32 +679,32 @@ class _DashboardScreenState extends State<DashboardScreen> {
   // ─────────────────── BOTTOM NAV BAR ───────────────────
   Widget _buildBottomNavBar() {
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+      padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
       color: Colors.transparent,
       child: Container(
         height: 70,
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.95),
-          borderRadius: BorderRadius.circular(30),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(35),
           boxShadow: [
             BoxShadow(
-              color: AppColors.primaryGreen.withOpacity(0.12),
-              blurRadius: 20,
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 25,
               offset: const Offset(0, 10),
             ),
           ],
         ),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
             _navItem(Icons.home_filled, 'Home', true),
             _navItem(Icons.account_balance_wallet_rounded, 'Wallet', false, onTap: () => _go(const AccountsScreen())),
             
-            // Central Add Button
-            Transform.translate(
-              offset: const Offset(0, -15),
+            // Central Add Button (Inline inside the pill)
+            GestureDetector(
+              onTap: () => Navigator.pushNamed(context, '/add-transaction'),
               child: Container(
-                width: 60, height: 60,
+                width: 50, height: 50,
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
                     colors: [AppColors.primaryGreen, Color(0xFF003829)],
@@ -716,7 +719,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                   ],
                 ),
-                child: const Icon(Icons.add_rounded, color: Colors.white, size: 32),
+                child: const Icon(Icons.add_rounded, color: Colors.white, size: 28),
               ),
             ),
             
@@ -805,7 +808,7 @@ class _StickyHeaderDelegate extends SliverPersistentHeaderDelegate {
                               child: CircleAvatar(
                                 radius: 20,
                                 backgroundColor: Colors.white,
-                                backgroundImage: (profilePic != null && profilePic.isNotEmpty) ? NetworkImage(profilePic) : null,
+                                backgroundImage: ImageUtils.buildProfileImage(profilePic),
                                 child: (profilePic == null || profilePic.isEmpty)
                                     ? Icon(Icons.person_rounded, color: AppColors.primaryGreen, size: 20)
                                     : null,

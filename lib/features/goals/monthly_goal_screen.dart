@@ -8,6 +8,8 @@ import 'package:pocketledger/features/auth/widgets/custom_text_field.dart';
 import 'package:pocketledger/models/account_model.dart';
 import 'package:pocketledger/services/account_service.dart';
 import 'package:pocketledger/services/transaction_service.dart';
+import 'package:pocketledger/core/constants/app_constants.dart';
+import 'package:fl_chart/fl_chart.dart';
 
 class MonthlyGoalScreen extends StatefulWidget {
   const MonthlyGoalScreen({super.key});
@@ -45,6 +47,10 @@ class _MonthlyGoalScreenState extends State<MonthlyGoalScreen> {
       'Other': TextEditingController(text: currentGoal?.categoryLimits['Other']?.toInt().toString() ?? ''),
     };
 
+    final prevIncomeCtrl = TextEditingController(text: currentGoal?.initialProgressIncome.toInt().toString() ?? '');
+    final prevExpenseCtrl = TextEditingController(text: currentGoal?.initialProgressExpense.toInt().toString() ?? '');
+    final prevSavedCtrl = TextEditingController(text: currentGoal?.initialProgressSavings.toInt().toString() ?? '');
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -65,23 +71,37 @@ class _MonthlyGoalScreenState extends State<MonthlyGoalScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Modal Header with Close Button
-                  Stack(
-                    alignment: Alignment.center,
+                  // Refined Modal Header
+                  Column(
                     children: [
-                      Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2))),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: IconButton(
-                          onPressed: () => Navigator.pop(context),
-                          icon: const Icon(Icons.close_rounded, color: AppColors.textGrey),
+                      Container(
+                        width: 45, height: 5,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade300,
+                          borderRadius: BorderRadius.circular(10),
                         ),
+                      ),
+                      const SizedBox(height: 15),
+                      Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Text('Target Settings', style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textBlack)),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: IconButton(
+                              onPressed: () => Navigator.pop(context),
+                              icon: Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: BoxDecoration(color: Colors.grey.shade200, shape: BoxShape.circle),
+                                child: const Icon(Icons.close_rounded, color: AppColors.textGrey, size: 18),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                  const SizedBox(height: 10),
-                  Text('Target Settings', style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold)),
-                  Text('Set your targets for $_monthName ${_currentMonth.year}', style: GoogleFonts.outfit(color: AppColors.textGrey, fontSize: 13)),
+                  Text('Set your targets for $_monthName ${_currentMonth.year}', style: GoogleFonts.outfit(color: AppColors.textGrey, fontSize: 13, fontWeight: FontWeight.w500)),
                   const SizedBox(height: 32),
                   
                   _buildModalInput('Monthly Income Target', incomeCtrl, Icons.payments_rounded, AppColors.primaryGreen),
@@ -91,13 +111,22 @@ class _MonthlyGoalScreenState extends State<MonthlyGoalScreen> {
                   _buildModalInput('Overall Expense Limit', expenseCtrl, Icons.money_off_rounded, Colors.redAccent),
                   
                   const SizedBox(height: 32),
-                  Align(alignment: Alignment.centerLeft, child: Text('CATEGORY LIMITS', style: GoogleFonts.outfit(color: AppColors.textGrey, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.5))),
-                  const SizedBox(height: 16),
-                  
                   ...categoryCtrls.entries.map((entry) => Padding(
                     padding: const EdgeInsets.only(bottom: 12),
                     child: _buildModalInput('${entry.key} Limit', entry.value, Icons.pie_chart_rounded, Colors.orangeAccent, isSmall: true),
                   )).toList(),
+
+                  const SizedBox(height: 32),
+                  Align(alignment: Alignment.centerLeft, child: Text('INITIAL PROGRESS (ALREADY DONE)', style: GoogleFonts.outfit(color: AppColors.textGrey, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.5))),
+                  const SizedBox(height: 8),
+                  Text('Add amounts done before using this app this month', style: GoogleFonts.outfit(color: AppColors.textGrey, fontSize: 11)),
+                  const SizedBox(height: 16),
+                  
+                  _buildModalInput('Already Earned', prevIncomeCtrl, Icons.add_task_rounded, AppColors.primaryGreen, isSmall: true),
+                  const SizedBox(height: 12),
+                  _buildModalInput('Already Spent', prevExpenseCtrl, Icons.remove_done_rounded, Colors.redAccent, isSmall: true),
+                  const SizedBox(height: 12),
+                  _buildModalInput('Already Saved', prevSavedCtrl, Icons.done_all_rounded, Colors.amber.shade600, isSmall: true),
                   
                   const SizedBox(height: 32),
                   Container(
@@ -123,6 +152,9 @@ class _MonthlyGoalScreenState extends State<MonthlyGoalScreen> {
                           incomeTarget: double.tryParse(incomeCtrl.text) ?? 0,
                           expenseLimit: double.tryParse(expenseCtrl.text) ?? 0,
                           savingsTarget: double.tryParse(savingsCtrl.text) ?? 0,
+                          initialProgressIncome: double.tryParse(prevIncomeCtrl.text) ?? 0,
+                          initialProgressExpense: double.tryParse(prevExpenseCtrl.text) ?? 0,
+                          initialProgressSavings: double.tryParse(prevSavedCtrl.text) ?? 0,
                           categoryLimits: categoryLimits,
                         );
                         
@@ -187,17 +219,25 @@ class _MonthlyGoalScreenState extends State<MonthlyGoalScreen> {
 
               final transactions = txSnapshot.data ?? [];
               final goal = goalSnapshot.data;
+              final filteredTransactions = transactions.where((tx) {
+                if (tx.owner != AppConstants.ownerSelf) return false;
+                final cat = tx.category.toLowerCase();
+                final note = tx.note.toLowerCase();
+                if (cat.contains('opening') || cat.contains('initial') || 
+                    note.contains('opening') || note.contains('initial')) {
+                  return false;
+                }
+                return true;
+              }).toList();
 
-              double actualIncome = 0;
-              double actualExpense = 0;
-              double actualSaved = 0;
+              double actualIncome = goal?.initialProgressIncome ?? 0;
+              double actualExpense = goal?.initialProgressExpense ?? 0;
+              double actualSaved = goal?.initialProgressSavings ?? 0;
               Map<String, double> expenseByCategory = {};
 
-              for (var tx in transactions) {
-                if (tx.category == 'Opening Balance') continue;
-
-                // Detect if this is a savings-related transaction
-                bool isSavings = tx.category.toLowerCase().contains('sav') || 
+              for (var tx in filteredTransactions) {
+                final cat = tx.category.toLowerCase();
+                bool isSavings = cat.contains('sav') || 
                                  tx.toAccountName?.toLowerCase().contains('sav') == true;
 
                 if (isSavings) {
@@ -226,8 +266,15 @@ class _MonthlyGoalScreenState extends State<MonthlyGoalScreen> {
                         children: [
                           _buildSectionHeader('Financial Health', 'Live status for this month'),
                           const SizedBox(height: 16),
-                          _buildHealthMeter(goal, actualExpense, actualIncome),
+                          HealthMeter(goal: goal, expense: actualExpense, income: actualIncome),
                           
+                          if (expenseByCategory.isNotEmpty) ...[
+                            const SizedBox(height: 32),
+                            _buildSectionHeader('Expense Breakdown', 'Where your money goes'),
+                            const SizedBox(height: 16),
+                            _buildExpensePieChart(expenseByCategory, actualExpense),
+                          ],
+
                           const SizedBox(height: 32),
                           _buildSectionHeader('Category Targets', 'Limits vs Actual spending'),
                           const SizedBox(height: 16),
@@ -241,7 +288,7 @@ class _MonthlyGoalScreenState extends State<MonthlyGoalScreen> {
                           const SizedBox(height: 32),
                           _buildSectionHeader('Recent Activity', 'Top movements this month'),
                           const SizedBox(height: 16),
-                          _buildRecentActivity(transactions),
+                          _buildRecentActivity(filteredTransactions),
                         ],
                       ),
                     ),
@@ -332,8 +379,13 @@ class _MonthlyGoalScreenState extends State<MonthlyGoalScreen> {
   }
 
   Widget _buildMainCircleStats(GoalModel? goal, double income, double expense, double saved) {
-    double progressIncome = goal != null && goal.incomeTarget > 0 ? (income / goal.incomeTarget) : 0;
-    double progressExpense = goal != null && goal.expenseLimit > 0 ? (expense / goal.expenseLimit) : 0;
+    double effExpLimit = goal?.expenseLimit ?? 0;
+    if (effExpLimit <= 0 && goal != null) {
+      effExpLimit = goal.categoryLimits.values.fold(0.0, (a, b) => a + b);
+    }
+
+    double progressIncome = goal != null && goal.incomeTarget > 0 ? (income / goal.incomeTarget) : (income > 0 ? 1.0 : 0.0);
+    double progressExpense = effExpLimit > 0 ? (expense / effExpLimit) : (income > 0 ? (expense / income) : 0);
     double savingsRatio = goal != null && goal.savingsTarget > 0 
         ? (saved / goal.savingsTarget) 
         : (income > 0 ? (saved / income) : 0);
@@ -374,51 +426,81 @@ class _MonthlyGoalScreenState extends State<MonthlyGoalScreen> {
     );
   }
 
-  Widget _buildHealthMeter(GoalModel? goal, double expense, double income) {
-    if (goal == null) return _buildNoGoalPrompt();
-    
-    double ratio = expense / goal.expenseLimit;
-    String status = 'Excellent';
-    Color color = AppColors.primaryGreen;
 
-    if (ratio > 1.0) { status = 'Critical'; color = Colors.redAccent; }
-    else if (ratio > 0.8) { status = 'Warning'; color = Colors.orangeAccent; }
-    else if (ratio > 0.5) { status = 'Good'; color = Colors.blueAccent; }
+
+  Widget _buildExpensePieChart(Map<String, double> expenses, double totalExpense) {
+    if (totalExpense <= 0) return const SizedBox();
+
+    final colors = [
+      AppColors.primaryGreen,
+      Colors.redAccent,
+      Colors.amber.shade600,
+      Colors.blueAccent,
+      Colors.purpleAccent,
+      Colors.teal,
+      Colors.orangeAccent,
+    ];
+
+    int colorIndex = 0;
+    final sortedEntries = expenses.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+    
+    List<PieChartSectionData> sections = [];
+    List<Widget> legendItems = [];
+
+    for (var entry in sortedEntries) {
+      if (entry.value <= 0) continue;
+      
+      final color = colors[colorIndex % colors.length];
+      final percentage = (entry.value / totalExpense) * 100;
+
+      sections.add(
+        PieChartSectionData(
+          color: color,
+          value: entry.value,
+          title: '${percentage.toStringAsFixed(0)}%',
+          radius: 60,
+          titleStyle: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+        ),
+      );
+
+      legendItems.add(
+        Padding(
+          padding: const EdgeInsets.only(bottom: 6),
+          child: Row(
+            children: [
+              Container(width: 12, height: 12, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+              const SizedBox(width: 8),
+              Expanded(child: Text(entry.key, style: GoogleFonts.outfit(fontSize: 13, color: AppColors.textGrey))),
+              Text('৳${entry.value.toInt()}', style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textBlack)),
+            ],
+          ),
+        ),
+      );
+
+      colorIndex++;
+    }
 
     return Container(
-      width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(25),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.01), blurRadius: 15)],
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 15, offset: const Offset(0, 5))],
       ),
       child: Column(
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('Monthly Budget Health', style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.bold)),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
-                child: Text(status, style: GoogleFonts.outfit(color: color, fontSize: 11, fontWeight: FontWeight.bold)),
+          SizedBox(
+            height: 200,
+            child: PieChart(
+              PieChartData(
+                sectionsSpace: 2,
+                centerSpaceRadius: 40,
+                sections: sections,
               ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: LinearProgressIndicator(
-              value: ratio.clamp(0, 1),
-              minHeight: 10,
-              backgroundColor: color.withOpacity(0.1),
-              valueColor: AlwaysStoppedAnimation<Color>(color),
             ),
           ),
-          const SizedBox(height: 12),
-          Text('You have utilized ${(ratio * 100).toInt()}% of your budget.', 
-            style: GoogleFonts.outfit(color: AppColors.textGrey, fontSize: 12)),
+          const SizedBox(height: 20),
+          ...legendItems,
         ],
       ),
     );
@@ -545,7 +627,83 @@ class _MonthlyGoalScreenState extends State<MonthlyGoalScreen> {
     );
   }
 
-  Widget _buildNoGoalPrompt() {
+
+
+  String _getMonthName(int month) {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return months[month - 1];
+  }
+}
+
+class HealthMeter extends StatelessWidget {
+  final GoalModel? goal;
+  final double expense;
+  final double income;
+
+  const HealthMeter({super.key, required this.goal, required this.expense, required this.income});
+
+  @override
+  Widget build(BuildContext context) {
+    if (goal == null) return const NoGoalPrompt();
+    
+    double effExpLimit = goal!.expenseLimit;
+    if (effExpLimit <= 0) {
+      effExpLimit = goal!.categoryLimits.values.fold(0.0, (a, b) => a + b);
+    }
+
+    double ratio = effExpLimit > 0 ? (expense / effExpLimit) : (income > 0 ? (expense / income) : 0);
+    String status = 'Excellent';
+    Color color = AppColors.primaryGreen;
+
+    if (ratio > 1.0) { status = 'Critical'; color = Colors.redAccent; }
+    else if (ratio > 0.8) { status = 'Warning'; color = Colors.orangeAccent; }
+    else if (ratio > 0.5) { status = 'Good'; color = Colors.blueAccent; }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(25),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.01), blurRadius: 15)],
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Monthly Budget Health', style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.bold)),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                child: Text(status, style: GoogleFonts.outfit(color: color, fontSize: 11, fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: LinearProgressIndicator(
+              value: ratio.clamp(0, 1),
+              minHeight: 10,
+              backgroundColor: color.withOpacity(0.1),
+              valueColor: AlwaysStoppedAnimation<Color>(color),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text('You have utilized ${(ratio * 100).toInt()}% of your budget.', 
+            style: GoogleFonts.outfit(color: AppColors.textGrey, fontSize: 12)),
+        ],
+      ),
+    );
+  }
+}
+
+class NoGoalPrompt extends StatelessWidget {
+  const NoGoalPrompt({super.key});
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
@@ -560,10 +718,5 @@ class _MonthlyGoalScreenState extends State<MonthlyGoalScreen> {
         ],
       ),
     );
-  }
-
-  String _getMonthName(int month) {
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    return months[month - 1];
   }
 }

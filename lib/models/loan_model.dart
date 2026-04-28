@@ -8,12 +8,24 @@ class RepaymentModel {
   final double amount;
   final DateTime date;
   final String note;
+  final String? sourceAccountId;
+  final String? sourceAccountName;
+  final String sourceOwner;
+  final String? destAccountId;
+  final String? destAccountName;
+  final String? destOwner;
 
   RepaymentModel({
     required this.id,
     required this.amount,
     required this.date,
     this.note = '',
+    this.sourceAccountId,
+    this.sourceAccountName,
+    this.sourceOwner = 'Self',
+    this.destAccountId,
+    this.destAccountName,
+    this.destOwner,
   });
 
   factory RepaymentModel.fromMap(Map<String, dynamic> data) {
@@ -22,6 +34,12 @@ class RepaymentModel {
       amount: (data['amount'] ?? 0).toDouble(),
       date: (data['date'] as Timestamp).toDate(),
       note: data['note'] ?? '',
+      sourceAccountId: data['sourceAccountId'],
+      sourceAccountName: data['sourceAccountName'],
+      sourceOwner: data['sourceOwner'] ?? 'Self',
+      destAccountId: data['destAccountId'],
+      destAccountName: data['destAccountName'],
+      destOwner: data['destOwner'],
     );
   }
 
@@ -31,6 +49,12 @@ class RepaymentModel {
       'amount': amount,
       'date': Timestamp.fromDate(date),
       'note': note,
+      'sourceAccountId': sourceAccountId,
+      'sourceAccountName': sourceAccountName,
+      'sourceOwner': sourceOwner,
+      'destAccountId': destAccountId,
+      'destAccountName': destAccountName,
+      'destOwner': destOwner,
     };
   }
 }
@@ -43,6 +67,8 @@ class LoanModel {
   final LoanType type;
   final LoanStatus status;
   final String? linkedAccountId;
+  final String? linkedAccountName;
+  final String owner;
   final DateTime date;
   final String note;
   final String userId;
@@ -56,6 +82,8 @@ class LoanModel {
     required this.type,
     required this.status,
     this.linkedAccountId,
+    this.linkedAccountName,
+    this.owner = 'Self',
     required this.date,
     required this.note,
     required this.userId,
@@ -78,6 +106,8 @@ class LoanModel {
       type: data['type'] == 'taken' ? LoanType.taken : LoanType.given,
       status: data['status'] == 'paid' ? LoanStatus.paid : LoanStatus.pending,
       linkedAccountId: data['linkedAccountId'],
+      linkedAccountName: data['linkedAccountName'],
+      owner: data['owner'] ?? 'Self',
       date: (data['date'] as Timestamp).toDate(),
       note: data['note'] ?? '',
       userId: data['userId'] ?? '',
@@ -93,6 +123,8 @@ class LoanModel {
       'type': type == LoanType.taken ? 'taken' : 'given',
       'status': status == LoanStatus.paid ? 'paid' : 'pending',
       'linkedAccountId': linkedAccountId,
+      'linkedAccountName': linkedAccountName,
+      'owner': owner,
       'date': Timestamp.fromDate(date),
       'note': note,
       'userId': userId,

@@ -131,4 +131,35 @@ class AccountService {
       print('Migration skipped: No accounts needed opening balances.');
     }
   }
+  // Update Account Name
+  Future<void> updateAccountName(String accountId, String newName) async {
+    if (_uid == null) return;
+
+    final batch = _db.batch();
+    
+    // 1. Update the Account Document
+    batch.update(_db.collection('accounts').doc(accountId), {'name': newName});
+
+    // 2. Update all transactions where this account is the primary account
+    final txQuery = await _db.collection('transactions')
+        .where('userId', isEqualTo: _uid)
+        .where('accountId', isEqualTo: accountId)
+        .get();
+        
+    for (var doc in txQuery.docs) {
+      batch.update(doc.reference, {'accountName': newName});
+    }
+
+    // 3. Update all transactions where this account is the target (for transfers)
+    final toTxQuery = await _db.collection('transactions')
+        .where('userId', isEqualTo: _uid)
+        .where('toAccountId', isEqualTo: accountId)
+        .get();
+        
+    for (var doc in toTxQuery.docs) {
+      batch.update(doc.reference, {'toAccountName': newName});
+    }
+
+    await batch.commit();
+  }
 }

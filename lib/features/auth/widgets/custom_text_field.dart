@@ -43,6 +43,7 @@ class CustomTextField extends StatelessWidget {
         ),
       ),
       child: TextField(
+        key: ValueKey(hintText),
         controller: controller,
         obscureText: obscureText ?? (isPassword && !isPasswordVisible),
         keyboardType: keyboardType,

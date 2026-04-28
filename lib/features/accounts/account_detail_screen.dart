@@ -3,12 +3,56 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:pocketledger/app/theme.dart';
 import 'package:pocketledger/models/account_model.dart';
 import 'package:pocketledger/models/transaction_model.dart';
+import 'package:pocketledger/services/account_service.dart';
 import 'package:pocketledger/services/transaction_service.dart';
 import 'package:intl/intl.dart';
 
-class AccountDetailScreen extends StatelessWidget {
+class AccountDetailScreen extends StatefulWidget {
   final AccountModel account;
   const AccountDetailScreen({super.key, required this.account});
+
+  @override
+  State<AccountDetailScreen> createState() => _AccountDetailScreenState();
+}
+
+class _AccountDetailScreenState extends State<AccountDetailScreen> {
+  late String _currentName;
+  final AccountService _accountService = AccountService();
+
+  @override
+  void initState() {
+    super.initState();
+    _currentName = widget.account.name;
+  }
+
+  void _showEditNameDialog() {
+    final nameCtrl = TextEditingController(text: _currentName);
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Edit Account Name', style: GoogleFonts.montserrat(fontWeight: FontWeight.bold)),
+        content: TextField(
+          controller: nameCtrl,
+          decoration: const InputDecoration(hintText: 'Enter new name'),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () async {
+              if (nameCtrl.text.isNotEmpty) {
+                final newName = nameCtrl.text;
+                await _accountService.updateAccountName(widget.account.id, newName);
+                setState(() => _currentName = newName);
+                if (mounted) Navigator.pop(context);
+              }
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -23,7 +67,14 @@ class AccountDetailScreen extends StatelessWidget {
           icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.primaryText, size: 20),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text(account.name, style: GoogleFonts.montserrat(color: AppColors.primaryText, fontWeight: FontWeight.bold)),
+        title: Text(_currentName, style: GoogleFonts.montserrat(color: AppColors.primaryText, fontWeight: FontWeight.bold)),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.edit_rounded, color: AppColors.brandPrimary, size: 20),
+            onPressed: _showEditNameDialog,
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
       body: SingleChildScrollView(
         physics: const BouncingScrollPhysics(),
@@ -48,7 +99,7 @@ class AccountDetailScreen extends StatelessWidget {
           Text('Full Balance', style: GoogleFonts.montserrat(color: AppColors.secondaryText, fontSize: 14)),
           const SizedBox(height: 8),
           Text(
-            '৳ ${account.totalBalance.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => "${m[1]},")}',
+            '৳ ${widget.account.totalBalance.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => "${m[1]},")}',
             style: GoogleFonts.montserrat(color: AppColors.primaryText, fontSize: 48, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
@@ -58,7 +109,7 @@ class AccountDetailScreen extends StatelessWidget {
               color: AppColors.brandPrimary.withOpacity(0.1),
               borderRadius: BorderRadius.circular(20),
             ),
-            child: Text(account.type, style: GoogleFonts.montserrat(color: AppColors.brandPrimary, fontSize: 12, fontWeight: FontWeight.bold)),
+            child: Text(widget.account.type, style: GoogleFonts.montserrat(color: AppColors.brandPrimary, fontSize: 12, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -82,7 +133,7 @@ class AccountDetailScreen extends StatelessWidget {
         children: [
           Text('Owner Breakdown', style: GoogleFonts.montserrat(color: AppColors.primaryText, fontSize: 16, fontWeight: FontWeight.bold)),
           const SizedBox(height: 20),
-          ...account.breakdown.entries.map((entry) => Padding(
+          ...widget.account.breakdown.entries.map((entry) => Padding(
             padding: const EdgeInsets.only(bottom: 16),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -158,7 +209,7 @@ class AccountDetailScreen extends StatelessWidget {
           Text('Transactions', style: GoogleFonts.montserrat(color: AppColors.primaryText, fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 20),
           StreamBuilder<List<TransactionModel>>(
-            stream: service.getTransactionsByAccount(account.id),
+            stream: service.getTransactionsByAccount(widget.account.id),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator(color: AppColors.brandPrimary));

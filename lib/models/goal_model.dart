@@ -8,6 +8,9 @@ class GoalModel {
   final double savingsTarget;
   final Map<String, double> categoryLimits;
   final String userId;
+  final double initialProgressIncome;
+  final double initialProgressExpense;
+  final double initialProgressSavings;
 
   GoalModel({
     required this.id,
@@ -17,6 +20,9 @@ class GoalModel {
     required this.savingsTarget,
     required this.categoryLimits,
     required this.userId,
+    this.initialProgressIncome = 0,
+    this.initialProgressExpense = 0,
+    this.initialProgressSavings = 0,
   });
 
   factory GoalModel.fromFirestore(DocumentSnapshot doc) {
@@ -27,6 +33,9 @@ class GoalModel {
       incomeTarget: (data['incomeTarget'] ?? 0).toDouble(),
       expenseLimit: (data['expenseLimit'] ?? 0).toDouble(),
       savingsTarget: (data['savingsTarget'] ?? 0).toDouble(),
+      initialProgressIncome: (data['initialProgressIncome'] ?? 0).toDouble(),
+      initialProgressExpense: (data['initialProgressExpense'] ?? 0).toDouble(),
+      initialProgressSavings: (data['initialProgressSavings'] ?? 0).toDouble(),
       categoryLimits: data['categoryLimits'] != null 
           ? Map<String, double>.from((data['categoryLimits'] as Map).map((k, v) => MapEntry(k, (v ?? 0).toDouble()))) 
           : {},
@@ -40,6 +49,9 @@ class GoalModel {
       'incomeTarget': incomeTarget,
       'expenseLimit': expenseLimit,
       'savingsTarget': savingsTarget,
+      'initialProgressIncome': initialProgressIncome,
+      'initialProgressExpense': initialProgressExpense,
+      'initialProgressSavings': initialProgressSavings,
       'categoryLimits': categoryLimits,
       'userId': userId,
     };

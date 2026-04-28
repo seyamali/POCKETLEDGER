@@ -6,6 +6,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart'; // For kIsWeb
+import 'dart:convert';
+import 'package:pocketledger/core/utils/image_utils.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -177,7 +179,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     child: CircleAvatar(
                       radius: 50,
                       backgroundColor: Colors.grey.shade100,
-                      backgroundImage: (profilePic != null && profilePic.isNotEmpty) ? NetworkImage(profilePic) : null,
+                      backgroundImage: ImageUtils.buildProfileImage(profilePic),
                       child: (profilePic == null || profilePic.isEmpty)
                           ? const Icon(Icons.person_rounded, size: 50, color: AppColors.primaryGreen)
                           : null,
@@ -347,7 +349,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             backgroundColor: Colors.grey.shade50,
                             backgroundImage: pickedImageBytes != null 
                                 ? MemoryImage(pickedImageBytes!) 
-                                : (currentPic != null && currentPic.isNotEmpty ? NetworkImage(currentPic) : null) as ImageProvider?,
+                                : ImageUtils.buildProfileImage(currentPic),
                             child: (pickedImageBytes == null && (currentPic == null || currentPic.isEmpty))
                                 ? Icon(Icons.person_rounded, size: 55, color: AppColors.primaryGreen.withOpacity(0.3))
                                 : null,
@@ -360,7 +362,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         child: GestureDetector(
                           onTap: () async {
                             final picker = ImagePicker();
-                            final image = await picker.pickImage(source: ImageSource.gallery, imageQuality: 70);
+                            // Resize to 400x400 and set low quality to keep Base64 size small
+                            final image = await picker.pickImage(
+                              source: ImageSource.gallery, 
+                              imageQuality: 30,
+                              maxWidth: 400,
+                              maxHeight: 400,
+                            );
                             if (image != null) {
                               final bytes = await image.readAsBytes();
                               setModalState(() {
@@ -417,6 +425,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       String? imageUrl = currentPic;
                       if (pickedImageBytes != null) {
                         imageUrl = await _authService.uploadProfileImage(pickedImageBytes!);
+                        if (imageUrl == null) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Failed to upload image. Please check your connection or Storage rules.')),
+                            );
+                          }
+                          setModalState(() => isUploading = false);
+                          return;
+                        }
                       }
 
                       await _authService.updateProfile(
@@ -485,4 +502,5 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
     );
   }
+
 }

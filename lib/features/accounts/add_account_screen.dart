@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:pocketledger/app/theme.dart';
 import 'package:pocketledger/services/account_service.dart';
 import 'package:pocketledger/features/auth/widgets/custom_text_field.dart';
+import 'package:pocketledger/core/constants/app_constants.dart';
 
 class AddAccountScreen extends StatefulWidget {
   const AddAccountScreen({super.key});
@@ -20,10 +21,10 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
 
   // New state for multiple owners
   final List<Map<String, dynamic>> _ownerBalances = [
-    {'owner': 'Self', 'controller': TextEditingController(text: '0')}
+    {'owner': AppConstants.ownerSelf, 'controller': TextEditingController(text: '0')}
   ];
 
-  final List<String> _owners = ['Self', 'Father', 'Mother', 'Others'];
+  final List<String> _owners = AppConstants.allowedOwners;
 
   final Map<String, IconData> _typeIcons = {
     'Bank': Icons.account_balance_outlined,

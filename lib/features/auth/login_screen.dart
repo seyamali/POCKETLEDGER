@@ -34,8 +34,9 @@ class _LoginScreenState extends State<LoginScreen> {
   void _loadCredentials() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
-      _emailController.text = prefs.getString('remember_email') ?? '';
-      _passwordController.text = prefs.getString('remember_password') ?? '';
+      // TODO: Remove prefill before production
+      _emailController.text = prefs.getString('remember_email') ?? 'Seyamhossain482@gmail.com';
+      _passwordController.text = prefs.getString('remember_password') ?? 'Sey@mPocket';
       _rememberMe = prefs.getBool('remember_me') ?? false;
     });
   }

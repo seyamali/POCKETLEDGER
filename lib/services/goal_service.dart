@@ -16,6 +16,9 @@ class GoalService {
     required double expenseLimit,
     required double savingsTarget,
     required Map<String, double> categoryLimits,
+    double initialProgressIncome = 0,
+    double initialProgressExpense = 0,
+    double initialProgressSavings = 0,
   }) async {
     if (_uid == null) return;
 
@@ -32,6 +35,9 @@ class GoalService {
         'incomeTarget': incomeTarget,
         'expenseLimit': expenseLimit,
         'savingsTarget': savingsTarget,
+        'initialProgressIncome': initialProgressIncome,
+        'initialProgressExpense': initialProgressExpense,
+        'initialProgressSavings': initialProgressSavings,
         'categoryLimits': categoryLimits,
       });
     } else {
@@ -43,6 +49,9 @@ class GoalService {
         incomeTarget: incomeTarget,
         expenseLimit: expenseLimit,
         savingsTarget: savingsTarget,
+        initialProgressIncome: initialProgressIncome,
+        initialProgressExpense: initialProgressExpense,
+        initialProgressSavings: initialProgressSavings,
         categoryLimits: categoryLimits,
         userId: _uid!,
       );

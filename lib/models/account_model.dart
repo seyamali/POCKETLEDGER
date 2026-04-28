@@ -1,11 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:pocketledger/core/constants/app_constants.dart';
 
 class AccountModel {
   final String id;
   final String name;
   final String type; // Bank, MFS, Cash
   final double totalBalance;
-  final Map<String, double> breakdown; // { 'Self': 20000, 'Father': 10000 }
+  final Map<String, double> breakdown; // { AppConstants.ownerSelf: 20000, AppConstants.ownerFather: 10000 }
   final String userId;
 
   AccountModel({

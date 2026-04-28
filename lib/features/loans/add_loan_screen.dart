@@ -6,6 +6,7 @@ import 'package:pocketledger/services/loan_service.dart';
 import 'package:pocketledger/features/auth/widgets/custom_text_field.dart';
 import 'package:pocketledger/models/account_model.dart';
 import 'package:pocketledger/services/account_service.dart';
+import 'package:pocketledger/core/constants/app_constants.dart';
 
 class AddLoanScreen extends StatefulWidget {
   const AddLoanScreen({super.key});
@@ -25,6 +26,7 @@ class _AddLoanScreenState extends State<AddLoanScreen> {
   final _amountController = TextEditingController();
   final _noteController = TextEditingController();
 
+  String _selectedOwner = AppConstants.ownerSelf;
   bool _isLoading = false;
   bool _adjustBalance = false; // OFF by default — for existing loans, balance is already correct
 
@@ -37,14 +39,24 @@ class _AddLoanScreenState extends State<AddLoanScreen> {
     setState(() => _isLoading = true);
 
     try {
-      await _loanService.addLoan(
+      final amount = double.tryParse(_amountController.text) ?? 0;
+      
+      final loan = LoanModel(
+        id: '', // Will be set by Firestore
         personName: _personNameController.text,
-        amount: double.parse(_amountController.text),
+        amount: amount,
+        remainingAmount: amount,
         type: _selectedType,
+        status: LoanStatus.pending,
         linkedAccountId: _adjustBalance ? _selectedAccount?.id : null,
         linkedAccountName: _adjustBalance ? _selectedAccount?.name : null,
+        owner: _selectedOwner,
+        date: DateTime.now(),
         note: _noteController.text,
+        userId: '', // Will be set in service
       );
+
+      await _loanService.addLoan(loan);
 
       if (mounted) Navigator.pop(context);
     } catch (e) {
@@ -90,6 +102,11 @@ class _AddLoanScreenState extends State<AddLoanScreen> {
                 _buildSectionLabel('PERSON NAME'),
                 const SizedBox(height: 12),
                 _buildDetailsInputs(),
+
+                const SizedBox(height: 24),
+                _buildSectionLabel('LOAN OWNER / PORTION'),
+                const SizedBox(height: 12),
+                _buildOwnerDropdown(),
 
                 const SizedBox(height: 24),
                 _buildSectionLabel('LINK ACCOUNT (OPTIONAL)'),
@@ -238,6 +255,30 @@ class _AddLoanScreenState extends State<AddLoanScreen> {
             onChanged: (val) => setState(() => _adjustBalance = val),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildOwnerDropdown() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 6),
+      decoration: BoxDecoration(
+        color: AppColors.cardBackground,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.brandPrimary.withOpacity(0.05)),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4))],
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: _selectedOwner,
+          isExpanded: true,
+          icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.secondaryText),
+          items: AppConstants.allowedOwners.map((o) => DropdownMenuItem(
+            value: o,
+            child: Text(o, style: GoogleFonts.montserrat(fontWeight: FontWeight.w600, fontSize: 16)),
+          )).toList(),
+          onChanged: (val) => setState(() => _selectedOwner = val ?? AppConstants.ownerSelf),
+        ),
       ),
     );
   }
