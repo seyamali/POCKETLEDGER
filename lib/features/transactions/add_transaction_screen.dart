@@ -256,27 +256,36 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   Widget _buildMassiveAmountInput(Color color) {
     return Column(
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Text('৳', style: GoogleFonts.outfit(color: color, fontSize: 32, fontWeight: FontWeight.bold)),
-            const SizedBox(width: 8),
-            IntrinsicWidth(
-              child: TextField(
-                controller: _amountController,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                textAlign: TextAlign.center,
-                style: GoogleFonts.outfit(color: AppColors.textBlack, fontSize: 56, fontWeight: FontWeight.bold, letterSpacing: -1),
-                cursorColor: color,
-                decoration: const InputDecoration(
-                  hintText: '0',
-                  hintStyle: TextStyle(color: Color(0xFFE0E0E0)),
-                  border: InputBorder.none,
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.05),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: color.withOpacity(0.2), width: 1.5),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Text('৳', style: GoogleFonts.outfit(color: color, fontSize: 32, fontWeight: FontWeight.bold)),
+              const SizedBox(width: 8),
+              IntrinsicWidth(
+                child: TextField(
+                  controller: _amountController,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.outfit(color: AppColors.textBlack, fontSize: 56, fontWeight: FontWeight.bold, letterSpacing: -1),
+                  cursorColor: color,
+                  decoration: const InputDecoration(
+                    hintText: '0',
+                    hintStyle: TextStyle(color: Color(0xFFE0E0E0)),
+                    border: InputBorder.none,
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
         Text(_selectedType.toString().split('.').last.toUpperCase(), 
           style: GoogleFonts.outfit(color: color.withOpacity(0.5), fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 2)),

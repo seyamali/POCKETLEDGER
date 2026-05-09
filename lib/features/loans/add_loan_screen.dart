@@ -29,9 +29,30 @@ class _AddLoanScreenState extends State<AddLoanScreen> {
   String _selectedOwner = AppConstants.ownerSelf;
   bool _isLoading = false;
   bool _adjustBalance = false; // OFF by default — for existing loans, balance is already correct
+  
+  List<String> _existingNames = [];
+  TextEditingController? _autoCompleteController;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadExistingNames();
+  }
+
+  void _loadExistingNames() async {
+    final loansStream = _loanService.getLoans();
+    final loans = await loansStream.first;
+    final names = loans.map((l) => l.personName).toSet().toList();
+    if (mounted) {
+      setState(() {
+        _existingNames = names;
+      });
+    }
+  }
 
   void _handleSave() async {
-    if (_personNameController.text.isEmpty || _amountController.text.isEmpty) {
+    final personName = _autoCompleteController?.text ?? _personNameController.text;
+    if (personName.isEmpty || _amountController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter name and amount')));
       return;
     }
@@ -43,7 +64,7 @@ class _AddLoanScreenState extends State<AddLoanScreen> {
       
       final loan = LoanModel(
         id: '', // Will be set by Firestore
-        personName: _personNameController.text,
+        personName: personName,
         amount: amount,
         remainingAmount: amount,
         type: _selectedType,
@@ -180,18 +201,26 @@ class _AddLoanScreenState extends State<AddLoanScreen> {
   }
 
   Widget _buildAmountInput() {
-    return IntrinsicWidth(
-      child: TextField(
-        controller: _amountController,
-        keyboardType: TextInputType.number,
-        textAlign: TextAlign.center,
-        style: GoogleFonts.montserrat(fontSize: 54, fontWeight: FontWeight.bold, color: AppColors.primaryText),
-        decoration: InputDecoration(
-          border: InputBorder.none,
-          hintText: '0',
-          hintStyle: TextStyle(color: AppColors.secondaryText.withOpacity(0.3)),
-          prefixText: '৳ ',
-          prefixStyle: const TextStyle(color: AppColors.brandPrimary, fontSize: 32, fontWeight: FontWeight.bold),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.brandPrimary.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.brandPrimary.withOpacity(0.2), width: 1.5),
+      ),
+      child: IntrinsicWidth(
+        child: TextField(
+          controller: _amountController,
+          keyboardType: TextInputType.number,
+          textAlign: TextAlign.center,
+          style: GoogleFonts.montserrat(fontSize: 54, fontWeight: FontWeight.bold, color: AppColors.primaryText),
+          decoration: InputDecoration(
+            border: InputBorder.none,
+            hintText: '0',
+            hintStyle: TextStyle(color: AppColors.secondaryText.withOpacity(0.3)),
+            prefixText: '৳ ',
+            prefixStyle: const TextStyle(color: AppColors.brandPrimary, fontSize: 32, fontWeight: FontWeight.bold),
+          ),
         ),
       ),
     );
@@ -208,10 +237,55 @@ class _AddLoanScreenState extends State<AddLoanScreen> {
       ),
       child: Column(
         children: [
-          CustomTextField(
-            controller: _personNameController,
-            hintText: 'Person Name (e.g. Rahim)',
-            icon: Icons.person_outline,
+          Autocomplete<String>(
+            optionsBuilder: (TextEditingValue textEditingValue) {
+              if (textEditingValue.text.isEmpty) {
+                return const Iterable<String>.empty();
+              }
+              return _existingNames.where((String option) {
+                return option.toLowerCase().contains(textEditingValue.text.toLowerCase());
+              });
+            },
+            onSelected: (String selection) {
+              _personNameController.text = selection;
+            },
+            fieldViewBuilder: (BuildContext context, TextEditingController fieldTextEditingController, FocusNode fieldFocusNode, VoidCallback onFieldSubmitted) {
+              _autoCompleteController = fieldTextEditingController;
+              return CustomTextField(
+                controller: fieldTextEditingController,
+                focusNode: fieldFocusNode,
+                hintText: 'Person Name (e.g. Rahim)',
+                icon: Icons.person_outline,
+              );
+            },
+            optionsViewBuilder: (BuildContext context, AutocompleteOnSelected<String> onSelected, Iterable<String> options) {
+              return Align(
+                alignment: Alignment.topLeft,
+                child: Material(
+                  elevation: 8.0,
+                  borderRadius: BorderRadius.circular(16),
+                  color: AppColors.surfaceLight,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(maxHeight: 200, maxWidth: MediaQuery.of(context).size.width - 96),
+                    child: ListView.builder(
+                      padding: EdgeInsets.zero,
+                      shrinkWrap: true,
+                      itemCount: options.length,
+                      itemBuilder: (BuildContext context, int index) {
+                        final String option = options.elementAt(index);
+                        return InkWell(
+                          onTap: () => onSelected(option),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Text(option, style: GoogleFonts.outfit(color: AppColors.textBlack, fontSize: 16)),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              );
+            },
           ),
           const SizedBox(height: 24),
           CustomTextField(

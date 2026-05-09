@@ -15,7 +15,7 @@ class LoansScreen extends StatefulWidget {
 
 class _LoansScreenState extends State<LoansScreen> {
   final LoanService _loanService = LoanService();
-  LoanType _selectedType = LoanType.given;
+  int _selectedTabIndex = 0; // 0: Given, 1: Taken, 2: By Person
 
   @override
   Widget build(BuildContext context) {
@@ -48,7 +48,9 @@ class _LoansScreenState extends State<LoansScreen> {
           }
 
           final allLoans = snapshot.data ?? [];
-          final filteredLoans = allLoans.where((l) => l.type == _selectedType).toList();
+          final filteredLoans = allLoans.where((l) => 
+            _selectedTabIndex == 0 ? l.type == LoanType.given : l.type == LoanType.taken
+          ).toList();
 
           return Column(
             children: [
@@ -57,14 +59,16 @@ class _LoansScreenState extends State<LoansScreen> {
               _buildToggleSwitch(),
               const SizedBox(height: 16),
               Expanded(
-                child: filteredLoans.isEmpty 
-                    ? _buildEmptyState() 
-                    : ListView.builder(
-                        padding: const EdgeInsets.only(left: 20, right: 20, bottom: 120),
-                        physics: const BouncingScrollPhysics(),
-                        itemCount: filteredLoans.length,
-                        itemBuilder: (context, index) => _LoanCard(loan: filteredLoans[index]),
-                      ),
+                child: _selectedTabIndex == 2 
+                    ? _buildByPersonList(allLoans)
+                    : filteredLoans.isEmpty 
+                        ? _buildEmptyState() 
+                        : ListView.builder(
+                            padding: const EdgeInsets.only(left: 20, right: 20, bottom: 120),
+                            physics: const BouncingScrollPhysics(),
+                            itemCount: filteredLoans.length,
+                            itemBuilder: (context, index) => _LoanCard(loan: filteredLoans[index]),
+                          ),
               ),
             ],
           );
@@ -131,18 +135,19 @@ class _LoansScreenState extends State<LoansScreen> {
       ),
       child: Row(
         children: [
-          _toggleButton(LoanType.given, 'Given Loans'),
-          _toggleButton(LoanType.taken, 'Taken Loans'),
+          _toggleButton(0, 'Given'),
+          _toggleButton(1, 'Taken'),
+          _toggleButton(2, 'By Person'),
         ],
       ),
     );
   }
 
-  Widget _toggleButton(LoanType type, String label) {
-    bool isSelected = _selectedType == type;
+  Widget _toggleButton(int index, String label) {
+    bool isSelected = _selectedTabIndex == index;
     return Expanded(
       child: GestureDetector(
-        onTap: () => setState(() => _selectedType = type),
+        onTap: () => setState(() => _selectedTabIndex = index),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(vertical: 14),
@@ -156,10 +161,120 @@ class _LoansScreenState extends State<LoansScreen> {
             style: GoogleFonts.montserrat(
               color: isSelected ? Colors.white : AppColors.secondaryText,
               fontWeight: FontWeight.bold,
-              fontSize: 14,
+              fontSize: 13,
             )),
         ),
       ),
+    );
+  }
+
+  Widget _buildByPersonList(List<LoanModel> allLoans) {
+    if (allLoans.isEmpty) return _buildEmptyState();
+
+    Map<String, Map<String, dynamic>> personSummary = {};
+    for (var loan in allLoans) {
+      String rawName = loan.personName.trim();
+      String key = rawName.toLowerCase();
+      
+      if (!personSummary.containsKey(key)) {
+        personSummary[key] = {'name': rawName, 'given': 0.0, 'taken': 0.0, 'net': 0.0, 'count': 0};
+      }
+      
+      personSummary[key]!['count'] = (personSummary[key]!['count'] as int) + 1;
+      
+      if (loan.type == LoanType.given) {
+        personSummary[key]!['given'] = (personSummary[key]!['given'] as double) + loan.remainingAmount;
+        personSummary[key]!['net'] = (personSummary[key]!['net'] as double) + loan.remainingAmount;
+      } else {
+        personSummary[key]!['taken'] = (personSummary[key]!['taken'] as double) + loan.remainingAmount;
+        personSummary[key]!['net'] = (personSummary[key]!['net'] as double) - loan.remainingAmount;
+      }
+    }
+
+    final personsKeys = personSummary.keys.toList()..sort();
+
+    return ListView.builder(
+      padding: const EdgeInsets.only(left: 20, right: 20, bottom: 120),
+      physics: const BouncingScrollPhysics(),
+      itemCount: personsKeys.length,
+      itemBuilder: (context, index) {
+        final key = personsKeys[index];
+        final summary = personSummary[key]!;
+        
+        final name = summary['name'] as String;
+        final count = summary['count'] as int;
+        final given = summary['given'] as double;
+        final taken = summary['taken'] as double;
+        final net = summary['net'] as double;
+        
+        bool youOwe = net < 0;
+        bool theyOwe = net > 0;
+        bool settled = net == 0;
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 16),
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: AppColors.cardBackground,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 5))],
+            border: Border.all(color: AppColors.brandPrimary.withOpacity(0.05)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: AppColors.brandPrimary.withOpacity(0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.person, color: AppColors.brandPrimary),
+                      ),
+                      const SizedBox(width: 12),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(name, style: GoogleFonts.montserrat(color: AppColors.primaryText, fontWeight: FontWeight.bold, fontSize: 16)),
+                          Text('$count loan${count > 1 ? 's' : ''}', style: GoogleFonts.montserrat(color: AppColors.secondaryText, fontSize: 11, fontWeight: FontWeight.w500)),
+                        ],
+                      ),
+                    ],
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: settled ? AppColors.brandPrimary.withOpacity(0.1) : (theyOwe ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1)),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(settled ? 'SETTLED' : (theyOwe ? 'THEY OWE' : 'YOU OWE'), 
+                      style: GoogleFonts.montserrat(
+                        color: settled ? AppColors.brandPrimary : (theyOwe ? Colors.green : Colors.red), 
+                        fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1,
+                      )
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _detailStat('Given (Pending)', given, AppColors.secondaryText),
+                  _detailStat('Taken (Pending)', taken, AppColors.secondaryText),
+                  _detailStat('Net Balance', net.abs(), settled ? AppColors.brandPrimary : (theyOwe ? Colors.green : Colors.red)),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -173,6 +288,17 @@ class _LoansScreenState extends State<LoansScreen> {
           Text('No loans found', style: GoogleFonts.montserrat(color: AppColors.secondaryText, fontSize: 16, fontWeight: FontWeight.w500)),
         ],
       ),
+    );
+  }
+
+  Widget _detailStat(String label, double value, Color color) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: GoogleFonts.montserrat(color: AppColors.secondaryText, fontSize: 11, fontWeight: FontWeight.w600)),
+        const SizedBox(height: 4),
+        Text('৳ ${value.toInt()}', style: GoogleFonts.montserrat(color: color, fontSize: 14, fontWeight: FontWeight.bold)),
+      ],
     );
   }
 }

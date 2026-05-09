@@ -27,7 +27,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
   String _sourceOwner = AppConstants.ownerSelf;
   AccountModel? _destAccount;
   String _destOwner = AppConstants.ownerMother;
-  bool _trackDestination = true;
+  bool _trackDestination = false;
   bool _isLoading = false;
 
   @override
@@ -43,6 +43,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
         _destOwner = AppConstants.ownerOther;
       }
       _sourceOwner = AppConstants.ownerSelf;
+      _trackDestination = false; // Default to OFF for repayments as destination is usually outside the app
     } else {
       // They are returning money TO me
       _destOwner = AppConstants.ownerSelf;
@@ -51,9 +52,30 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
       } else {
         _sourceOwner = AppConstants.ownerOther;
       }
+      _trackDestination = true; // Default to ON for receiving as it should go into my account
     }
+
+    // Try to pre-select linked account if available
+    _initializeAccounts();
+  }
+
+  void _initializeAccounts() async {
+    if (widget.loan.linkedAccountId == null) return;
     
-    _trackDestination = true;
+    // We need the full AccountModel list to find the matching one
+    final accounts = await _accountService.getAccounts().first;
+    if (mounted) {
+      setState(() {
+        final linked = accounts.firstWhere((a) => a.id == widget.loan.linkedAccountId, orElse: () => accounts.first);
+        if (widget.loan.type == LoanType.taken) {
+          _sourceAccount = linked;
+          _sourceOwner = widget.loan.owner;
+        } else {
+          _destAccount = linked;
+          _destOwner = widget.loan.owner;
+        }
+      });
+    }
   }
 
   void _handleAddPayment() async {
@@ -330,6 +352,10 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
         centerTitle: true,
         actions: [
           IconButton(
+            icon: const Icon(Icons.edit_rounded, color: AppColors.brandPrimary),
+            onPressed: _showEditNameDialog,
+          ),
+          IconButton(
             icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent),
             onPressed: () => _showDeleteConfirmation(
               title: 'Delete Loan?',
@@ -368,6 +394,50 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
               onConfirm();
             }, 
             child: const Text('Delete', style: TextStyle(color: Colors.redAccent)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showEditNameDialog() {
+    final TextEditingController nameController = TextEditingController(text: widget.loan.personName);
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text('Edit Name', style: GoogleFonts.montserrat(fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Make the name exactly the same as other loans to group them together in the "By Person" tab.', 
+              style: GoogleFonts.montserrat(fontSize: 12, color: AppColors.secondaryText)),
+            const SizedBox(height: 16),
+            CustomTextField(
+              controller: nameController,
+              hintText: 'Person Name',
+              icon: Icons.person_outline,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel', style: TextStyle(color: AppColors.secondaryText))),
+          TextButton(
+            onPressed: () async {
+              final newName = nameController.text.trim();
+              if (newName.isEmpty || newName == widget.loan.personName) return;
+              Navigator.pop(context);
+              setState(() => _isLoading = true);
+              try {
+                await _loanService.updateLoanPersonName(widget.loan.id, newName);
+                if (mounted) Navigator.pop(context); // Go back to refresh list
+              } catch (e) {
+                if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+              } finally {
+                if (mounted) setState(() => _isLoading = false);
+              }
+            }, 
+            child: const Text('Save', style: TextStyle(color: AppColors.brandPrimary, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
