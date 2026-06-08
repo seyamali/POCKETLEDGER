@@ -630,9 +630,32 @@ class _DashboardScreenState extends State<DashboardScreen> {
           children: snapshot.data!.map((tx) {
             final isIncome = tx.type == TransactionType.income;
             final isTransfer = tx.type == TransactionType.transfer;
-            final Color color = isIncome ? AppColors.primaryGreen : (isTransfer ? Colors.blue : Colors.redAccent);
-            final IconData icon = isIncome ? Icons.arrow_downward_rounded : (isTransfer ? Icons.swap_horiz_rounded : Icons.arrow_upward_rounded);
-            final String prefix = isIncome ? '+' : (isTransfer ? '' : '-');
+            final isOthers = tx.type == TransactionType.others;
+            
+            final Color color;
+            if (isIncome) color = AppColors.primaryGreen;
+            else if (isTransfer) color = Colors.blue;
+            else if (isOthers) color = Colors.purpleAccent;
+            else color = Colors.redAccent;
+
+            final IconData icon;
+            if (isIncome) icon = Icons.arrow_downward_rounded;
+            else if (isTransfer) icon = Icons.swap_horiz_rounded;
+            else if (isOthers) icon = Icons.change_circle_rounded;
+            else icon = Icons.arrow_upward_rounded;
+
+            String prefix = '';
+            if (isIncome) {
+              prefix = '+';
+            } else if (isOthers) {
+              if (tx.category.contains('Taken') || tx.category.contains('Received')) {
+                prefix = '+';
+              } else {
+                prefix = '-';
+              }
+            } else if (!isTransfer) {
+              prefix = '-';
+            }
 
             return Container(
               margin: const EdgeInsets.only(bottom: 12),

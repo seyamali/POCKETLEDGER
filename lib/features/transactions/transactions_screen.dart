@@ -269,13 +269,26 @@ class _TransactionCardState extends State<_TransactionCard> {
   Widget build(BuildContext context) {
     final bool isIncome = widget.transaction.type == TransactionType.income;
     final bool isTransfer = widget.transaction.type == TransactionType.transfer;
+    final bool isOthers = widget.transaction.type == TransactionType.others;
     
     Color typeColor;
     if (isIncome) typeColor = AppColors.brandPrimary;
     else if (isTransfer) typeColor = Colors.blue;
+    else if (isOthers) typeColor = Colors.purpleAccent;
     else typeColor = Colors.redAccent;
 
-    String amountPrefix = isIncome ? '+' : (isTransfer ? '' : '-');
+    String amountPrefix = '';
+    if (isIncome) {
+      amountPrefix = '+';
+    } else if (isOthers) {
+      if (widget.transaction.category.contains('Taken') || widget.transaction.category.contains('Received')) {
+        amountPrefix = '+';
+      } else {
+        amountPrefix = '-';
+      }
+    } else if (!isTransfer) {
+      amountPrefix = '-';
+    }
 
     return GestureDetector(
       onTap: () => setState(() => _isExpanded = !_isExpanded),

@@ -13,56 +13,61 @@ class LoanService {
 
     final loanRef = _db.collection('loans').doc();
     await _db.runTransaction((transaction) async {
+      DocumentSnapshot? accountDoc;
+      DocumentReference? accountRef;
+
+      // --- ALL READS FIRST ---
+      if (loan.linkedAccountId != null) {
+        accountRef = _db.collection('accounts').doc(loan.linkedAccountId);
+        accountDoc = await transaction.get(accountRef);
+      }
+
+      // --- ALL WRITES ---
       // 1. Save Loan Document
       transaction.set(loanRef, loan.toFirestore()..addAll({'userId': _uid}));
 
       // 2. Adjust Linked Account Balance if provided
-      if (loan.linkedAccountId != null) {
-        final accountRef = _db.collection('accounts').doc(loan.linkedAccountId);
-        final accountDoc = await transaction.get(accountRef);
-        
-        if (accountDoc.exists) {
-          final accountData = accountDoc.data() as Map<String, dynamic>;
-          double currentTotal = (accountData['totalBalance'] ?? 0).toDouble();
-          Map<String, double> breakdown = Map<String, double>.from(
-            (accountData['breakdown'] ?? {}).map((key, value) => MapEntry(key, value.toDouble())),
-          );
+      if (accountRef != null && accountDoc != null && accountDoc.exists) {
+        final accountData = accountDoc.data() as Map<String, dynamic>;
+        double currentTotal = (accountData['totalBalance'] ?? 0).toDouble();
+        Map<String, double> breakdown = Map<String, double>.from(
+          (accountData['breakdown'] ?? {}).map((key, value) => MapEntry(key, value.toDouble())),
+        );
 
-          double ownerBalance = breakdown[loan.owner] ?? 0;
+        double ownerBalance = breakdown[loan.owner] ?? 0;
 
-          if (loan.type == LoanType.taken) {
-            // Taking loan adds money to account
-            currentTotal += loan.amount;
-            ownerBalance += loan.amount;
-          } else {
-            // Giving loan subtracts money from account
-            currentTotal -= loan.amount;
-            ownerBalance -= loan.amount;
-          }
-
-          breakdown[loan.owner] = ownerBalance;
-
-          transaction.update(accountRef, {
-            'totalBalance': currentTotal,
-            'breakdown': breakdown,
-          });
-
-          // 3. Add initial transaction record
-          final transRef = _db.collection('transactions').doc();
-          transaction.set(transRef, TransactionModel(
-            id: transRef.id,
-            accountId: loan.linkedAccountId!,
-            accountName: loan.linkedAccountName ?? 'Account',
-            owner: loan.owner,
-            amount: loan.amount,
-            type: loan.type == LoanType.taken ? TransactionType.income : TransactionType.expense,
-            category: 'Loan (${loan.type == LoanType.taken ? 'Taken' : 'Given'})',
-            note: 'Loan with ${loan.personName}',
-            date: loan.date,
-            userId: _uid!,
-            loanId: loanRef.id,
-          ).toFirestore());
+        if (loan.type == LoanType.taken) {
+          // Taking loan adds money to account
+          currentTotal += loan.amount;
+          ownerBalance += loan.amount;
+        } else {
+          // Giving loan subtracts money from account
+          currentTotal -= loan.amount;
+          ownerBalance -= loan.amount;
         }
+
+        breakdown[loan.owner] = ownerBalance;
+
+        transaction.update(accountRef, {
+          'totalBalance': currentTotal,
+          'breakdown': breakdown,
+        });
+
+        // 3. Add initial transaction record
+        final transRef = _db.collection('transactions').doc();
+        transaction.set(transRef, TransactionModel(
+          id: transRef.id,
+          accountId: loan.linkedAccountId!,
+          accountName: loan.linkedAccountName ?? 'Account',
+          owner: loan.owner,
+          amount: loan.amount,
+          type: TransactionType.others,
+          category: 'Loan (${loan.type == LoanType.taken ? 'Taken' : 'Given'})',
+          note: 'Loan with ${loan.personName}',
+          date: loan.date,
+          userId: _uid!,
+          loanId: loanRef.id,
+        ).toFirestore());
       }
     });
   }
@@ -101,16 +106,6 @@ class LoanService {
         destAccountName: destAccountName,
         destOwner: destOwner,
       );
-
-      // 1. UPDATE LOAN RECORD
-      List<RepaymentModel> newRepayments = List.from(loan.repayments)..add(repayment);
-      double newRemaining = loan.remainingAmount - paymentAmount;
-      
-      tx.update(loanRef, {
-        'repayments': newRepayments.map((r) => r.toMap()).toList(),
-        'remainingAmount': newRemaining,
-        'status': newRemaining <= 0 ? 'paid' : 'pending',
-      });
 
       // To handle cases where source and destination might be the same account,
       // we track changes in memory first.
@@ -160,12 +155,30 @@ class LoanService {
         }
       }
 
+      // --- NEW READ SECTION: Fetch all accounts BEFORE writes ---
+      Map<String, DocumentSnapshot> fetchedAccountDocs = {};
+      for (var accId in accountUpdates.keys) {
+        final accRef = _db.collection('accounts').doc(accId);
+        fetchedAccountDocs[accId] = await tx.get(accRef);
+      }
+
+      // --- ALL WRITES ---
+      // 1. UPDATE LOAN RECORD
+      List<RepaymentModel> newRepayments = List.from(loan.repayments)..add(repayment);
+      double newRemaining = loan.remainingAmount - paymentAmount;
+      
+      tx.update(loanRef, {
+        'repayments': newRepayments.map((r) => r.toMap()).toList(),
+        'remainingAmount': newRemaining,
+        'status': newRemaining <= 0 ? 'paid' : 'pending',
+      });
+
       // 4. APPLY CONSOLIDATED UPDATES
       for (var entry in accountUpdates.entries) {
         final accId = entry.key;
         final update = entry.value;
         final accRef = _db.collection('accounts').doc(accId);
-        final accDoc = await tx.get(accRef);
+        final accDoc = fetchedAccountDocs[accId]!;
         
         if (accDoc.exists) {
           final data = accDoc.data() as Map<String, dynamic>;
@@ -202,7 +215,7 @@ class LoanService {
           accountName: sourceAccountName,
           owner: sourceOwner,
           amount: paymentAmount,
-          type: TransactionType.expense,
+          type: TransactionType.others,
           category: 'Loan Repayment (Sent)',
           note: 'Paid to ${loan.personName} from $sourceOwner portion',
           date: DateTime.now(),
@@ -220,7 +233,7 @@ class LoanService {
           accountName: destAccountName,
           owner: destOwner ?? loan.personName,
           amount: paymentAmount,
-          type: TransactionType.income,
+          type: TransactionType.others,
           category: 'Loan Repayment (Received)',
           note: 'Received back into ${destOwner ?? loan.personName} portion',
           date: DateTime.now(),

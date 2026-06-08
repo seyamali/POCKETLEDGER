@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:pocketledger/core/constants/app_constants.dart';
 
-enum TransactionType { income, expense, transfer }
+enum TransactionType { income, expense, transfer, others }
 
 class TransactionModel {
   final String id;
