@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:pocketledger/app/theme.dart';
 import 'package:pocketledger/models/category_model.dart';
 import 'package:pocketledger/services/category_service.dart';
+import 'package:pocketledger/core/constants/app_icons.dart';
 
 class CategoryManagerScreen extends StatefulWidget {
   const CategoryManagerScreen({super.key});
@@ -29,29 +30,7 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen> with Sing
     const Color(0xFF7B7B7B), // Slate Grey
   ];
 
-  // Curated Material Icons to Choose From
-  final List<IconData> _pickerIcons = [
-    Icons.category_rounded,
-    Icons.home_rounded,
-    Icons.restaurant_rounded,
-    Icons.directions_bus_rounded,
-    Icons.favorite_rounded,
-    Icons.person_rounded,
-    Icons.payments_rounded,
-    Icons.work_rounded,
-    Icons.store_rounded,
-    Icons.shopping_bag_rounded,
-    Icons.fitness_center_rounded,
-    Icons.movie_rounded,
-    Icons.school_rounded,
-    Icons.flight_rounded,
-    Icons.medical_services_rounded,
-    Icons.build_rounded,
-    Icons.pets_rounded,
-    Icons.coffee_rounded,
-    Icons.fastfood_rounded,
-    Icons.local_grocery_store_rounded,
-  ];
+
 
   @override
   void initState() {
@@ -69,8 +48,8 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen> with Sing
     final isEditing = existingCategory != null;
     final nameController = TextEditingController(text: existingCategory?.name ?? '');
     IconData selectedIcon = isEditing
-        ? IconData(existingCategory!.iconCode, fontFamily: 'MaterialIcons')
-        : _pickerIcons.first;
+        ? AppIcons.getIconFromCode(existingCategory!.iconCode)
+        : AppIcons.availableIcons.first;
     Color selectedColor = isEditing
         ? Color(existingCategory!.colorValue)
         : _pickerColors.first;
@@ -140,7 +119,7 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen> with Sing
                         child: Container(
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           decoration: BoxDecoration(
-                            color: selectedType == 'expense' ? Colors.redAccent.withOpacity(0.1) : Colors.transparent,
+                            color: selectedType == 'expense' ? Colors.redAccent.withValues(alpha: 0.1) : Colors.transparent,
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(color: selectedType == 'expense' ? Colors.redAccent : Colors.grey.shade300),
                           ),
@@ -156,7 +135,7 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen> with Sing
                         child: Container(
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           decoration: BoxDecoration(
-                            color: selectedType == 'income' ? AppColors.primaryGreen.withOpacity(0.1) : Colors.transparent,
+                            color: selectedType == 'income' ? AppColors.primaryGreen.withValues(alpha: 0.1) : Colors.transparent,
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(color: selectedType == 'income' ? AppColors.primaryGreen : Colors.grey.shade300),
                           ),
@@ -176,9 +155,9 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen> with Sing
                   height: 60,
                   child: ListView.builder(
                     scrollDirection: Axis.horizontal,
-                    itemCount: _pickerIcons.length,
+                    itemCount: AppIcons.availableIcons.length,
                     itemBuilder: (context, idx) {
-                      final icon = _pickerIcons[idx];
+                      final icon = AppIcons.availableIcons[idx];
                       final isSelected = selectedIcon.codePoint == icon.codePoint;
                       return GestureDetector(
                         onTap: () => setModalState(() => selectedIcon = icon),
@@ -187,7 +166,7 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen> with Sing
                           margin: const EdgeInsets.only(right: 12),
                           width: 50,
                           decoration: BoxDecoration(
-                            color: isSelected ? selectedColor.withOpacity(0.1) : AppColors.pageBackground,
+                            color: isSelected ? selectedColor.withValues(alpha: 0.1) : AppColors.pageBackground,
                             shape: BoxShape.circle,
                             border: Border.all(color: isSelected ? selectedColor : Colors.transparent, width: 2),
                           ),
@@ -221,7 +200,7 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen> with Sing
                             shape: BoxShape.circle,
                             border: Border.all(color: isSelected ? Colors.white : Colors.transparent, width: 3),
                             boxShadow: isSelected
-                                ? [BoxShadow(color: color.withOpacity(0.4), blurRadius: 8, spreadRadius: 1)]
+                                ? [BoxShadow(color: color.withValues(alpha: 0.4), blurRadius: 8, spreadRadius: 1)]
                                 : [],
                           ),
                         ),
@@ -238,7 +217,7 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen> with Sing
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(16),
                     gradient: LinearGradient(
-                      colors: [selectedColor, selectedColor.withOpacity(0.8)],
+                      colors: [selectedColor, selectedColor.withValues(alpha: 0.8)],
                     ),
                   ),
                   child: ElevatedButton(
@@ -318,6 +297,18 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen> with Sing
       body: StreamBuilder<List<CategoryModel>>(
         stream: _categoryService.getCategories(),
         builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Text(
+                  'Error loading categories: ${snapshot.error}',
+                  style: GoogleFonts.outfit(color: Colors.redAccent, fontSize: 14),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            );
+          }
           if (snapshot.connectionState == ConnectionState.waiting) {
             return Center(child: CircularProgressIndicator(color: AppColors.primaryGreen));
           }
@@ -364,7 +355,7 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen> with Sing
                     Container(
                       padding: const EdgeInsets.all(4),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.15),
+                        color: Colors.white.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: TabBar(
@@ -410,7 +401,7 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen> with Sing
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.category_rounded, size: 64, color: AppColors.textGrey.withOpacity(0.3)),
+            Icon(Icons.category_rounded, size: 64, color: AppColors.textGrey.withValues(alpha: 0.3)),
             const SizedBox(height: 16),
             Text('No categories found', style: GoogleFonts.outfit(color: AppColors.textGrey, fontSize: 16, fontWeight: FontWeight.bold)),
           ],
@@ -425,7 +416,7 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen> with Sing
       itemBuilder: (context, idx) {
         final cat = list[idx];
         final catColor = Color(cat.colorValue);
-        final catIcon = IconData(cat.iconCode, fontFamily: 'MaterialIcons');
+        final catIcon = AppIcons.getIconFromCode(cat.iconCode);
 
         return Container(
           margin: const EdgeInsets.only(bottom: 12),
@@ -434,7 +425,7 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen> with Sing
             color: AppColors.cardWhite,
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
-              BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4)),
+              BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 10, offset: const Offset(0, 4)),
             ],
           ),
           child: Row(
@@ -442,7 +433,7 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen> with Sing
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: catColor.withOpacity(0.1),
+                  color: catColor.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(catIcon, color: catColor, size: 24),

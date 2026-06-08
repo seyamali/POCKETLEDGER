@@ -128,7 +128,7 @@ class _SavingsScreenState extends State<SavingsScreen> {
                     child: Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: alreadyPaid ? AppColors.primaryGreen.withOpacity(0.05) : Colors.white,
+                        color: alreadyPaid ? AppColors.primaryGreen.withValues(alpha: 0.05) : Colors.white,
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(color: alreadyPaid ? AppColors.primaryGreen : Colors.transparent),
                       ),
@@ -268,9 +268,9 @@ class _SavingsScreenState extends State<SavingsScreen> {
     return Container(
       width: double.infinity, height: 60,
       decoration: BoxDecoration(
-        gradient: LinearGradient(colors: [AppColors.primaryGreen, AppColors.primaryGreen.withOpacity(0.8)]),
+        gradient: LinearGradient(colors: [AppColors.primaryGreen, AppColors.primaryGreen.withValues(alpha: 0.8)]),
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: AppColors.primaryGreen.withOpacity(0.3), blurRadius: 15, offset: const Offset(0, 8))],
+        boxShadow: [BoxShadow(color: AppColors.primaryGreen.withValues(alpha: 0.3), blurRadius: 15, offset: const Offset(0, 8))],
       ),
       child: ElevatedButton(
         onPressed: isLoading ? null : onTap,
@@ -332,13 +332,13 @@ class _SavingsScreenState extends State<SavingsScreen> {
       decoration: BoxDecoration(
         gradient: LinearGradient(colors: [Colors.amber.shade600, Colors.amber.shade400], begin: Alignment.topLeft, end: Alignment.bottomRight),
         borderRadius: BorderRadius.circular(35),
-        boxShadow: [BoxShadow(color: Colors.amber.withOpacity(0.3), blurRadius: 25, offset: const Offset(0, 12))],
+        boxShadow: [BoxShadow(color: Colors.amber.withValues(alpha: 0.3), blurRadius: 25, offset: const Offset(0, 12))],
       ),
       child: Column(
         children: [
-          Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle), child: const Icon(Icons.savings_rounded, color: Colors.white, size: 30)),
+          Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), shape: BoxShape.circle), child: const Icon(Icons.savings_rounded, color: Colors.white, size: 30)),
           const SizedBox(height: 20),
-          Text('Total Net Savings', style: GoogleFonts.outfit(color: Colors.white.withOpacity(0.9), fontSize: 14, fontWeight: FontWeight.w500)),
+          Text('Total Net Savings', style: GoogleFonts.outfit(color: Colors.white.withValues(alpha: 0.9), fontSize: 14, fontWeight: FontWeight.w500)),
           const SizedBox(height: 8),
           Text('৳${total.toInt()}', style: GoogleFonts.outfit(color: Colors.white, fontSize: 48, fontWeight: FontWeight.bold, letterSpacing: -1)),
         ],
@@ -351,7 +351,7 @@ class _SavingsScreenState extends State<SavingsScreen> {
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(color: AppColors.cardWhite, borderRadius: BorderRadius.circular(25), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10)]),
+        decoration: BoxDecoration(color: AppColors.cardWhite, borderRadius: BorderRadius.circular(25), boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 10)]),
         child: Column(
           children: [
             Icon(icon, color: color, size: 26),
@@ -367,10 +367,10 @@ class _SavingsScreenState extends State<SavingsScreen> {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(color: AppColors.cardWhite, borderRadius: BorderRadius.circular(25), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.01), blurRadius: 10)]),
+      decoration: BoxDecoration(color: AppColors.cardWhite, borderRadius: BorderRadius.circular(25), boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.01), blurRadius: 10)]),
       child: Row(
         children: [
-          Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: Colors.amber.withOpacity(0.1), shape: BoxShape.circle), child: Icon(Icons.account_balance_wallet_rounded, color: Colors.amber.shade600, size: 20)),
+          Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: Colors.amber.withValues(alpha: 0.1), shape: BoxShape.circle), child: Icon(Icons.account_balance_wallet_rounded, color: Colors.amber.shade600, size: 20)),
           const SizedBox(width: 16),
           Expanded(
             child: Column(

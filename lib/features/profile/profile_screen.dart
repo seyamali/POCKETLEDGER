@@ -124,9 +124,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           width: double.infinity,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           decoration: BoxDecoration(
-                            color: Colors.red.withOpacity(0.1),
+                            color: Colors.red.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: Colors.red.withOpacity(0.2)),
+                            border: Border.all(color: Colors.red.withValues(alpha: 0.2)),
                           ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -170,7 +170,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 top: -20, right: -20,
                 child: Container(
                   width: 140, height: 140,
-                  decoration: BoxDecoration(color: Colors.white.withOpacity(0.05), shape: BoxShape.circle),
+                  decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.05), shape: BoxShape.circle),
                 ),
               ),
               SafeArea(
@@ -258,13 +258,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
         decoration: BoxDecoration(
           color: AppColors.cardWhite,
           borderRadius: BorderRadius.circular(20),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4))],
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 10, offset: const Offset(0, 4))],
         ),
         child: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(color: AppColors.primaryGreen.withOpacity(0.08), borderRadius: BorderRadius.circular(14)),
+              decoration: BoxDecoration(color: AppColors.primaryGreen.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(14)),
               child: Icon(icon, color: AppColors.primaryGreen, size: 22),
             ),
             const SizedBox(width: 16),
@@ -277,7 +277,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ],
               ),
             ),
-            Icon(Icons.arrow_forward_ios_rounded, color: AppColors.textGrey.withOpacity(0.3), size: 16),
+            Icon(Icons.arrow_forward_ios_rounded, color: AppColors.textGrey.withValues(alpha: 0.3), size: 16),
           ],
         ),
       ),
@@ -295,14 +295,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
           decoration: BoxDecoration(
             color: AppColors.cardWhite,
             borderRadius: BorderRadius.circular(20),
-            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4))],
+            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 10, offset: const Offset(0, 4))],
           ),
           child: Row(
             children: [
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: (isDark ? const Color(0xFF52B788) : AppColors.primaryGreen).withOpacity(0.08),
+                  color: (isDark ? const Color(0xFF52B788) : AppColors.primaryGreen).withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Icon(
@@ -407,9 +407,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     Container(
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
-                        color: isEnabled ? AppColors.primaryGreen.withOpacity(0.05) : Colors.grey.shade50,
+                        color: isEnabled ? AppColors.primaryGreen.withValues(alpha: 0.05) : Colors.grey.shade50,
                         borderRadius: BorderRadius.circular(24),
-                        border: Border.all(color: isEnabled ? AppColors.primaryGreen.withOpacity(0.2) : Colors.grey.shade200),
+                        border: Border.all(color: isEnabled ? AppColors.primaryGreen.withValues(alpha: 0.2) : Colors.grey.shade200),
                       ),
                       child: Row(
                         children: [
@@ -452,9 +452,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       Container(
                         padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
-                          color: isBiometricEnabled ? AppColors.primaryGreen.withOpacity(0.05) : Colors.grey.shade50,
+                          color: isBiometricEnabled ? AppColors.primaryGreen.withValues(alpha: 0.05) : Colors.grey.shade50,
                           borderRadius: BorderRadius.circular(24),
-                          border: Border.all(color: isBiometricEnabled ? AppColors.primaryGreen.withOpacity(0.2) : Colors.grey.shade200),
+                          border: Border.all(color: isBiometricEnabled ? AppColors.primaryGreen.withValues(alpha: 0.2) : Colors.grey.shade200),
                         ),
                         child: Row(
                           children: [
@@ -613,7 +613,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       begin: Alignment.centerLeft, end: Alignment.centerRight,
                     ),
                     boxShadow: [
-                      BoxShadow(color: AppColors.primaryGreen.withOpacity(0.3), blurRadius: 20, offset: const Offset(0, 8)),
+                      BoxShadow(color: AppColors.primaryGreen.withValues(alpha: 0.3), blurRadius: 20, offset: const Offset(0, 8)),
                     ],
                   ),
                   child: ElevatedButton(
@@ -735,9 +735,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   height: 60,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(20),
-                    color: AppColors.error.withOpacity(0.9),
+                    color: AppColors.error.withValues(alpha: 0.9),
                     boxShadow: [
-                      BoxShadow(color: AppColors.error.withOpacity(0.2), blurRadius: 20, offset: const Offset(0, 8)),
+                      BoxShadow(color: AppColors.error.withValues(alpha: 0.2), blurRadius: 20, offset: const Offset(0, 8)),
                     ],
                   ),
                   child: ElevatedButton(
@@ -870,7 +870,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       begin: Alignment.centerLeft, end: Alignment.centerRight,
                     ),
                     boxShadow: [
-                      BoxShadow(color: AppColors.primaryGreen.withOpacity(0.3), blurRadius: 20, offset: const Offset(0, 8)),
+                      BoxShadow(color: AppColors.primaryGreen.withValues(alpha: 0.3), blurRadius: 20, offset: const Offset(0, 8)),
                     ],
                   ),
                   child: ElevatedButton(
@@ -1008,7 +1008,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color: AppColors.primaryGreen.withOpacity(0.15),
+                              color: AppColors.primaryGreen.withValues(alpha: 0.15),
                               blurRadius: 30, spreadRadius: 5,
                             ),
                           ],
@@ -1034,7 +1034,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 ? MemoryImage(pickedImageBytes!) 
                                 : ImageUtils.buildProfileImage(currentPic),
                             child: (pickedImageBytes == null && (currentPic == null || currentPic.isEmpty))
-                                ? Icon(Icons.person_rounded, size: 55, color: AppColors.primaryGreen.withOpacity(0.3))
+                                ? Icon(Icons.person_rounded, size: 55, color: AppColors.primaryGreen.withValues(alpha: 0.3))
                                 : null,
                           ),
                         ),
@@ -1066,7 +1066,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               shape: BoxShape.circle,
                               border: Border.all(color: Colors.white, width: 3),
                               boxShadow: [
-                                BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 4)),
+                                BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 10, offset: const Offset(0, 4)),
                               ],
                             ),
                             child: const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 20),
@@ -1096,7 +1096,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: AppColors.primaryGreen.withOpacity(0.3),
+                        color: AppColors.primaryGreen.withValues(alpha: 0.3),
                         blurRadius: 20, offset: const Offset(0, 8),
                       ),
                     ],
@@ -1501,7 +1501,7 @@ class _GeneratePDFSheetState extends State<_GeneratePDFSheet> {
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primaryGreen.withOpacity(0.08) : AppColors.cardWhite,
+          color: isSelected ? AppColors.primaryGreen.withValues(alpha: 0.08) : AppColors.cardWhite,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isSelected ? AppColors.primaryGreen : Colors.grey.shade200,
@@ -1566,7 +1566,7 @@ class _GeneratePDFSheetState extends State<_GeneratePDFSheet> {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: AppColors.primaryGreen.withOpacity(0.1),
+                    color: AppColors.primaryGreen.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(Icons.picture_as_pdf_rounded, color: AppColors.primaryGreen, size: 22),

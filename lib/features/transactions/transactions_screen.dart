@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:pocketledger/app/theme.dart';
@@ -5,6 +6,8 @@ import 'package:pocketledger/models/transaction_model.dart';
 import 'package:pocketledger/services/transaction_service.dart';
 import 'package:pocketledger/core/widgets/skeleton_loader.dart';
 import 'package:intl/intl.dart';
+import 'package:pocketledger/core/widgets/scale_on_tap.dart';
+import 'package:pocketledger/core/widgets/glass_card.dart';
 
 class TransactionsScreen extends StatefulWidget {
   const TransactionsScreen({super.key});
@@ -16,149 +19,342 @@ class TransactionsScreen extends StatefulWidget {
 class _TransactionsScreenState extends State<TransactionsScreen> {
   final TransactionService _transactionService = TransactionService();
   final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
   String _searchQuery = '';
   String _selectedFilter = 'All';
   final List<String> _filters = ['All', 'Income', 'Expense', 'Transfer', 'This Month', 'This Week'];
-  int _currentLimit = 20; // Start with 20 items
+  int _currentLimit = 20;
+
+  @override
+  void initState() {
+    super.initState();
+    _searchFocusNode.addListener(() => setState(() {}));
+  }
 
   @override
   void dispose() {
     _searchController.dispose();
+    _searchFocusNode.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
       backgroundColor: AppColors.primaryBackground,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: Text('Transactions', style: GoogleFonts.montserrat(color: AppColors.primaryText, fontWeight: FontWeight.bold)),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.add_circle_rounded, color: AppColors.brandPrimary, size: 30),
-            onPressed: () => Navigator.pushNamed(context, '/add-transaction'),
+        title: Text(
+          'Transactions',
+          style: GoogleFonts.outfit(
+            color: AppColors.primaryText,
+            fontWeight: FontWeight.bold,
+            fontSize: 22,
           ),
-          const SizedBox(width: 12),
+        ),
+        actions: [
+          ScaleOnTap(
+            onTap: () => Navigator.pushNamed(context, '/add-transaction'),
+            child: Container(
+              margin: const EdgeInsets.only(right: 20),
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.brandPrimary.withValues(alpha: 0.1),
+              ),
+              child: Icon(Icons.add_rounded, color: AppColors.brandPrimary, size: 24),
+            ),
+          ),
         ],
       ),
-      body: Column(
+      body: Stack(
         children: [
-          _buildSearchBar(),
-          _buildFilterBar(),
-          Expanded(
-            child: StreamBuilder<List<TransactionModel>>(
-              stream: _transactionService.getRecentTransactions(limit: _currentLimit),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
-                  return ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                    itemCount: 6,
-                    itemBuilder: (context, index) => const SkeletonLoader(
-                      width: double.infinity,
-                      height: 100,
-                      borderRadius: 20,
-                      margin: EdgeInsets.only(bottom: 16),
-                    ),
-                  );
-                }
+          // Background ambient glowing circles
+          Positioned(
+            top: -20, right: -40,
+            child: Container(
+              width: 220, height: 220,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.brandPrimary.withValues(alpha: isDark ? 0.08 : 0.05),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 150, left: -60,
+            child: Container(
+              width: 240, height: 240,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.blueAccent.withValues(alpha: isDark ? 0.06 : 0.04),
+              ),
+            ),
+          ),
+          Positioned.fill(
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
+              child: Container(color: Colors.transparent),
+            ),
+          ),
+          Column(
+            children: [
+              _buildSearchBar(isDark),
+              _buildFilterBar(isDark),
+              Expanded(
+                child: StreamBuilder<List<TransactionModel>>(
+                  stream: _transactionService.getRecentTransactions(limit: _currentLimit),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
+                      return ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        itemCount: 6,
+                        itemBuilder: (context, index) => const SkeletonLoader(
+                          width: double.infinity,
+                          height: 100,
+                          borderRadius: 20,
+                          margin: EdgeInsets.only(bottom: 16),
+                        ),
+                      );
+                    }
 
-                if (snapshot.hasError) {
-                  return Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Text('Error loading transactions:\n${snapshot.error}', 
-                        textAlign: TextAlign.center, 
-                        style: const TextStyle(color: Colors.redAccent)),
-                    ),
-                  );
-                }
-
-                if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return _buildEmptyState();
-                }
-
-                final transactions = _applyFilter(snapshot.data!);
-
-                if (transactions.isEmpty) {
-                  return _buildEmptyState();
-                }
-
-                return ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                  physics: const BouncingScrollPhysics(),
-                  itemCount: transactions.length + 1, // +1 for the Load More button
-                  itemBuilder: (context, index) {
-                    if (index == transactions.length) {
-                      // Only show load more if we haven't filtered heavily
-                      // and we are actually hitting the limit
-                      if (snapshot.data!.length >= _currentLimit) {
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 20),
-                          child: Center(
-                            child: TextButton.icon(
-                              onPressed: () => setState(() => _currentLimit += 20),
-                              icon: Icon(Icons.refresh_rounded, color: AppColors.brandPrimary),
-                              label: Text('Load More', style: GoogleFonts.montserrat(color: AppColors.brandPrimary, fontWeight: FontWeight.bold)),
-                              style: TextButton.styleFrom(
-                                backgroundColor: AppColors.brandPrimary.withOpacity(0.1),
-                                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                              ),
+                    if (snapshot.hasError) {
+                      return Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Text(
+                            'Error loading transactions:\n${snapshot.error}',
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.outfit(
+                              color: Colors.redAccent,
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
-                        );
-                      } else {
-                        return const SizedBox(height: 40); // Bottom padding
-                      }
+                        ),
+                      );
                     }
-                    return _TransactionCard(transaction: transactions[index]);
+
+                    if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                      return _buildEmptyState();
+                    }
+
+                    final transactions = _applyFilter(snapshot.data!);
+
+                    if (transactions.isEmpty) {
+                      return _buildEmptyState();
+                    }
+
+                    return Column(
+                      children: [
+                        _buildSummaryHeader(transactions, isDark),
+                        Expanded(
+                          child: ListView.builder(
+                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                            physics: const BouncingScrollPhysics(),
+                            itemCount: transactions.length + 1,
+                            itemBuilder: (context, index) {
+                              if (index == transactions.length) {
+                                if (snapshot.data!.length >= _currentLimit) {
+                                  return Padding(
+                                    padding: const EdgeInsets.symmetric(vertical: 20),
+                                    child: Center(
+                                      child: ScaleOnTap(
+                                        onTap: () => setState(() => _currentLimit += 20),
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.brandPrimary.withValues(alpha: 0.1),
+                                            borderRadius: BorderRadius.circular(20),
+                                            border: Border.all(color: AppColors.brandPrimary.withValues(alpha: 0.15)),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(Icons.refresh_rounded, color: AppColors.brandPrimary, size: 18),
+                                              const SizedBox(width: 8),
+                                              Text(
+                                                'Load More',
+                                                style: GoogleFonts.outfit(color: AppColors.brandPrimary, fontWeight: FontWeight.bold),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                } else {
+                                  return const SizedBox(height: 40);
+                                }
+                              }
+                              return _TransactionCard(transaction: transactions[index]);
+                            },
+                          ),
+                        ),
+                      ],
+                    );
                   },
-                );
-              },
-            ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
 
-  Widget _buildSearchBar() {
+  Widget _buildSummaryHeader(List<TransactionModel> transactions, bool isDark) {
+    double totalIncome = 0;
+    double totalExpense = 0;
+
+    for (final tx in transactions) {
+      if (tx.type == TransactionType.income) {
+        totalIncome += tx.amount;
+      } else if (tx.type == TransactionType.others) {
+        if (tx.category.contains('Taken') || tx.category.contains('Received')) {
+          totalIncome += tx.amount;
+        } else {
+          totalExpense += tx.amount;
+        }
+      } else if (tx.type == TransactionType.expense) {
+        totalExpense += tx.amount;
+      }
+    }
+
+    final double totalCombined = totalIncome + totalExpense;
+    final double ratio = totalCombined > 0 ? totalIncome / totalCombined : 0.5;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 10),
+      child: GlassCard(
+        blur: 15,
+        opacity: isDark ? 0.05 : 0.45,
+        color: isDark ? const Color(0xFF16201D) : Colors.white,
+        borderRadius: 20,
+        border: Border.all(color: AppColors.brandPrimary.withValues(alpha: 0.1)),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.arrow_downward_rounded, color: AppColors.brandPrimary, size: 14),
+                          const SizedBox(width: 4),
+                          Text(
+                            'TOTAL INCOME',
+                            style: GoogleFonts.outfit(
+                              color: AppColors.textGrey,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '৳${totalIncome.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => "${m[1]},")}',
+                        style: GoogleFonts.outfit(
+                          color: AppColors.brandPrimary,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.arrow_upward_rounded, color: Colors.redAccent, size: 14),
+                          const SizedBox(width: 4),
+                          Text(
+                            'TOTAL EXPENSE',
+                            style: GoogleFonts.outfit(
+                              color: AppColors.textGrey,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '৳${totalExpense.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => "${m[1]},")}',
+                        style: GoogleFonts.outfit(
+                          color: Colors.redAccent,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: SizedBox(
+                  height: 6,
+                  child: LinearProgressIndicator(
+                    value: ratio,
+                    backgroundColor: Colors.redAccent.withValues(alpha: 0.2),
+                    valueColor: AlwaysStoppedAnimation<Color>(AppColors.brandPrimary),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSearchBar(bool isDark) {
+    final isFocused = _searchFocusNode.hasFocus;
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
-      child: Container(
-        decoration: BoxDecoration(
-          color: AppColors.cardWhite,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            )
-          ],
+      child: GlassCard(
+        blur: 10,
+        opacity: isDark ? 0.03 : 0.45,
+        color: isDark ? const Color(0xFF16201D) : Colors.white,
+        borderRadius: 16,
+        border: Border.all(
+          color: isFocused
+              ? AppColors.brandPrimary.withValues(alpha: 0.4)
+              : AppColors.brandPrimary.withValues(alpha: 0.08),
+          width: isFocused ? 1.5 : 1.0,
         ),
         child: TextField(
           controller: _searchController,
+          focusNode: _searchFocusNode,
           onChanged: (value) => setState(() => _searchQuery = value.toLowerCase()),
           decoration: InputDecoration(
             hintText: 'Search by note, category, or amount...',
-            hintStyle: GoogleFonts.montserrat(color: AppColors.textGrey, fontSize: 14),
-            prefixIcon: Icon(Icons.search_rounded, color: AppColors.textGrey),
-            suffixIcon: _searchQuery.isNotEmpty 
-              ? IconButton(
-                  icon: Icon(Icons.clear_rounded, color: AppColors.textGrey),
-                  onPressed: () {
-                    _searchController.clear();
-                    setState(() => _searchQuery = '');
-                  },
-                )
-              : null,
+            hintStyle: GoogleFonts.outfit(color: AppColors.textGrey, fontSize: 14),
+            prefixIcon: Icon(Icons.search_rounded, color: isFocused ? AppColors.brandPrimary : AppColors.textGrey, size: 20),
+            suffixIcon: _searchQuery.isNotEmpty
+                ? ScaleOnTap(
+                    onTap: () {
+                      _searchController.clear();
+                      setState(() => _searchQuery = '');
+                    },
+                    child: Icon(Icons.clear_rounded, color: AppColors.textGrey, size: 18),
+                  )
+                : null,
             border: InputBorder.none,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
           ),
-          style: GoogleFonts.montserrat(fontSize: 15, fontWeight: FontWeight.w500),
+          style: GoogleFonts.outfit(fontSize: 15, color: AppColors.textBlack, fontWeight: FontWeight.w500),
         ),
       ),
     );
@@ -166,8 +362,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
 
   List<TransactionModel> _applyFilter(List<TransactionModel> transactions) {
     final now = DateTime.now();
-    
-    // 1. First apply text search if it exists
+
     List<TransactionModel> filtered = transactions;
     if (_searchQuery.isNotEmpty) {
       filtered = filtered.where((tx) {
@@ -178,7 +373,6 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
       }).toList();
     }
 
-    // 2. Then apply the chip filter
     switch (_selectedFilter) {
       case 'Income':
         return filtered.where((tx) => tx.type == TransactionType.income).toList();
@@ -196,10 +390,10 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
     }
   }
 
-  Widget _buildFilterBar() {
+  Widget _buildFilterBar(bool isDark) {
     return Container(
-      height: 48,
-      margin: const EdgeInsets.symmetric(vertical: 12),
+      height: 42,
+      margin: const EdgeInsets.symmetric(vertical: 8),
       child: ListView.builder(
         padding: const EdgeInsets.symmetric(horizontal: 20),
         scrollDirection: Axis.horizontal,
@@ -208,27 +402,53 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
         itemBuilder: (context, index) {
           final filter = _filters[index];
           final isSelected = _selectedFilter == filter;
-          return GestureDetector(
-            onTap: () => setState(() => _selectedFilter = filter),
-            child: Container(
-              margin: const EdgeInsets.only(right: 12),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              decoration: BoxDecoration(
-                color: isSelected ? AppColors.brandPrimary : AppColors.cardBackground,
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(
-                  color: isSelected ? AppColors.brandPrimary : AppColors.brandPrimary.withOpacity(0.1),
+
+          Color selectedColor;
+          if (filter == 'Income') selectedColor = AppColors.brandPrimary;
+          else if (filter == 'Expense') selectedColor = Colors.redAccent;
+          else if (filter == 'Transfer') selectedColor = Colors.blueAccent;
+          else selectedColor = AppColors.brandPrimary;
+
+          return Padding(
+            padding: const EdgeInsets.only(right: 10),
+            child: ScaleOnTap(
+              onTap: () => setState(() => _selectedFilter = filter),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.symmetric(horizontal: 18),
+                decoration: BoxDecoration(
+                  gradient: isSelected
+                      ? LinearGradient(
+                          colors: [selectedColor, selectedColor.withValues(alpha: 0.85)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        )
+                      : null,
+                  color: isSelected ? null : (isDark ? const Color(0xFF16201D).withValues(alpha: 0.4) : Colors.white.withValues(alpha: 0.5)),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: isSelected
+                        ? selectedColor.withValues(alpha: 0.5)
+                        : AppColors.brandPrimary.withValues(alpha: 0.08),
+                  ),
+                  boxShadow: isSelected
+                      ? [
+                          BoxShadow(
+                            color: selectedColor.withValues(alpha: 0.25),
+                            blurRadius: 8,
+                            offset: const Offset(0, 3),
+                          )
+                        ]
+                      : [],
                 ),
-                boxShadow: isSelected 
-                  ? [BoxShadow(color: AppColors.brandPrimary.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 4))] 
-                  : [],
-              ),
-              child: Text(
-                filter,
-                style: GoogleFonts.montserrat(
-                  color: isSelected ? Colors.white : AppColors.secondaryText,
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-                  fontSize: 13,
+                alignment: Alignment.center,
+                child: Text(
+                  filter,
+                  style: GoogleFonts.outfit(
+                    color: isSelected ? Colors.white : AppColors.secondaryText,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                    fontSize: 12.5,
+                  ),
                 ),
               ),
             ),
@@ -243,11 +463,24 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.receipt_long_outlined, size: 80, color: AppColors.secondaryText.withOpacity(0.2)),
-          const SizedBox(height: 24),
-          Text('No Transactions Found', style: GoogleFonts.montserrat(color: AppColors.primaryText, fontSize: 18, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          Text('Tap + to add a new record', style: GoogleFonts.montserrat(color: AppColors.secondaryText, fontSize: 13)),
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppColors.brandPrimary.withValues(alpha: 0.05),
+            ),
+            child: Icon(Icons.receipt_long_outlined, size: 54, color: AppColors.brandPrimary.withValues(alpha: 0.4)),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            'No Transactions Found',
+            style: GoogleFonts.outfit(color: AppColors.primaryText, fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Tap the add button to insert a transaction',
+            style: GoogleFonts.outfit(color: AppColors.secondaryText, fontSize: 12.5),
+          ),
         ],
       ),
     );
@@ -270,12 +503,23 @@ class _TransactionCardState extends State<_TransactionCard> {
     final bool isIncome = widget.transaction.type == TransactionType.income;
     final bool isTransfer = widget.transaction.type == TransactionType.transfer;
     final bool isOthers = widget.transaction.type == TransactionType.others;
-    
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     Color typeColor;
-    if (isIncome) typeColor = AppColors.brandPrimary;
-    else if (isTransfer) typeColor = Colors.blue;
-    else if (isOthers) typeColor = Colors.purpleAccent;
-    else typeColor = Colors.redAccent;
+    IconData typeIcon;
+    if (isIncome) {
+      typeColor = AppColors.brandPrimary;
+      typeIcon = Icons.arrow_downward_rounded;
+    } else if (isTransfer) {
+      typeColor = Colors.blueAccent;
+      typeIcon = Icons.swap_horiz_rounded;
+    } else if (isOthers) {
+      typeColor = Colors.purpleAccent;
+      typeIcon = Icons.receipt_long_rounded;
+    } else {
+      typeColor = Colors.redAccent;
+      typeIcon = Icons.arrow_upward_rounded;
+    }
 
     String amountPrefix = '';
     if (isIncome) {
@@ -290,89 +534,150 @@ class _TransactionCardState extends State<_TransactionCard> {
       amountPrefix = '-';
     }
 
-    return GestureDetector(
-      onTap: () => setState(() => _isExpanded = !_isExpanded),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        margin: const EdgeInsets.only(bottom: 16),
-        decoration: BoxDecoration(
-          color: AppColors.cardBackground,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: typeColor.withOpacity(0.1)),
-          boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4)),
-          ],
-        ),
-        child: IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Left color indicator
-              Container(
-                width: 6,
-                decoration: BoxDecoration(
-                  color: typeColor,
-                  borderRadius: const BorderRadius.only(topLeft: Radius.circular(20), bottomLeft: Radius.circular(20)),
-                ),
-              ),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              widget.transaction.category,
-                              style: GoogleFonts.montserrat(color: AppColors.primaryText, fontSize: 16, fontWeight: FontWeight.bold),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          Text(
-                            '$amountPrefix${widget.transaction.amount.toInt()} Tk',
-                            style: GoogleFonts.montserrat(color: typeColor, fontSize: 16, fontWeight: FontWeight.bold),
-                          ),
-                        ],
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: ScaleOnTap(
+        onTap: () => setState(() => _isExpanded = !_isExpanded),
+        child: GlassCard(
+          blur: 15,
+          opacity: isDark ? 0.04 : 0.45,
+          color: isDark ? const Color(0xFF16201D) : Colors.white,
+          borderRadius: 20,
+          border: Border.all(color: typeColor.withValues(alpha: 0.12)),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: typeColor.withValues(alpha: 0.08),
                       ),
-                      const SizedBox(height: 8),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      child: Icon(typeIcon, color: typeColor, size: 18),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
                             children: [
-                              Icon(isTransfer ? Icons.swap_horiz_rounded : Icons.account_balance_wallet_rounded, size: 14, color: AppColors.secondaryText),
-                              const SizedBox(width: 4),
-                              Text(
-                                isTransfer ? '${widget.transaction.accountName} → ${widget.transaction.toAccountName}' : widget.transaction.accountName,
-                                style: GoogleFonts.montserrat(color: AppColors.secondaryText, fontSize: 12, fontWeight: FontWeight.w500),
+                              Flexible(
+                                child: Text(
+                                  widget.transaction.category,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: GoogleFonts.outfit(
+                                    color: AppColors.textBlack,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: AppColors.accentGold.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  widget.transaction.owner.toUpperCase(),
+                                  style: GoogleFonts.outfit(
+                                    color: AppColors.accentGold,
+                                    fontSize: 8,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
                               ),
                             ],
                           ),
-                          Text(
-                            DateFormat('dd MMM').format(widget.transaction.date),
-                            style: GoogleFonts.montserrat(color: AppColors.secondaryText, fontSize: 12),
+                          const SizedBox(height: 3),
+                          Row(
+                            children: [
+                              Icon(
+                                isTransfer
+                                    ? Icons.swap_horiz_rounded
+                                    : Icons.account_balance_wallet_rounded,
+                                size: 11,
+                                color: AppColors.textGrey,
+                              ),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  isTransfer
+                                      ? '${widget.transaction.accountName} → ${widget.transaction.toAccountName}'
+                                      : widget.transaction.accountName,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: GoogleFonts.outfit(
+                                    color: AppColors.textGrey,
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
-                      
-                      // Expandable Details
-                      if (_isExpanded) ...[
-                        const SizedBox(height: 16),
-                        Divider(color: AppColors.secondaryText.withOpacity(0.1)),
-                        const SizedBox(height: 16),
-                        _buildDetailRow('Owner', widget.transaction.owner),
-                        if (isTransfer) _buildDetailRow('To Owner', widget.transaction.toOwner ?? 'Unknown'),
-                        _buildDetailRow('Type', widget.transaction.type.name.toUpperCase()),
-                        if (widget.transaction.note.isNotEmpty) _buildDetailRow('Note', widget.transaction.note),
+                    ),
+                    const SizedBox(width: 8),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          '$amountPrefix${widget.transaction.amount.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => "${m[1]},")} ৳',
+                          style: GoogleFonts.outfit(
+                            color: typeColor,
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          DateFormat('dd MMM').format(widget.transaction.date),
+                          style: GoogleFonts.outfit(
+                            color: AppColors.textGrey,
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
                       ],
+                    ),
+                  ],
+                ),
+                AnimatedCrossFade(
+                  duration: const Duration(milliseconds: 200),
+                  firstCurve: Curves.easeInOut,
+                  secondCurve: Curves.easeInOut,
+                  sizeCurve: Curves.easeInOut,
+                  crossFadeState: _isExpanded
+                      ? CrossFadeState.showSecond
+                      : CrossFadeState.showFirst,
+                  firstChild: const SizedBox.shrink(),
+                  secondChild: Column(
+                    children: [
+                      const SizedBox(height: 12),
+                      Divider(color: AppColors.brandPrimary.withValues(alpha: 0.08)),
+                      const SizedBox(height: 8),
+                      _buildDetailRow('Owner Split', widget.transaction.owner),
+                      if (isTransfer)
+                        _buildDetailRow(
+                          'To Owner',
+                          widget.transaction.toOwner ?? 'Self',
+                        ),
+                      _buildDetailRow('Tx Type', widget.transaction.type.name.toUpperCase()),
+                      if (widget.transaction.note.isNotEmpty)
+                        _buildDetailRow('Note', widget.transaction.note),
                     ],
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -381,12 +686,30 @@ class _TransactionCardState extends State<_TransactionCard> {
 
   Widget _buildDetailRow(String label, String value) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: GoogleFonts.montserrat(color: AppColors.secondaryText, fontSize: 12, fontWeight: FontWeight.bold)),
-          Text(value, style: GoogleFonts.montserrat(color: AppColors.primaryText, fontSize: 12, fontWeight: FontWeight.w600)),
+          Text(
+            label,
+            style: GoogleFonts.outfit(
+              color: AppColors.textGrey,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Flexible(
+            child: Text(
+              value,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.outfit(
+                color: AppColors.textBlack,
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
         ],
       ),
     );

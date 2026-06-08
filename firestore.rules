@@ -1,0 +1,59 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper function to check if the user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper function to check if the user owns the document (for collections with a userId field)
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Helper to check if a document's userId matches the authenticated user
+    function isDocOwner() {
+      return isAuthenticated() && resource == null || resource.data.userId == request.auth.uid;
+    }
+
+    // 1. User Profile & User Subcollections (creditCards, categories)
+    match /users/{userId} {
+      allow read, write: if isOwner(userId);
+      
+      match /{document=**} {
+        allow read, write: if isOwner(userId);
+      }
+    }
+
+    // 2. Accounts
+    match /accounts/{accountId} {
+      allow read, create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+
+    // 3. Transactions
+    match /transactions/{transactionId} {
+      allow read, create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+
+    // 4. Recurring Bills
+    match /recurring_bills/{billId} {
+      allow read, create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+
+    // 5. Loans
+    match /loans/{loanId} {
+      allow read, create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+
+    // 6. Goals
+    match /goals/{goalId} {
+      allow read, create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+  }
+}

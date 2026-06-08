@@ -8,6 +8,15 @@ class AccountModel {
   final double totalBalance;
   final Map<String, double> breakdown; // { AppConstants.ownerSelf: 20000, AppConstants.ownerFather: 10000 }
   final String userId;
+  
+  // Bank details fields
+  final String? accountNumber;
+  final String? cardNumber;
+  final String? branchName;
+  final String? routingNumber;
+
+  // MFS fields
+  final String? mobileNumber;
 
   AccountModel({
     required this.id,
@@ -16,6 +25,11 @@ class AccountModel {
     required this.totalBalance,
     required this.breakdown,
     required this.userId,
+    this.accountNumber,
+    this.cardNumber,
+    this.branchName,
+    this.routingNumber,
+    this.mobileNumber,
   });
 
   factory AccountModel.fromFirestore(DocumentSnapshot doc) {
@@ -29,6 +43,11 @@ class AccountModel {
         (data['breakdown'] ?? {}).map((key, value) => MapEntry(key, value.toDouble())),
       ),
       userId: data['userId'] ?? '',
+      accountNumber: data['accountNumber'],
+      cardNumber: data['cardNumber'],
+      branchName: data['branchName'],
+      routingNumber: data['routingNumber'],
+      mobileNumber: data['mobileNumber'],
     );
   }
 
@@ -39,6 +58,11 @@ class AccountModel {
       'totalBalance': totalBalance,
       'breakdown': breakdown,
       'userId': userId,
+      'accountNumber': accountNumber,
+      'cardNumber': cardNumber,
+      'branchName': branchName,
+      'routingNumber': routingNumber,
+      'mobileNumber': mobileNumber,
     };
   }
 }

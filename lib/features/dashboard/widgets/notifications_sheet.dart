@@ -38,7 +38,7 @@ class NotificationsSheet extends StatelessWidget {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: AppColors.textGrey.withOpacity(0.3),
+                color: AppColors.textGrey.withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -113,10 +113,10 @@ class NotificationsSheet extends StatelessWidget {
                       margin: const EdgeInsets.only(bottom: 12),
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: isUrgent ? AppColors.error.withOpacity(0.1) : AppColors.primaryGreen.withOpacity(0.05),
+                        color: isUrgent ? AppColors.error.withValues(alpha: 0.1) : AppColors.primaryGreen.withValues(alpha: 0.05),
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
-                          color: isUrgent ? AppColors.error.withOpacity(0.3) : Colors.transparent,
+                          color: isUrgent ? AppColors.error.withValues(alpha: 0.3) : Colors.transparent,
                         ),
                       ),
                       child: Row(
@@ -124,7 +124,7 @@ class NotificationsSheet extends StatelessWidget {
                           Container(
                             padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
-                              color: isUrgent ? AppColors.error.withOpacity(0.2) : AppColors.primaryGreen.withOpacity(0.1),
+                              color: isUrgent ? AppColors.error.withValues(alpha: 0.2) : AppColors.primaryGreen.withValues(alpha: 0.1),
                               shape: BoxShape.circle,
                             ),
                             child: Icon(

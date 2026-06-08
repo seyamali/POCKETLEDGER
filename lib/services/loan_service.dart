@@ -5,13 +5,14 @@ import 'package:pocketledger/models/transaction_model.dart';
 
 class LoanService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
-  final String? _uid = FirebaseAuth.instance.currentUser?.uid;
+  String? get _uid => FirebaseAuth.instance.currentUser?.uid;
+  CollectionReference get _col => _db.collection('loans');
 
   // Add a new loan
   Future<void> addLoan(LoanModel loan) async {
     if (_uid == null) return;
 
-    final loanRef = _db.collection('loans').doc();
+    final loanRef = _col.doc();
     await _db.runTransaction((transaction) async {
       DocumentSnapshot? accountDoc;
       DocumentReference? accountRef;
@@ -87,7 +88,7 @@ class LoanService {
     if (_uid == null) return;
 
     await _db.runTransaction((tx) async {
-      final loanRef = _db.collection('loans').doc(loanId);
+      final loanRef = _col.doc(loanId);
       final loanDoc = await tx.get(loanRef);
       if (!loanDoc.exists) return;
 
@@ -279,8 +280,7 @@ class LoanService {
   Stream<List<LoanModel>> getLoans() {
     if (_uid == null) return Stream.value([]);
 
-    return _db
-        .collection('loans')
+    return _col
         .where('userId', isEqualTo: _uid)
         .orderBy('date', descending: true)
         .snapshots()
@@ -363,7 +363,7 @@ class LoanService {
       }
 
       // 5. Delete the Loan itself
-      tx.delete(_db.collection('loans').doc(loan.id));
+      tx.delete(_col.doc(loan.id));
     });
   }
 
@@ -379,7 +379,7 @@ class LoanService {
     final transDocRefs = transQuery.docs.map((d) => d.reference).toList();
 
     await _db.runTransaction((tx) async {
-      final loanRef = _db.collection('loans').doc(loanId);
+      final loanRef = _col.doc(loanId);
       final loanSnap = await tx.get(loanRef);
       if (!loanSnap.exists) return;
       
@@ -444,7 +444,7 @@ class LoanService {
 
   // Update a loan's person name to fix typos/merge
   Future<void> updateLoanPersonName(String loanId, String newName) async {
-    await _db.collection('loans').doc(loanId).update({'personName': newName});
+    await _col.doc(loanId).update({'personName': newName});
   }
 }
 

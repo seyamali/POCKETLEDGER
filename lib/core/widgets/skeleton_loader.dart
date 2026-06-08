@@ -51,7 +51,7 @@ class _SkeletonLoaderState extends State<SkeletonLoader> with SingleTickerProvid
           height: widget.height,
           margin: widget.margin,
           decoration: BoxDecoration(
-            color: Colors.grey.withOpacity(_animation.value * 0.2),
+            color: Colors.grey.withValues(alpha: _animation.value * 0.2),
             borderRadius: BorderRadius.circular(widget.borderRadius),
           ),
         );

@@ -168,8 +168,8 @@ class _LockScreenState extends State<LockScreen> with SingleTickerProviderStateM
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      AppColors.primaryGreen.withOpacity(0.92),
-                      const Color(0xFF032219).withOpacity(0.96),
+                      AppColors.primaryGreen.withValues(alpha: 0.92),
+                      const Color(0xFF032219).withValues(alpha: 0.96),
                     ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
@@ -195,7 +195,7 @@ class _LockScreenState extends State<LockScreen> with SingleTickerProviderStateM
                           icon: Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.1),
+                              color: Colors.white.withValues(alpha: 0.1),
                               shape: BoxShape.circle,
                             ),
                             child: const Icon(Icons.close_rounded, color: Colors.white, size: 20),
@@ -213,7 +213,7 @@ class _LockScreenState extends State<LockScreen> with SingleTickerProviderStateM
                     Container(
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
-                        color: AppColors.accentGold.withOpacity(0.12),
+                        color: AppColors.accentGold.withValues(alpha: 0.12),
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
@@ -236,7 +236,7 @@ class _LockScreenState extends State<LockScreen> with SingleTickerProviderStateM
                     Text(
                       'Enter your 4-digit security PIN',
                       style: GoogleFonts.outfit(
-                        color: Colors.white.withOpacity(0.6),
+                        color: Colors.white.withValues(alpha: 0.6),
                         fontSize: 14,
                       ),
                     ),
@@ -261,13 +261,13 @@ class _LockScreenState extends State<LockScreen> with SingleTickerProviderStateM
                                   color: isActive ? AppColors.accentGold : Colors.transparent,
                                   shape: BoxShape.circle,
                                   border: Border.all(
-                                    color: isActive ? AppColors.accentGold : Colors.white.withOpacity(0.4),
+                                    color: isActive ? AppColors.accentGold : Colors.white.withValues(alpha: 0.4),
                                     width: 2,
                                   ),
                                   boxShadow: isActive
                                       ? [
                                           BoxShadow(
-                                            color: AppColors.accentGold.withOpacity(0.5),
+                                            color: AppColors.accentGold.withValues(alpha: 0.5),
                                             blurRadius: 10,
                                             spreadRadius: 1,
                                           )
@@ -382,10 +382,10 @@ class _LockScreenState extends State<LockScreen> with SingleTickerProviderStateM
         width: 70,
         height: 70,
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.06),
+          color: Colors.white.withValues(alpha: 0.06),
           shape: BoxShape.circle,
           border: Border.all(
-            color: Colors.white.withOpacity(0.12),
+            color: Colors.white.withValues(alpha: 0.12),
             width: 1.5,
           ),
         ),

@@ -92,7 +92,7 @@ class _CreditCardDetailScreenState extends State<CreditCardDetailScreen> {
         borderRadius: BorderRadius.circular(16),
         gradient: LinearGradient(colors: gradient, begin: Alignment.topLeft, end: Alignment.bottomRight),
         boxShadow: [
-          BoxShadow(color: gradient[0].withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 5)),
+          BoxShadow(color: gradient[0].withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(0, 5)),
         ],
       ),
       padding: const EdgeInsets.all(20),
@@ -166,7 +166,7 @@ class _CreditCardDetailScreenState extends State<CreditCardDetailScreen> {
             decoration: BoxDecoration(
               color: AppColors.cardWhite,
               borderRadius: BorderRadius.circular(16),
-              border: card.daysUntilDue <= 3 ? Border.all(color: AppColors.error.withOpacity(0.5), width: 2) : null,
+              border: card.daysUntilDue <= 3 ? Border.all(color: AppColors.error.withValues(alpha: 0.5), width: 2) : null,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

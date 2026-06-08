@@ -5,12 +5,12 @@ import 'package:pocketledger/models/account_model.dart';
 import 'package:pocketledger/models/transaction_model.dart';
 import 'package:pocketledger/services/account_service.dart';
 import 'package:pocketledger/services/transaction_service.dart';
-import 'package:pocketledger/features/auth/widgets/custom_text_field.dart';
 import 'package:pocketledger/core/constants/app_constants.dart';
 import 'package:pocketledger/services/category_service.dart';
 import 'package:pocketledger/models/category_model.dart';
 import 'package:pocketledger/models/credit_card_model.dart';
 import 'package:pocketledger/services/credit_card_service.dart';
+import 'package:pocketledger/core/constants/app_icons.dart';
 
 class AddTransactionScreen extends StatefulWidget {
   final TransactionType initialType;
@@ -150,7 +150,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                       color: AppColors.cardWhite,
                       borderRadius: const BorderRadius.vertical(bottom: Radius.circular(40)),
                       boxShadow: [
-                        BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 20, offset: const Offset(0, 10)),
+                        BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 20, offset: const Offset(0, 10)),
                       ],
                     ),
                     child: Column(
@@ -194,7 +194,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                             Center(
                               child: Container(
                                 padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(color: Colors.blueAccent.withOpacity(0.1), shape: BoxShape.circle),
+                                decoration: BoxDecoration(color: Colors.blueAccent.withValues(alpha: 0.1), shape: BoxShape.circle),
                                 child: const Icon(Icons.swap_vert_rounded, color: Colors.blueAccent, size: 24),
                               ),
                             ),
@@ -299,9 +299,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.05),
+            color: color.withValues(alpha: 0.05),
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: color.withOpacity(0.2), width: 1.5),
+            border: Border.all(color: color.withValues(alpha: 0.2), width: 1.5),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -328,7 +328,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           ),
         ),
         Text(_selectedType.toString().split('.').last.toUpperCase(), 
-          style: GoogleFonts.outfit(color: color.withOpacity(0.5), fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 2)),
+          style: GoogleFonts.outfit(color: color.withValues(alpha: 0.5), fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 2)),
       ],
     );
   }
@@ -357,8 +357,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                 color: isSelected ? AppColors.primaryGreen : AppColors.cardWhite,
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: isSelected 
-                  ? [BoxShadow(color: AppColors.primaryGreen.withOpacity(0.2), blurRadius: 10, offset: const Offset(0, 4))]
-                  : [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 5, offset: const Offset(0, 2))],
+                  ? [BoxShadow(color: AppColors.primaryGreen.withValues(alpha: 0.2), blurRadius: 10, offset: const Offset(0, 4))]
+                  : [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 5, offset: const Offset(0, 2))],
               ),
               alignment: Alignment.center,
               child: Text(acc.name, 
@@ -395,7 +395,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
             decoration: BoxDecoration(
               color: isSelected ? AppColors.accentGold : AppColors.cardWhite,
               borderRadius: BorderRadius.circular(14),
-              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 5)],
+              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 5)],
             ),
             child: Text(owner, 
               style: GoogleFonts.outfit(
@@ -421,6 +421,18 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     return StreamBuilder<List<CategoryModel>>(
       stream: _categoryService.getCategories(),
       builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text(
+                'Error: ${snapshot.error}',
+                style: GoogleFonts.outfit(color: Colors.redAccent, fontSize: 13),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          );
+        }
         if (!snapshot.hasData) {
           return Center(
             child: CircularProgressIndicator(color: AppColors.primaryGreen),
@@ -434,7 +446,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
         final items = filtered.map((cat) => {
           'name': cat.name,
-          'icon': IconData(cat.iconCode, fontFamily: 'MaterialIcons'),
+          'icon': AppIcons.getIconFromCode(cat.iconCode),
           'color': Color(cat.colorValue),
         }).toList();
 
@@ -485,13 +497,13 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
               color: isSelected ? itemColor : AppColors.cardWhite,
               borderRadius: BorderRadius.circular(20),
               boxShadow: isSelected 
-                ? [BoxShadow(color: itemColor.withOpacity(0.2), blurRadius: 8)]
-                : [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 4)],
+                ? [BoxShadow(color: itemColor.withValues(alpha: 0.2), blurRadius: 8)]
+                : [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 4)],
             ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(cat['icon'] as IconData, color: isSelected ? Colors.white : itemColor.withOpacity(0.8), size: 24),
+                Icon(cat['icon'] as IconData, color: isSelected ? Colors.white : itemColor.withValues(alpha: 0.8), size: 24),
                 const SizedBox(height: 8),
                 Text(cat['name'] as String, maxLines: 1, overflow: TextOverflow.ellipsis, style: GoogleFonts.outfit(color: isSelected ? Colors.white : AppColors.textBlack, fontSize: 11, fontWeight: FontWeight.bold)),
               ],
@@ -508,7 +520,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       decoration: BoxDecoration(
         color: AppColors.cardWhite,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10)],
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 10)],
       ),
       child: TextField(
         controller: _noteController,
@@ -517,7 +529,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           hintText: 'Add a note...',
           hintStyle: TextStyle(color: Colors.grey.shade400),
           border: InputBorder.none,
-          icon: Icon(Icons.sticky_note_2_rounded, color: AppColors.primaryGreen.withOpacity(0.5), size: 20),
+          icon: Icon(Icons.sticky_note_2_rounded, color: AppColors.primaryGreen.withValues(alpha: 0.5), size: 20),
         ),
       ),
     );
@@ -528,9 +540,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       width: double.infinity,
       height: 60,
       decoration: BoxDecoration(
-        gradient: LinearGradient(colors: [color, color.withOpacity(0.8)]),
+        gradient: LinearGradient(colors: [color, color.withValues(alpha: 0.8)]),
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: color.withOpacity(0.3), blurRadius: 15, offset: const Offset(0, 8))],
+        boxShadow: [BoxShadow(color: color.withValues(alpha: 0.3), blurRadius: 15, offset: const Offset(0, 8))],
       ),
       child: ElevatedButton(
         onPressed: _isLoading ? null : _handleSave,
@@ -592,8 +604,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           color: isSelected ? AppColors.error : AppColors.cardWhite, // red accent for credit charge
           borderRadius: BorderRadius.circular(16),
           boxShadow: isSelected 
-            ? [BoxShadow(color: AppColors.error.withOpacity(0.2), blurRadius: 10, offset: const Offset(0, 4))]
-            : [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 5, offset: const Offset(0, 2))],
+            ? [BoxShadow(color: AppColors.error.withValues(alpha: 0.2), blurRadius: 10, offset: const Offset(0, 4))]
+            : [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 5, offset: const Offset(0, 2))],
         ),
         alignment: Alignment.center,
         child: Text(label, 

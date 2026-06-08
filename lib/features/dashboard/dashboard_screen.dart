@@ -11,7 +11,6 @@ import 'package:pocketledger/features/loans/loans_screen.dart';
 import 'package:pocketledger/features/accounts/accounts_screen.dart';
 import 'package:pocketledger/features/transactions/transactions_screen.dart';
 import 'package:pocketledger/models/transaction_model.dart';
-import 'package:pocketledger/features/auth/widgets/custom_text_field.dart';
 import 'package:pocketledger/core/constants/app_constants.dart';
 import 'package:pocketledger/core/utils/image_utils.dart';
 import 'package:pocketledger/services/transaction_service.dart';
@@ -26,8 +25,9 @@ import 'package:pocketledger/models/recurring_bill_model.dart';
 import 'package:pocketledger/services/recurring_bill_service.dart';
 import 'package:pocketledger/features/credit_cards/credit_cards_screen.dart';
 import 'package:pocketledger/services/credit_card_service.dart';
-import 'package:pocketledger/models/credit_card_model.dart';
 import 'package:pocketledger/features/dashboard/widgets/notifications_sheet.dart';
+import 'package:pocketledger/core/widgets/scale_on_tap.dart';
+import 'package:pocketledger/core/widgets/glass_card.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -38,7 +38,6 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   final AccountService _accountService = AccountService();
-  final AuthService _authService = AuthService();
   final LoanService _loanService = LoanService();
   final CreditCardService _creditCardService = CreditCardService();
 
@@ -113,9 +112,50 @@ class _DashboardScreenState extends State<DashboardScreen> {
               double loanGiven = loans.where((l) => l.type == LoanType.given).fold(0, (s, l) => s + l.remainingAmount);
               double loanTaken = loans.where((l) => l.type == LoanType.taken).fold(0, (s, l) => s + l.remainingAmount);
 
-              return CustomScrollView(
-                physics: const BouncingScrollPhysics(),
-                slivers: [
+              return Stack(
+                children: [
+                  // ── Premium glowing liquid background blobs ──
+                  Positioned(
+                    top: 100, left: -60,
+                    child: Container(
+                      width: 280, height: 280,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: AppColors.primaryGreen.withValues(alpha: 0.15),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    top: 450, right: -80,
+                    child: Container(
+                      width: 260, height: 260,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: AppColors.accentGold.withValues(alpha: 0.12),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    bottom: 220, left: -50,
+                    child: Container(
+                      width: 220, height: 220,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.blueAccent.withValues(alpha: 0.1),
+                      ),
+                    ),
+                  ),
+                  Positioned.fill(
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 90, sigmaY: 90),
+                      child: Container(color: Colors.transparent),
+                    ),
+                  ),
+
+                  // ── Scrolling content ──
+                  CustomScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    slivers: [
                   // ── Sticky Header ──
                   SliverPersistentHeader(
                     pinned: true,
@@ -200,7 +240,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                   const SliverToBoxAdapter(child: SizedBox(height: 100)),
                 ],
-              );
+              ),
+            ],
+          );
             },
           );
         },
@@ -223,7 +265,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
           boxShadow: [
             BoxShadow(
-              color: AppColors.primaryGreen.withOpacity(0.3),
+              color: AppColors.primaryGreen.withValues(alpha: 0.3),
               blurRadius: 30, offset: const Offset(0, 15),
             ),
           ],
@@ -241,7 +283,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     width: 200, height: 200,
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
-                        colors: [Colors.white.withOpacity(0.1), Colors.transparent],
+                        colors: [Colors.white.withValues(alpha: 0.1), Colors.transparent],
                         begin: Alignment.topCenter, end: Alignment.bottomCenter,
                       ),
                       borderRadius: BorderRadius.circular(40),
@@ -254,7 +296,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 child: Container(
                   width: 200, height: 200,
                   decoration: BoxDecoration(
-                    color: AppColors.accentGold.withOpacity(0.05),
+                    color: AppColors.accentGold.withValues(alpha: 0.05),
                     shape: BoxShape.circle,
                   ),
                 ),
@@ -273,7 +315,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text('TOTAL ASSETS', 
-                              style: GoogleFonts.outfit(color: Colors.white.withOpacity(0.6), fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.5)),
+                              style: GoogleFonts.outfit(color: Colors.white.withValues(alpha: 0.6), fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.5)),
                             const SizedBox(height: 8),
                             Row(
                               crossAxisAlignment: CrossAxisAlignment.center,
@@ -290,7 +332,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         Container(
                           padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.1),
+                            color: Colors.white.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Icon(Icons.nfc_rounded, color: AppColors.accentGold, size: 24),
@@ -304,9 +346,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.06),
+                        color: Colors.white.withValues(alpha: 0.06),
                         borderRadius: BorderRadius.circular(24),
-                        border: Border.all(color: Colors.white.withOpacity(0.1)),
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -333,7 +375,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     margin: const EdgeInsets.only(right: 12),
                                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                                     decoration: BoxDecoration(
-                                      color: Colors.white.withOpacity(0.1),
+                                      color: Colors.white.withValues(alpha: 0.1),
                                       borderRadius: BorderRadius.circular(14),
                                     ),
                                     child: Column(
@@ -384,7 +426,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ? (MediaQuery.of(context).size.width - 40 - (58 * 4)) / 3 
             : 16,
           runSpacing: 16,
-          children: actions.map((a) => GestureDetector(
+          children: actions.map((a) => ScaleOnTap(
             onTap: () => _go(a['screen'] as Widget),
             child: SizedBox(
               width: 58,
@@ -396,7 +438,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     decoration: BoxDecoration(
                       color: AppColors.cardWhite,
                       shape: BoxShape.circle,
-                      boxShadow: [BoxShadow(color: AppColors.primaryGreen.withOpacity(0.12), blurRadius: 12, offset: const Offset(0, 4))],
+                      boxShadow: [BoxShadow(color: AppColors.primaryGreen.withValues(alpha: 0.12), blurRadius: 12, offset: const Offset(0, 4))],
                     ),
                     child: Icon(a['icon'] as IconData, color: AppColors.primaryGreen, size: 26),
                   ),
@@ -421,24 +463,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
         _sectionTitle('Savings & Loans'),
         const SizedBox(height: 14),
         // Savings — gold card
-        GestureDetector(
+        ScaleOnTap(
           onTap: () => _go(const SavingsScreen()),
           child: Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [AppColors.accentGold, AppColors.accentGold.withOpacity(0.75)],
+                colors: [AppColors.accentGold, AppColors.accentGold.withValues(alpha: 0.75)],
                 begin: Alignment.topLeft, end: Alignment.bottomRight,
               ),
               borderRadius: BorderRadius.circular(20),
-              boxShadow: [BoxShadow(color: AppColors.accentGold.withOpacity(0.3), blurRadius: 12, offset: const Offset(0, 6))],
+              boxShadow: [BoxShadow(color: AppColors.accentGold.withValues(alpha: 0.3), blurRadius: 12, offset: const Offset(0, 6))],
             ),
             child: Row(
               children: [
                 Container(
                   padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(color: Colors.white.withOpacity(0.25), shape: BoxShape.circle),
+                  decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.25), shape: BoxShape.circle),
                   child: const Icon(Icons.savings_rounded, color: Colors.white, size: 22),
                 ),
                 const SizedBox(width: 14),
@@ -446,7 +488,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('My Savings', style: GoogleFonts.outfit(color: Colors.white.withOpacity(0.85), fontSize: 12, fontWeight: FontWeight.w600)),
+                      Text('My Savings', style: GoogleFonts.outfit(color: Colors.white.withValues(alpha: 0.85), fontSize: 12, fontWeight: FontWeight.w600)),
                       Text('৳ ${_fmt(savings)}', style: GoogleFonts.outfit(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
                     ],
                   ),
@@ -460,12 +502,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
         // Loans row
         Row(
           children: [
-            Expanded(child: GestureDetector(
+            Expanded(child: ScaleOnTap(
               onTap: () => _go(const LoansScreen()),
               child: _loanCard('Loan Given', given, AppColors.primaryGreen, Icons.arrow_upward_rounded),
             )),
             const SizedBox(width: 12),
-            Expanded(child: GestureDetector(
+            Expanded(child: ScaleOnTap(
               onTap: () => _go(const LoansScreen()),
               child: _loanCard('Loan Taken', taken, const Color(0xFFE67E22), Icons.arrow_downward_rounded),
             )),
@@ -481,13 +523,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
       decoration: BoxDecoration(
         color: AppColors.cardWhite,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4))],
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 10, offset: const Offset(0, 4))],
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(color: color.withOpacity(0.1), shape: BoxShape.circle),
+            decoration: BoxDecoration(color: color.withValues(alpha: 0.1), shape: BoxShape.circle),
             child: Icon(icon, color: color, size: 18),
           ),
           const SizedBox(width: 10),
@@ -519,14 +561,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
           children: [
             _buildSectionRow('Credit Cards', onTap: () => _go(const CreditCardsScreen())),
             const SizedBox(height: 14),
-            GestureDetector(
+            ScaleOnTap(
               onTap: () => _go(const CreditCardsScreen()),
               child: Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   color: AppColors.cardWhite,
                   borderRadius: BorderRadius.circular(20),
-                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4))],
+                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 10, offset: const Offset(0, 4))],
                 ),
                 child: Column(
                   children: [
@@ -579,7 +621,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       children: [
         _buildSectionRow('Accounts', onTap: () => _go(const AccountsScreen())),
         const SizedBox(height: 14),
-        ...regular.map((acc) => GestureDetector(
+        ...regular.map((acc) => ScaleOnTap(
           onTap: () => _go(const AccountsScreen()),
           child: Container(
             margin: const EdgeInsets.only(bottom: 10),
@@ -587,20 +629,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
             decoration: BoxDecoration(
               color: AppColors.cardWhite,
               borderRadius: BorderRadius.circular(18),
-              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4))],
+              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 4))],
             ),
             child: Row(
               children: [
                 Container(
                   padding: const EdgeInsets.all(9),
-                  decoration: BoxDecoration(color: AppColors.primaryGreen.withOpacity(0.08), shape: BoxShape.circle),
+                  decoration: BoxDecoration(color: AppColors.primaryGreen.withValues(alpha: 0.08), shape: BoxShape.circle),
                   child: Icon(Icons.account_balance_outlined, color: AppColors.primaryGreen, size: 18),
                 ),
                 const SizedBox(width: 14),
                 Expanded(child: Text(acc.name, style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.textBlack))),
                 Text('৳ ${_fmt(acc.totalBalance)}', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.primaryGreen)),
                 const SizedBox(width: 4),
-                Icon(Icons.chevron_right_rounded, color: AppColors.textGrey.withOpacity(0.5), size: 18),
+                Icon(Icons.chevron_right_rounded, color: AppColors.textGrey.withValues(alpha: 0.5), size: 18),
               ],
             ),
           ),
@@ -611,7 +653,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   // ─────────────────── GOALS BANNER ───────────────────
   Widget _buildGoalsBanner() {
-    return GestureDetector(
+    return ScaleOnTap(
       onTap: () => _go(const MonthlyGoalScreen()),
       child: Container(
         width: double.infinity,
@@ -619,13 +661,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
         decoration: BoxDecoration(
           color: AppColors.primaryGreen,
           borderRadius: BorderRadius.circular(20),
-          boxShadow: [BoxShadow(color: AppColors.primaryGreen.withOpacity(0.2), blurRadius: 12, offset: const Offset(0, 6))],
+          boxShadow: [BoxShadow(color: AppColors.primaryGreen.withValues(alpha: 0.2), blurRadius: 12, offset: const Offset(0, 6))],
         ),
         child: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), shape: BoxShape.circle),
+              decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.15), shape: BoxShape.circle),
               child: const Icon(Icons.track_changes_rounded, color: Colors.white, size: 24),
             ),
             const SizedBox(width: 16),
@@ -640,7 +682,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
             Container(
               padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), shape: BoxShape.circle),
+              decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.15), shape: BoxShape.circle),
               child: const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 18),
             ),
           ],
@@ -685,14 +727,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
               margin: const EdgeInsets.only(bottom: 12),
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: AppColors.primaryGreen.withOpacity(0.05),
+                color: AppColors.primaryGreen.withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Row(
                 children: [
                   Container(
                     padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(color: AppColors.primaryGreen.withOpacity(0.1), shape: BoxShape.circle),
+                    decoration: BoxDecoration(color: AppColors.primaryGreen.withValues(alpha: 0.1), shape: BoxShape.circle),
                     child: Icon(Icons.account_balance_outlined, color: AppColors.primaryGreen, size: 18),
                   ),
                   const SizedBox(width: 14),
@@ -784,13 +826,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
               decoration: BoxDecoration(
                 color: AppColors.cardWhite,
                 borderRadius: BorderRadius.circular(18),
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 8, offset: const Offset(0, 3))],
+                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 8, offset: const Offset(0, 3))],
               ),
               child: Row(
                 children: [
                   Container(
                     width: 44, height: 44,
-                    decoration: BoxDecoration(color: color.withOpacity(0.1), shape: BoxShape.circle),
+                    decoration: BoxDecoration(color: color.withValues(alpha: 0.1), shape: BoxShape.circle),
                     child: Icon(icon, color: color, size: 20),
                   ),
                   const SizedBox(width: 14),
@@ -825,59 +867,58 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Container(
       padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
       color: Colors.transparent,
-      child: Container(
-        height: 70,
-        decoration: BoxDecoration(
-          color: AppColors.cardWhite,
-          borderRadius: BorderRadius.circular(35),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: 25,
-              offset: const Offset(0, 10),
-            ),
-          ],
+      child: GlassCard(
+        blur: 20,
+        opacity: 0.8,
+        color: AppColors.cardWhite,
+        borderRadius: 35,
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.15),
+          width: 1.5,
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            _navItem(Icons.home_filled, 'Home', true),
-            _navItem(Icons.account_balance_wallet_rounded, 'Wallet', false, onTap: () => _go(const AccountsScreen())),
-            
-            // Central Add Button (Inline inside the pill)
-            GestureDetector(
-              onTap: () => Navigator.pushNamed(context, '/add-transaction'),
-              child: Container(
-                width: 50, height: 50,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [AppColors.primaryGreen, Color(0xFF003829)],
-                    begin: Alignment.topLeft, end: Alignment.bottomRight,
-                  ),
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.primaryGreen.withOpacity(0.35),
-                      blurRadius: 15,
-                      offset: const Offset(0, 8),
+        child: SizedBox(
+          height: 70,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _navItem(Icons.home_filled, 'Home', true),
+              _navItem(Icons.account_balance_wallet_rounded, 'Wallet', false, onTap: () => _go(const AccountsScreen())),
+              
+              // Central Add Button (Inline inside the pill)
+              ScaleOnTap(
+                onTap: () => Navigator.pushNamed(context, '/add-transaction'),
+                child: Container(
+                  width: 50, height: 50,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [AppColors.primaryGreen, Color(0xFF003829)],
+                      begin: Alignment.topLeft, end: Alignment.bottomRight,
                     ),
-                  ],
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.primaryGreen.withValues(alpha: 0.35),
+                        blurRadius: 15,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(Icons.add_rounded, color: Colors.white, size: 28),
                 ),
-                child: const Icon(Icons.add_rounded, color: Colors.white, size: 28),
               ),
-            ),
-            
-            _navItem(Icons.analytics_rounded, 'Stats', false, onTap: () => _go(const TransactionsScreen())),
-            _navItem(Icons.person_rounded, 'Profile', false, onTap: () => _go(const ProfileScreen())),
-          ],
+              
+              _navItem(Icons.analytics_rounded, 'Stats', false, onTap: () => _go(const TransactionsScreen())),
+              _navItem(Icons.person_rounded, 'Profile', false, onTap: () => _go(const ProfileScreen())),
+            ],
+          ),
         ),
       ),
     );
   }
 
   Widget _navItem(IconData icon, String label, bool isActive, {VoidCallback? onTap}) {
-    return GestureDetector(
-      onTap: onTap,
+    return ScaleOnTap(
+      onTap: onTap ?? () {},
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -915,11 +956,11 @@ class _StickyHeaderDelegate extends SliverPersistentHeaderDelegate {
           duration: const Duration(milliseconds: 300),
           decoration: BoxDecoration(
             color: isScrolled 
-              ? const Color(0xFF003829).withOpacity(0.85) 
-              : const Color(0xFFF4F6F5).withOpacity(0.7),
+              ? const Color(0xFF003829).withValues(alpha: 0.85) 
+              : const Color(0xFFF4F6F5).withValues(alpha: 0.7),
             border: Border(
               bottom: BorderSide(
-                color: isScrolled ? Colors.white.withOpacity(0.05) : Colors.transparent,
+                color: isScrolled ? Colors.white.withValues(alpha: 0.05) : Colors.transparent,
                 width: 1,
               ),
             ),
@@ -934,7 +975,7 @@ class _StickyHeaderDelegate extends SliverPersistentHeaderDelegate {
                 children: [
                   Row(
                     children: [
-                      GestureDetector(
+                      ScaleOnTap(
                         onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen())),
                         child: StreamBuilder<DocumentSnapshot>(
                           stream: AuthService().getUserProfile(),
@@ -985,15 +1026,15 @@ class _StickyHeaderDelegate extends SliverPersistentHeaderDelegate {
                       ),
                     ],
                   ),
-                  GestureDetector(
+                  ScaleOnTap(
                     onTap: () => NotificationsSheet.show(context),
                     child: Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: isScrolled ? Colors.white.withOpacity(0.15) : Colors.white,
+                        color: isScrolled ? Colors.white.withValues(alpha: 0.15) : Colors.white,
                         shape: BoxShape.circle,
                         boxShadow: isScrolled ? [] : [
-                          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4)),
+                          BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 4)),
                         ],
                       ),
                       child: Stack(
@@ -1092,7 +1133,7 @@ class BudgetAlertBanner extends StatelessWidget {
             final utilizationPercent = (ratio * 100).toInt();
 
             final Color cardColor = isOverLimit ? const Color(0xFFFFECEB) : const Color(0xFFFFF6E6);
-            final Color borderColor = isOverLimit ? Colors.redAccent.withOpacity(0.2) : Colors.orangeAccent.withOpacity(0.2);
+            final Color borderColor = isOverLimit ? Colors.redAccent.withValues(alpha: 0.2) : Colors.orangeAccent.withValues(alpha: 0.2);
             final Color textColor = isOverLimit ? Colors.red.shade900 : Colors.orange.shade900;
             final IconData icon = isOverLimit ? Icons.error_outline_rounded : Icons.warning_amber_rounded;
             final String title = isOverLimit ? 'Budget Exceeded!' : 'Budget Warning!';
@@ -1102,50 +1143,44 @@ class BudgetAlertBanner extends StatelessWidget {
 
             return Padding(
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: cardColor,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: borderColor, width: 1.5),
-                  boxShadow: [
-                    BoxShadow(
-                      color: (isOverLimit ? Colors.redAccent : Colors.orangeAccent).withOpacity(0.06),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(icon, color: isOverLimit ? Colors.redAccent : Colors.orangeAccent, size: 24),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            title,
-                            style: GoogleFonts.outfit(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                              color: textColor,
+              child: GlassCard(
+                opacity: 0.1,
+                color: cardColor,
+                borderRadius: 20,
+                border: Border.all(color: borderColor, width: 1.5),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(icon, color: isOverLimit ? Colors.redAccent : Colors.orangeAccent, size: 24),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              title,
+                              style: GoogleFonts.outfit(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                color: textColor,
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            message,
-                            style: GoogleFonts.outfit(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                              color: textColor.withOpacity(0.8),
+                            const SizedBox(height: 4),
+                            Text(
+                              message,
+                              style: GoogleFonts.outfit(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                                color: textColor.withValues(alpha: 0.8),
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             );
@@ -1214,7 +1249,7 @@ class RecurringBillsAlert extends StatelessWidget {
           textColor = Colors.orange.shade900;
         } else {
           subtitle = '${firstBill.title} (৳${firstBill.amount.toInt()}) due in $daysLeft days.';
-          bannerColor = AppColors.primaryGreen.withOpacity(0.05);
+          bannerColor = AppColors.primaryGreen.withValues(alpha: 0.05);
           textColor = AppColors.primaryGreen;
         }
 
@@ -1224,65 +1259,66 @@ class RecurringBillsAlert extends StatelessWidget {
 
         return Padding(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-          child: GestureDetector(
+          child: ScaleOnTap(
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const SubscriptionsScreen()),
             ),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-              decoration: BoxDecoration(
-                color: bannerColor,
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(
-                  color: textColor.withOpacity(0.15),
-                  width: 1.5,
-                ),
+            child: GlassCard(
+              opacity: 0.08,
+              color: bannerColor,
+              borderRadius: 24,
+              border: Border.all(
+                color: textColor.withValues(alpha: 0.15),
+                width: 1.5,
               ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: textColor.withOpacity(0.1),
-                      shape: BoxShape.circle,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: textColor.withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.event_repeat_rounded,
+                        color: textColor,
+                        size: 20,
+                      ),
                     ),
-                    child: Icon(
-                      Icons.event_repeat_rounded,
-                      color: textColor,
-                      size: 20,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          title,
-                          style: GoogleFonts.outfit(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                            color: textColor,
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            title,
+                            style: GoogleFonts.outfit(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                              color: textColor,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          subtitle,
-                          style: GoogleFonts.outfit(
-                            fontSize: 12,
-                            color: textColor.withOpacity(0.8),
+                          const SizedBox(height: 2),
+                          Text(
+                            subtitle,
+                            style: GoogleFonts.outfit(
+                              fontSize: 12,
+                              color: textColor.withValues(alpha: 0.8),
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                  Icon(
-                    Icons.arrow_forward_ios_rounded,
-                    color: textColor.withOpacity(0.5),
-                    size: 14,
-                  ),
-                ],
+                    Icon(
+                      Icons.arrow_forward_ios_rounded,
+                      color: textColor.withValues(alpha: 0.5),
+                      size: 14,
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -1293,45 +1329,239 @@ class RecurringBillsAlert extends StatelessWidget {
 }
 
 // 🧠 Smart Financial Tips & AI Budget Advisor
+enum AdvisorTipType {
+  info,
+  danger,
+  warning,
+  warningAlt,
+  purple,
+  success,
+}
+
+class _AdvisorTip {
+  final String title;
+  final String content;
+  final IconData icon;
+  final String buttonText;
+  final Widget targetScreen;
+  final AdvisorTipType type;
+
+  const _AdvisorTip({
+    required this.title,
+    required this.content,
+    required this.icon,
+    required this.buttonText,
+    required this.targetScreen,
+    required this.type,
+  });
+}
+
+class _AdvisorTipColors {
+  final List<Color> gradientColors;
+  final Color borderColor;
+  final Color textColor;
+  final Color bulbColor;
+
+  const _AdvisorTipColors({
+    required this.gradientColors,
+    required this.borderColor,
+    required this.textColor,
+    required this.bulbColor,
+  });
+}
+
 class SmartAdvisorCard extends StatelessWidget {
   const SmartAdvisorCard({super.key});
 
-  Widget _buildCard(BuildContext context, _AdvisorTip tip) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-      child: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: tip.gradientColors,
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(
-            color: tip.borderColor.withOpacity(0.4),
-            width: 1.5,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: tip.textColor.withOpacity(0.05),
-              blurRadius: 15,
-              offset: const Offset(0, 8),
+  _AdvisorTipColors _getTipColors(AdvisorTipType type, bool isDark) {
+    switch (type) {
+      case AdvisorTipType.info:
+        return isDark
+            ? _AdvisorTipColors(
+                gradientColors: [const Color(0xFF082F49).withValues(alpha: 0.35), const Color(0xFF0C4A6E).withValues(alpha: 0.25)],
+                borderColor: const Color(0xFF0284C7).withValues(alpha: 0.3),
+                textColor: const Color(0xFF38BDF8),
+                bulbColor: const Color(0xFF0EA5E9),
+              )
+            : _AdvisorTipColors(
+                gradientColors: [const Color(0xFFF0F9FF), const Color(0xFFE0F2FE)],
+                borderColor: const Color(0xFFB9E6FE),
+                textColor: const Color(0xFF0369A1),
+                bulbColor: const Color(0xFF0EA5E9),
+              );
+      case AdvisorTipType.danger:
+        return isDark
+            ? _AdvisorTipColors(
+                gradientColors: [const Color(0xFF450A0A).withValues(alpha: 0.35), const Color(0xFF7F1D1D).withValues(alpha: 0.25)],
+                borderColor: const Color(0xFFDC2626).withValues(alpha: 0.3),
+                textColor: const Color(0xFFFCA5A5),
+                bulbColor: const Color(0xFFEF4444),
+              )
+            : _AdvisorTipColors(
+                gradientColors: [const Color(0xFFFEF2F2), const Color(0xFFFEE2E2)],
+                borderColor: const Color(0xFFFCA5A5),
+                textColor: const Color(0xFFB91C1C),
+                bulbColor: const Color(0xFFEF4444),
+              );
+      case AdvisorTipType.warning:
+        return isDark
+            ? _AdvisorTipColors(
+                gradientColors: [const Color(0xFF431407).withValues(alpha: 0.35), const Color(0xFF7C2D12).withValues(alpha: 0.25)],
+                borderColor: const Color(0xFFEA580C).withValues(alpha: 0.3),
+                textColor: const Color(0xFFFDBA74),
+                bulbColor: const Color(0xFFF97316),
+              )
+            : _AdvisorTipColors(
+                gradientColors: [const Color(0xFFFFF7ED), const Color(0xFFFFEDD5)],
+                borderColor: const Color(0xFFFED7AA),
+                textColor: const Color(0xFFC2410C),
+                bulbColor: const Color(0xFFF97316),
+              );
+      case AdvisorTipType.warningAlt:
+        return isDark
+            ? _AdvisorTipColors(
+                gradientColors: [const Color(0xFF422006).withValues(alpha: 0.35), const Color(0xFF713F12).withValues(alpha: 0.25)],
+                borderColor: const Color(0xFFCA8A04).withValues(alpha: 0.3),
+                textColor: const Color(0xFFFDE047),
+                bulbColor: const Color(0xFFEAB308),
+              )
+            : _AdvisorTipColors(
+                gradientColors: [const Color(0xFFFEFCE8), const Color(0xFFFEF9C3)],
+                borderColor: const Color(0xFFFEF08A),
+                textColor: const Color(0xFFA16207),
+                bulbColor: const Color(0xFFEAB308),
+              );
+      case AdvisorTipType.purple:
+        return isDark
+            ? _AdvisorTipColors(
+                gradientColors: [const Color(0xFF3B0764).withValues(alpha: 0.35), const Color(0xFF581C87).withValues(alpha: 0.25)],
+                borderColor: const Color(0xFF9333EA).withValues(alpha: 0.3),
+                textColor: const Color(0xFFE9D5FF),
+                bulbColor: const Color(0xFFA855F7),
+              )
+            : _AdvisorTipColors(
+                gradientColors: [const Color(0xFFFAF5FF), const Color(0xFFF3E8FF)],
+                borderColor: const Color(0xFFE9D5FF),
+                textColor: const Color(0xFF6B21A8),
+                bulbColor: const Color(0xFFA855F7),
+              );
+      case AdvisorTipType.success:
+        return isDark
+            ? _AdvisorTipColors(
+                gradientColors: [const Color(0xFF022C22).withValues(alpha: 0.35), const Color(0xFF064E3B).withValues(alpha: 0.25)],
+                borderColor: const Color(0xFF16A34A).withValues(alpha: 0.3),
+                textColor: const Color(0xFF86EFAC),
+                bulbColor: const Color(0xFF22C55E),
+              )
+            : _AdvisorTipColors(
+                gradientColors: [const Color(0xFFF0FDF4), const Color(0xFFDCFCE7)],
+                borderColor: const Color(0xFFBBF7D0),
+                textColor: const Color(0xFF15803D),
+                bulbColor: const Color(0xFF22C55E),
+              );
+    }
+  }
+
+  Widget _buildRichTextContent(String content, Color baseColor, Color highlightColor) {
+    final regex = RegExp(r'(৳\d+(?:,\d+)*|\d+%)');
+    final matches = regex.allMatches(content);
+    if (matches.isEmpty) {
+      return Text(
+        content,
+        style: GoogleFonts.outfit(
+          fontSize: 13.5,
+          height: 1.45,
+          fontWeight: FontWeight.w500,
+          color: baseColor,
+        ),
+      );
+    }
+
+    final spans = <TextSpan>[];
+    int start = 0;
+    for (final match in matches) {
+      if (match.start > start) {
+        spans.add(TextSpan(
+          text: content.substring(start, match.start),
+          style: TextStyle(color: baseColor, fontWeight: FontWeight.w500),
+        ));
+      }
+      spans.add(TextSpan(
+        text: match.group(0),
+        style: TextStyle(
+          color: highlightColor,
+          fontWeight: FontWeight.w800,
+          shadows: [
+            Shadow(
+              color: highlightColor.withValues(alpha: 0.35),
+              blurRadius: 6,
             ),
           ],
         ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(24),
+      ));
+      start = match.end;
+    }
+    if (start < content.length) {
+      spans.add(TextSpan(
+        text: content.substring(start),
+        style: TextStyle(color: baseColor, fontWeight: FontWeight.w500),
+      ));
+    }
+
+    return RichText(
+      text: TextSpan(
+        children: spans,
+        style: GoogleFonts.outfit(
+          fontSize: 13.5,
+          height: 1.45,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCard(BuildContext context, _AdvisorTip tip) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors = _getTipColors(tip.type, isDark);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+      child: GlassCard(
+        blur: 24,
+        opacity: isDark ? 0.03 : 0.45,
+        color: isDark ? const Color(0xFF16201D) : Colors.white,
+        borderRadius: 24,
+        border: Border.all(
+          color: colors.borderColor,
+          width: 1.5,
+        ),
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                colors.gradientColors[0].withValues(alpha: isDark ? 0.15 : 0.55),
+                colors.gradientColors[1].withValues(alpha: isDark ? 0.05 : 0.35),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
           child: Stack(
             children: [
+              // Ambient Light Bulb Glow Circle
               Positioned(
-                right: -20,
-                bottom: -20,
+                right: -25,
+                top: -25,
                 child: Container(
-                  width: 100,
-                  height: 100,
+                  width: 130,
+                  height: 130,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: tip.bulbColor.withOpacity(0.04),
+                    gradient: RadialGradient(
+                      colors: [
+                        colors.bulbColor.withValues(alpha: isDark ? 0.22 : 0.15),
+                        colors.bulbColor.withValues(alpha: 0.0),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -1340,33 +1570,55 @@ class SmartAdvisorCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Top Row with Pulse Indicator and Type Label
                     Row(
                       children: [
                         GlowingPulseIcon(
                           icon: tip.icon,
-                          color: tip.bulbColor,
+                          color: colors.bulbColor,
                         ),
                         const SizedBox(width: 14),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                "SMART ADVISOR",
-                                style: GoogleFonts.outfit(
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 11,
-                                  color: tip.textColor.withOpacity(0.6),
-                                  letterSpacing: 1.2,
-                                ),
+                              Row(
+                                children: [
+                                  // Pulsing active dot
+                                  Container(
+                                    width: 6,
+                                    height: 6,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: colors.bulbColor,
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: colors.bulbColor.withValues(alpha: 0.6),
+                                          blurRadius: 4,
+                                          spreadRadius: 1,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    "AI WEALTH COPILOT",
+                                    style: GoogleFonts.outfit(
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 10,
+                                      color: colors.textColor.withValues(alpha: isDark ? 0.75 : 0.65),
+                                      letterSpacing: 1.5,
+                                    ),
+                                  ),
+                                ],
                               ),
                               const SizedBox(height: 2),
                               Text(
                                 tip.title,
                                 style: GoogleFonts.outfit(
                                   fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                  color: tip.textColor,
+                                  fontSize: 16.5,
+                                  color: isDark ? Colors.white : colors.textColor,
                                 ),
                               ),
                             ],
@@ -1374,56 +1626,62 @@ class SmartAdvisorCard extends StatelessWidget {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 14),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 4),
-                      child: Text(
+                      child: _buildRichTextContent(
                         tip.content,
-                        style: GoogleFonts.outfit(
-                          fontSize: 13.5,
-                          height: 1.4,
-                          fontWeight: FontWeight.w500,
-                          color: tip.textColor.withOpacity(0.85),
-                        ),
+                        isDark ? Colors.white.withValues(alpha: 0.88) : colors.textColor.withValues(alpha: 0.88),
+                        colors.textColor,
                       ),
                     ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 16),
                     Align(
                       alignment: Alignment.bottomRight,
-                      child: TextButton(
-                        onPressed: () => Navigator.push(
+                      child: ScaleOnTap(
+                        onTap: () => Navigator.push(
                           context,
                           MaterialPageRoute(builder: (_) => tip.targetScreen),
                         ),
-                        style: TextButton.styleFrom(
-                          backgroundColor: tip.textColor.withOpacity(0.1),
-                          foregroundColor: tip.textColor,
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            side: BorderSide(
-                              color: tip.textColor.withOpacity(0.2),
-                              width: 1,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                colors.bulbColor,
+                                colors.bulbColor.withValues(alpha: 0.8),
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
                             ),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              tip.buttonText,
-                              style: GoogleFonts.outfit(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: colors.bulbColor.withValues(alpha: isDark ? 0.45 : 0.3),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
                               ),
-                            ),
-                            const SizedBox(width: 4),
-                            Icon(
-                              Icons.arrow_forward_ios_rounded,
-                              size: 10,
-                              color: tip.textColor,
-                            ),
-                          ],
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                tip.buttonText,
+                                style: GoogleFonts.outfit(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12.5,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              const Icon(
+                                Icons.arrow_forward_rounded,
+                                size: 14,
+                                color: Colors.white,
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -1464,13 +1722,10 @@ class SmartAdvisorCard extends StatelessWidget {
                 _AdvisorTip(
                   title: "Set Your Goals",
                   content: "Set your targets! Setting monthly budgets helps users save up to 20% more. Set a goal.",
-                  gradientColors: [const Color(0xFFF0F9FF), const Color(0xFFD2EFFF)],
-                  borderColor: const Color(0xFFA5D8FF),
-                  textColor: const Color(0xFF005A9C),
                   icon: Icons.lightbulb_outline_rounded,
-                  bulbColor: const Color(0xFF0288D1),
                   buttonText: "Set Goal",
                   targetScreen: const MonthlyGoalScreen(),
+                  type: AdvisorTipType.info,
                 ),
               );
             }
@@ -1521,13 +1776,10 @@ class SmartAdvisorCard extends StatelessWidget {
                 _AdvisorTip(
                   title: "Budget Exceeded!",
                   content: "Budget Exceeded! You spent ৳${overSpent.toInt()} over your monthly limit. Hold non-essential purchases.",
-                  gradientColors: [const Color(0xFFFFECEB), const Color(0xFFFFDCDA)],
-                  borderColor: const Color(0xFFFFC0BD),
-                  textColor: const Color(0xFFC62828),
                   icon: Icons.error_outline_rounded,
-                  bulbColor: const Color(0xFFE53935),
                   buttonText: "Adjust Goals",
                   targetScreen: const MonthlyGoalScreen(),
+                  type: AdvisorTipType.danger,
                 ),
               );
             }
@@ -1540,13 +1792,10 @@ class SmartAdvisorCard extends StatelessWidget {
                 _AdvisorTip(
                   title: "Budget Warning!",
                   content: "Nearing Limit! You have used $utilization% of your budget. Cut down discretionary spending.",
-                  gradientColors: [const Color(0xFFFFF6E6), const Color(0xFFFFECD0)],
-                  borderColor: const Color(0xFFFFD49E),
-                  textColor: const Color(0xFFD84315),
                   icon: Icons.warning_amber_rounded,
-                  bulbColor: const Color(0xFFFB8C00),
                   buttonText: "Adjust Goals",
                   targetScreen: const MonthlyGoalScreen(),
+                  type: AdvisorTipType.warning,
                 ),
               );
             }
@@ -1559,13 +1808,10 @@ class SmartAdvisorCard extends StatelessWidget {
                 _AdvisorTip(
                   title: "Savings Alert",
                   content: "Savings Alert: You met only $savingsPercent% of your savings target. Log savings early to stay safe.",
-                  gradientColors: [const Color(0xFFFFFDF0), const Color(0xFFFFF7C2)],
-                  borderColor: const Color(0xFFFFE082),
-                  textColor: const Color(0xFFF57F17),
                   icon: Icons.savings_rounded,
-                  bulbColor: const Color(0xFFFBC02D),
                   buttonText: "Log Savings",
                   targetScreen: const SavingsScreen(),
+                  type: AdvisorTipType.warningAlt,
                 ),
               );
             }
@@ -1587,13 +1833,10 @@ class SmartAdvisorCard extends StatelessWidget {
                 _AdvisorTip(
                   title: "Category Spike!",
                   content: "Category Check: Spending on '$highestCategory' is $categoryPercent% of your total. Try cooking at home or deferring.",
-                  gradientColors: [const Color(0xFFF5F0FF), const Color(0xFFE5D5FF)],
-                  borderColor: const Color(0xFFD1B3FF),
-                  textColor: const Color(0xFF6A1B9A),
                   icon: Icons.pie_chart_outline_rounded,
-                  bulbColor: const Color(0xFF7E57C2),
                   buttonText: "View Trends",
                   targetScreen: const MonthlyGoalScreen(),
+                  type: AdvisorTipType.purple,
                 ),
               );
             }
@@ -1605,13 +1848,10 @@ class SmartAdvisorCard extends StatelessWidget {
                 _AdvisorTip(
                   title: "Excellent Cashflow!",
                   content: "Excellent Cashflow! You met your savings target. Put surplus cash into Savings Vaults.",
-                  gradientColors: [const Color(0xFFEDFBF4), const Color(0xFFD0F5E2)],
-                  borderColor: const Color(0xFFA3EBBF),
-                  textColor: const Color(0xFF2E7D32),
                   icon: Icons.stars_rounded,
-                  bulbColor: const Color(0xFF43A047),
                   buttonText: "Log Savings",
                   targetScreen: const SavingsScreen(),
+                  type: AdvisorTipType.success,
                 ),
               );
             }
@@ -1622,13 +1862,10 @@ class SmartAdvisorCard extends StatelessWidget {
               _AdvisorTip(
                 title: "Advisor Update",
                 content: "On Track! Your expenses and savings are healthy. Keep tracking and maintain the streak!",
-                gradientColors: [const Color(0xFFF0F9FF), const Color(0xFFD2EFFF)],
-                borderColor: const Color(0xFFA5D8FF),
-                textColor: const Color(0xFF005A9C),
                 icon: Icons.insights_rounded,
-                bulbColor: const Color(0xFF0288D1),
                 buttonText: "View Analytics",
                 targetScreen: const MonthlyGoalScreen(),
+                type: AdvisorTipType.info,
               ),
             );
           },
@@ -1638,29 +1875,6 @@ class SmartAdvisorCard extends StatelessWidget {
   }
 }
 
-class _AdvisorTip {
-  final String title;
-  final String content;
-  final List<Color> gradientColors;
-  final Color borderColor;
-  final Color textColor;
-  final IconData icon;
-  final Color bulbColor;
-  final String buttonText;
-  final Widget targetScreen;
-
-  _AdvisorTip({
-    required this.title,
-    required this.content,
-    required this.gradientColors,
-    required this.borderColor,
-    required this.textColor,
-    required this.icon,
-    required this.bulbColor,
-    required this.buttonText,
-    required this.targetScreen,
-  });
-}
 
 class GlowingPulseIcon extends StatefulWidget {
   final IconData icon;
@@ -1712,10 +1926,10 @@ class _GlowingPulseIconState extends State<GlowingPulseIcon> with SingleTickerPr
               height: 38,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: widget.color.withOpacity(_opacityAnimation.value * 0.3),
+                color: widget.color.withValues(alpha: _opacityAnimation.value * 0.3),
                 boxShadow: [
                   BoxShadow(
-                    color: widget.color.withOpacity(_opacityAnimation.value),
+                    color: widget.color.withValues(alpha: _opacityAnimation.value),
                     blurRadius: 10 * _scaleAnimation.value,
                     spreadRadius: 2 * _scaleAnimation.value,
                   ),
@@ -1727,7 +1941,7 @@ class _GlowingPulseIconState extends State<GlowingPulseIcon> with SingleTickerPr
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: widget.color.withOpacity(0.15),
+            color: widget.color.withValues(alpha: 0.15),
             shape: BoxShape.circle,
           ),
           child: Icon(

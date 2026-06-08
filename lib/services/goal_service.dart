@@ -8,6 +8,7 @@ class GoalService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
   String? get _uid => _auth.currentUser?.uid;
+  CollectionReference get _col => _db.collection('goals');
 
   // Set or update a goal for a specific month
   Future<void> setGoal({
@@ -22,8 +23,7 @@ class GoalService {
   }) async {
     if (_uid == null) return;
 
-    final query = await _db
-        .collection('goals')
+    final query = await _col
         .where('userId', isEqualTo: _uid)
         .where('monthYear', isEqualTo: monthYear)
         .limit(1)
@@ -31,7 +31,7 @@ class GoalService {
 
     if (query.docs.isNotEmpty) {
       // Update existing
-      await _db.collection('goals').doc(query.docs.first.id).update({
+      await _col.doc(query.docs.first.id).update({
         'incomeTarget': incomeTarget,
         'expenseLimit': expenseLimit,
         'savingsTarget': savingsTarget,
@@ -42,7 +42,7 @@ class GoalService {
       });
     } else {
       // Create new
-      final docRef = _db.collection('goals').doc();
+      final docRef = _col.doc();
       final goal = GoalModel(
         id: docRef.id,
         monthYear: monthYear,
@@ -63,8 +63,7 @@ class GoalService {
   Stream<GoalModel?> getGoal(String monthYear) {
     if (_uid == null) return Stream.value(null);
 
-    return _db
-        .collection('goals')
+    return _col
         .where('userId', isEqualTo: _uid)
         .where('monthYear', isEqualTo: monthYear)
         .limit(1)

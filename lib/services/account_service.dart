@@ -14,6 +14,11 @@ class AccountService {
     required String name,
     required String type,
     required Map<String, double> breakdown,
+    String? accountNumber,
+    String? cardNumber,
+    String? branchName,
+    String? routingNumber,
+    String? mobileNumber,
   }) async {
     if (_uid == null) return;
 
@@ -31,6 +36,11 @@ class AccountService {
       totalBalance: totalBalance,
       breakdown: breakdown,
       userId: _uid!,
+      accountNumber: accountNumber,
+      cardNumber: cardNumber,
+      branchName: branchName,
+      routingNumber: routingNumber,
+      mobileNumber: mobileNumber,
     );
     batch.set(docRef, account.toFirestore());
 
@@ -158,6 +168,53 @@ class AccountService {
         
     for (var doc in toTxQuery.docs) {
       batch.update(doc.reference, {'toAccountName': newName});
+    }
+
+    await batch.commit();
+  }
+
+  // Update Account Details (Name, Bank Details, MFS Details)
+  Future<void> updateAccountDetails({
+    required String accountId,
+    required String name,
+    String? accountNumber,
+    String? cardNumber,
+    String? branchName,
+    String? routingNumber,
+    String? mobileNumber,
+  }) async {
+    if (_uid == null) return;
+
+    final batch = _db.batch();
+
+    // 1. Update the Account Document
+    batch.update(_db.collection('accounts').doc(accountId), {
+      'name': name,
+      'accountNumber': accountNumber,
+      'cardNumber': cardNumber,
+      'branchName': branchName,
+      'routingNumber': routingNumber,
+      'mobileNumber': mobileNumber,
+    });
+
+    // 2. Update all transactions where this account is the primary account
+    final txQuery = await _db.collection('transactions')
+        .where('userId', isEqualTo: _uid)
+        .where('accountId', isEqualTo: accountId)
+        .get();
+        
+    for (var doc in txQuery.docs) {
+      batch.update(doc.reference, {'accountName': name});
+    }
+
+    // 3. Update all transactions where this account is the target (for transfers)
+    final toTxQuery = await _db.collection('transactions')
+        .where('userId', isEqualTo: _uid)
+        .where('toAccountId', isEqualTo: accountId)
+        .get();
+        
+    for (var doc in toTxQuery.docs) {
+      batch.update(doc.reference, {'toAccountName': name});
     }
 
     await batch.commit();

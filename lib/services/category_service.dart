@@ -13,26 +13,29 @@ class CategoryService {
   static final CategoryService _instance = CategoryService._internal();
   factory CategoryService() => _instance;
   CategoryService._internal();
+  bool _isPrepopulating = false;
+
+  CollectionReference get _col => _db.collection('users').doc(_uid!).collection('categories');
 
   /// Gets a real-time stream of categories for the logged-in user.
   /// If the collection is empty, it automatically populates the defaults first.
   Stream<List<CategoryModel>> getCategories() {
     if (_uid == null) return Stream.value([]);
 
-    return _db
-        .collection('categories')
-        .where('userId', isEqualTo: _uid)
+    return _col
         .snapshots()
-        .asyncMap((snap) async {
-          if (snap.docs.isEmpty) {
-            await _prepopulateDefaultCategories();
-            final freshSnap = await _db
-                .collection('categories')
-                .where('userId', isEqualTo: _uid)
-                .get();
-            return freshSnap.docs.map((doc) => CategoryModel.fromFirestore(doc)).toList();
+        .map((snap) {
+          final list = snap.docs.map((doc) => CategoryModel.fromFirestore(doc)).toList();
+          if (list.isEmpty && !_isPrepopulating) {
+            _isPrepopulating = true;
+            _prepopulateDefaultCategories().then((_) {
+              _isPrepopulating = false;
+            }).catchError((e, stackTrace) {
+              _isPrepopulating = false;
+              ErrorLogger.logError(e, stackTrace, 'prepopulateDefaultCategories background');
+            });
           }
-          return snap.docs.map((doc) => CategoryModel.fromFirestore(doc)).toList();
+          return list;
         });
   }
 
@@ -40,7 +43,7 @@ class CategoryService {
   Future<void> addCategory(CategoryModel category) async {
     if (_uid == null) return;
     try {
-      final docRef = _db.collection('categories').doc();
+      final docRef = _col.doc();
       final newCat = CategoryModel(
         id: docRef.id,
         name: category.name,
@@ -60,7 +63,7 @@ class CategoryService {
   Future<void> updateCategory(CategoryModel category) async {
     if (_uid == null) return;
     try {
-      await _db.collection('categories').doc(category.id).update(category.toFirestore());
+      await _col.doc(category.id).update(category.toFirestore());
     } catch (e, stackTrace) {
       ErrorLogger.logError(e, stackTrace, 'updateCategory');
       rethrow;
@@ -71,7 +74,7 @@ class CategoryService {
   Future<void> deleteCategory(String categoryId) async {
     if (_uid == null) return;
     try {
-      await _db.collection('categories').doc(categoryId).delete();
+      await _col.doc(categoryId).delete();
     } catch (e, stackTrace) {
       ErrorLogger.logError(e, stackTrace, 'deleteCategory');
       rethrow;
@@ -100,7 +103,7 @@ class CategoryService {
 
     final batch = _db.batch();
     for (final cat in defaults) {
-      final docRef = _db.collection('categories').doc();
+      final docRef = _col.doc();
       batch.set(docRef, cat.toFirestore());
     }
     await batch.commit();

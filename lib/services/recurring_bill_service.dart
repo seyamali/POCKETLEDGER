@@ -19,11 +19,13 @@ class RecurringBillService {
   factory RecurringBillService() => _instance;
   RecurringBillService._internal();
 
+  CollectionReference get _col => _db.collection('recurring_bills');
+
   /// Adds a new recurring subscription to Firestore
   Future<void> createRecurringBill(RecurringBillModel bill) async {
     if (_uid == null) return;
     try {
-      final docRef = _db.collection('recurring_bills').doc();
+      final docRef = _col.doc();
       final newBill = RecurringBillModel(
         id: docRef.id,
         title: bill.title,
@@ -55,8 +57,7 @@ class RecurringBillService {
   /// Gets a real-time stream of recurring subscriptions for the logged-in user
   Stream<List<RecurringBillModel>> getRecurringBills() {
     if (_uid == null) return Stream.value([]);
-    return _db
-        .collection('recurring_bills')
+    return _col
         .where('userId', isEqualTo: _uid)
         .snapshots()
         .map((snap) => snap.docs
@@ -68,8 +69,7 @@ class RecurringBillService {
   Future<void> updateRecurringBill(RecurringBillModel bill) async {
     if (_uid == null) return;
     try {
-      await _db
-          .collection('recurring_bills')
+      await _col
           .doc(bill.id)
           .update(bill.toFirestore());
 
@@ -94,7 +94,7 @@ class RecurringBillService {
   Future<void> deleteRecurringBill(String billId) async {
     if (_uid == null) return;
     try {
-      await _db.collection('recurring_bills').doc(billId).delete();
+      await _col.doc(billId).delete();
       await _notificationService.cancelBillReminder(billId);
     } catch (e, stackTrace) {
       ErrorLogger.logError(e, stackTrace, 'deleteRecurringBill');

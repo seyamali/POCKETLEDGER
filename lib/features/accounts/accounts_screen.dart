@@ -1,9 +1,12 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:pocketledger/app/theme.dart';
 import 'package:pocketledger/models/account_model.dart';
 import 'package:pocketledger/services/account_service.dart';
 import 'package:pocketledger/features/accounts/account_detail_screen.dart';
+import 'package:pocketledger/core/widgets/scale_on_tap.dart';
+import 'package:pocketledger/core/widgets/glass_card.dart';
 
 class AccountsScreen extends StatelessWidget {
   const AccountsScreen({super.key});
@@ -11,23 +14,35 @@ class AccountsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final AccountService accountService = AccountService();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
+      extendBody: true,
       backgroundColor: AppColors.primaryBackground,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.primaryText, size: 20),
-          onPressed: () => Navigator.maybePop(context),
-        ),
-        title: Text('Accounts', style: GoogleFonts.montserrat(color: AppColors.primaryText, fontWeight: FontWeight.bold)),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.add_circle_rounded, color: AppColors.brandPrimary, size: 30),
-            onPressed: () => Navigator.pushNamed(context, '/add-account'),
+        leading: ScaleOnTap(
+          onTap: () => Navigator.maybePop(context),
+          child: Padding(
+            padding: const EdgeInsets.only(left: 12),
+            child: Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.primaryText, size: 20),
           ),
-          const SizedBox(width: 12),
+        ),
+        title: Text(
+          'Accounts',
+          style: GoogleFonts.outfit(
+            color: AppColors.primaryText,
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+          ),
+        ),
+        actions: [
+          ScaleOnTap(
+            onTap: () => Navigator.pushNamed(context, '/add-account'),
+            child: Icon(Icons.add_circle_rounded, color: AppColors.brandPrimary, size: 28),
+          ),
+          const SizedBox(width: 20),
         ],
       ),
       body: StreamBuilder<List<AccountModel>>(
@@ -40,18 +55,49 @@ class AccountsScreen extends StatelessWidget {
           final accounts = snapshot.data ?? [];
           double totalBalance = accounts.fold(0, (sum, acc) => sum + acc.totalBalance);
 
-          return Column(
+          return Stack(
             children: [
-              _buildSummaryHeader(totalBalance),
-              Expanded(
-                child: accounts.isEmpty 
-                    ? _buildEmptyState(context)
-                    : ListView.builder(
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                        physics: const BouncingScrollPhysics(),
-                        itemCount: accounts.length,
-                        itemBuilder: (context, index) => _AccountCard(account: accounts[index]),
-                      ),
+              // Liquid glow blobs in background
+              Positioned(
+                top: 40, left: -50,
+                child: Container(
+                  width: 240, height: 240,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppColors.brandPrimary.withValues(alpha: isDark ? 0.08 : 0.06),
+                  ),
+                ),
+              ),
+              Positioned(
+                bottom: 150, right: -60,
+                child: Container(
+                  width: 220, height: 220,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppColors.accentGold.withValues(alpha: isDark ? 0.06 : 0.04),
+                  ),
+                ),
+              ),
+              Positioned.fill(
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
+                  child: Container(color: Colors.transparent),
+                ),
+              ),
+              Column(
+                children: [
+                  _buildSummaryHeader(context, totalBalance),
+                  Expanded(
+                    child: accounts.isEmpty 
+                        ? _buildEmptyState(context)
+                        : ListView.builder(
+                            padding: const EdgeInsets.fromLTRB(20, 12, 20, 100),
+                            physics: const BouncingScrollPhysics(),
+                            itemCount: accounts.length,
+                            itemBuilder: (context, index) => _AccountCard(account: accounts[index]),
+                          ),
+                  ),
+                ],
               ),
             ],
           );
@@ -60,36 +106,72 @@ class AccountsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSummaryHeader(double total) {
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-      padding: const EdgeInsets.all(28),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [AppColors.brandPrimary, AppColors.brandPrimary.withOpacity(0.8)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+  Widget _buildSummaryHeader(BuildContext context, double total) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      child: GlassCard(
+        blur: 20,
+        opacity: isDark ? 0.05 : 0.45,
+        color: isDark ? const Color(0xFF16201D) : Colors.white,
+        borderRadius: 24,
+        border: Border.all(
+          color: AppColors.brandPrimary.withValues(alpha: 0.15),
+          width: 1.5,
         ),
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(color: AppColors.brandPrimary.withOpacity(0.2), blurRadius: 15, offset: const Offset(0, 8)),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('💰 Total Across All Accounts', 
-            style: GoogleFonts.montserrat(color: Colors.white.withOpacity(0.9), fontSize: 12, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          Text(
-            '${total.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => "${m[1]},")} Tk',
-            style: GoogleFonts.montserrat(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                AppColors.brandPrimary.withValues(alpha: 0.12),
+                AppColors.brandPrimary.withValues(alpha: 0.03),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
           ),
-          const SizedBox(height: 4),
-          Text('“Combined balance of all accounts”', 
-            style: GoogleFonts.montserrat(color: Colors.white.withOpacity(0.8), fontSize: 11, fontStyle: FontStyle.italic)),
-        ],
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.wallet_rounded, color: AppColors.brandPrimary, size: 16),
+                  const SizedBox(width: 8),
+                  Text(
+                    'COMBINED PORTFOLIO BALANCE',
+                    style: GoogleFonts.outfit(
+                      color: isDark ? Colors.white70 : AppColors.brandPrimary.withValues(alpha: 0.8),
+                      fontSize: 10,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.5,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                '৳ ${total.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => "${m[1]},")}',
+                style: GoogleFonts.outfit(
+                  color: AppColors.textBlack,
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                '“Combined balance of all MFS, Bank & Cash accounts”',
+                style: GoogleFonts.outfit(
+                  color: AppColors.textGrey,
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w500,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -99,109 +181,295 @@ class AccountsScreen extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.account_balance_wallet_outlined, size: 80, color: AppColors.secondaryText.withOpacity(0.2)),
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppColors.brandPrimary.withValues(alpha: 0.08),
+            ),
+            child: Icon(Icons.account_balance_wallet_outlined, size: 64, color: AppColors.brandPrimary.withValues(alpha: 0.6)),
+          ),
           const SizedBox(height: 24),
-          Text('Where is my money?', style: GoogleFonts.montserrat(color: AppColors.primaryText, fontSize: 18, fontWeight: FontWeight.bold)),
+          Text(
+            'Where is my money?',
+            style: GoogleFonts.outfit(
+              color: AppColors.textBlack,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
           const SizedBox(height: 8),
-          Text('Add an account to see it here', style: GoogleFonts.montserrat(color: AppColors.secondaryText, fontSize: 13)),
+          Text(
+            'Add an account to see your assets here',
+            style: GoogleFonts.outfit(
+              color: AppColors.textGrey,
+              fontSize: 13.5,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
-class _AccountCard extends StatefulWidget {
+class _AccountCard extends StatelessWidget {
   final AccountModel account;
   const _AccountCard({required this.account});
 
-  @override
-  State<_AccountCard> createState() => _AccountCardState();
-}
+  List<Color> _getCardGradient(String type, bool isDark) {
+    final t = type.toLowerCase();
+    if (t.contains('bank')) {
+      return [
+        const Color(0xFF0F2027),
+        const Color(0xFF203A43),
+        const Color(0xFF2C5364),
+      ];
+    } else if (t.contains('mfs') || t.contains('bkash') || t.contains('nagad')) {
+      return [
+        const Color(0xFFE2125B),
+        const Color(0xFFFF5E62),
+      ];
+    } else if (t.contains('cash')) {
+      return [
+        const Color(0xFF005B41),
+        const Color(0xFF008967),
+      ];
+    } else {
+      return isDark
+          ? [const Color(0xFF16201D), const Color(0xFF283A35)]
+          : [const Color(0xFFECE9E6), const Color(0xFFFFFFFF)];
+    }
+  }
 
-class _AccountCardState extends State<_AccountCard> {
-  double _scale = 1.0;
+  IconData _getAccountIcon(String type) {
+    final t = type.toLowerCase();
+    if (t.contains('bank')) {
+      return Icons.account_balance_rounded;
+    } else if (t.contains('mfs') || t.contains('phone') || t.contains('bkash') || t.contains('nagad')) {
+      return Icons.phone_android_rounded;
+    } else if (t.contains('cash')) {
+      return Icons.payments_rounded;
+    }
+    return Icons.wallet_rounded;
+  }
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: (_) => setState(() => _scale = 0.97),
-      onTapUp: (_) => setState(() => _scale = 1.0),
-      onTapCancel: () => setState(() => _scale = 1.0),
-      onTap: () {
-        // Navigate to detail view
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => AccountDetailScreen(account: widget.account),
-          ),
-        );
-      },
-      child: AnimatedScale(
-        scale: _scale,
-        duration: const Duration(milliseconds: 100),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final gradient = _getCardGradient(account.type, isDark);
+    final isSpecialGradient = account.type.toLowerCase().contains('bank') ||
+        account.type.toLowerCase().contains('mfs') ||
+        account.type.toLowerCase().contains('cash');
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 20),
+      child: ScaleOnTap(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => AccountDetailScreen(account: account),
+            ),
+          );
+        },
         child: Container(
-          margin: const EdgeInsets.only(bottom: 20),
+          width: double.infinity,
           decoration: BoxDecoration(
-            color: AppColors.cardBackground,
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: AppColors.brandPrimary.withOpacity(0.05)),
+            gradient: LinearGradient(
+              colors: gradient,
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(28),
             boxShadow: [
-              BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 15, offset: const Offset(0, 8)),
+              BoxShadow(
+                color: gradient[0].withValues(alpha: isDark ? 0.3 : 0.15),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
+              ),
             ],
           ),
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(28),
+            child: Stack(
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Text(widget.account.name, 
-                        style: GoogleFonts.montserrat(color: AppColors.primaryText, fontSize: 18, fontWeight: FontWeight.bold),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    _buildTypeTag(widget.account.type),
-                  ],
+                Positioned(
+                  right: -15,
+                  top: -15,
+                  child: Icon(
+                    _getAccountIcon(account.type),
+                    size: 140,
+                    color: Colors.white.withValues(alpha: isSpecialGradient ? 0.05 : (isDark ? 0.03 : 0.05)),
+                  ),
                 ),
-                const SizedBox(height: 12),
-                Text('💰 Total: ${widget.account.totalBalance.toInt()} Tk', 
-                  style: GoogleFonts.montserrat(color: AppColors.brandPrimary, fontSize: 16, fontWeight: FontWeight.w600)),
-                const SizedBox(height: 16),
-                Divider(color: AppColors.secondaryText.withOpacity(0.1)),
-                const SizedBox(height: 12),
-                Text('Breakdown:', style: GoogleFonts.montserrat(color: AppColors.secondaryText, fontSize: 11, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                ...widget.account.breakdown.entries.map((entry) => Padding(
-                  padding: const EdgeInsets.only(bottom: 6),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                // Visual simulated smart card chip
+                Positioned(
+                  left: 24,
+                  top: 24,
+                  child: Container(
+                    width: 36,
+                    height: 26,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFB800).withValues(alpha: 0.8),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+                    ),
+                    child: Stack(
+                      children: [
+                        Positioned.fill(
+                          child: GridView.builder(
+                            physics: const NeverScrollableScrollPhysics(),
+                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 3,
+                            ),
+                            itemCount: 9,
+                            itemBuilder: (context, idx) => Container(
+                              decoration: BoxDecoration(
+                                border: Border.all(color: Colors.black12, width: 0.5),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 70, 24, 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('• ${entry.key}:', style: GoogleFonts.montserrat(color: AppColors.secondaryText, fontSize: 13)),
-                      Text('${entry.value.toInt()} ', style: GoogleFonts.montserrat(color: AppColors.primaryText, fontSize: 13, fontWeight: FontWeight.bold)),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              account.name,
+                              style: GoogleFonts.outfit(
+                                color: isSpecialGradient ? Colors.white : AppColors.textBlack,
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: isSpecialGradient ? 0.15 : (isDark ? 0.08 : 0.15)),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+                            ),
+                            child: Text(
+                              account.type.toUpperCase(),
+                              style: GoogleFonts.outfit(
+                                color: isSpecialGradient ? Colors.white : AppColors.textBlack,
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 1.0,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      Text(
+                        'TOTAL BALANCE',
+                        style: GoogleFonts.outfit(
+                          color: isSpecialGradient
+                              ? Colors.white.withValues(alpha: 0.6)
+                              : AppColors.textGrey,
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '৳ ${account.totalBalance.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => "${m[1]},")}',
+                        style: GoogleFonts.outfit(
+                          color: isSpecialGradient ? Colors.white : AppColors.textBlack,
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Divider(
+                        color: isSpecialGradient
+                            ? Colors.white.withValues(alpha: 0.15)
+                            : AppColors.secondaryText.withValues(alpha: 0.15),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'OWNER SPLIT',
+                        style: GoogleFonts.outfit(
+                          color: isSpecialGradient
+                              ? Colors.white.withValues(alpha: 0.7)
+                              : AppColors.textGrey,
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1.0,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      ...account.breakdown.entries.map((entry) => Padding(
+                            padding: const EdgeInsets.only(bottom: 6),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Expanded(
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        width: 6,
+                                        height: 6,
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color: isSpecialGradient
+                                              ? Colors.white.withValues(alpha: 0.6)
+                                              : AppColors.brandPrimary.withValues(alpha: 0.6),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          entry.key,
+                                          overflow: TextOverflow.ellipsis,
+                                          maxLines: 1,
+                                          style: GoogleFonts.outfit(
+                                            color: isSpecialGradient
+                                                ? Colors.white.withValues(alpha: 0.85)
+                                                : AppColors.textGrey,
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Text(
+                                  '৳ ${entry.value.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => "${m[1]},")}',
+                                  style: GoogleFonts.outfit(
+                                    color: isSpecialGradient ? Colors.white : AppColors.textBlack,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )),
                     ],
                   ),
-                )),
+                ),
               ],
             ),
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildTypeTag(String type) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: AppColors.brandPrimary.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text('Type: $type', 
-        style: GoogleFonts.montserrat(color: AppColors.brandPrimary, fontSize: 10, fontWeight: FontWeight.bold)),
     );
   }
 }

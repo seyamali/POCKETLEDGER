@@ -103,7 +103,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                       decoration: BoxDecoration(
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.4),
+                            color: Colors.black.withValues(alpha: 0.4),
                             blurRadius: 40,
                             offset: const Offset(0, 20),
                           ),
@@ -155,7 +155,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                           Text(
                             '— Track Money. Stay in Control. —',
                             style: GoogleFonts.montserrat(
-                              color: greyText.withOpacity(0.6),
+                              color: greyText.withValues(alpha: 0.6),
                               fontSize: 14,
                               fontWeight: FontWeight.w400,
                               letterSpacing: 1.2,
@@ -184,9 +184,9 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                       height: 4,
                       width: double.infinity,
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.08),
+                        color: Colors.white.withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: Colors.white.withOpacity(0.05), width: 0.5),
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.05), width: 0.5),
                       ),
                       child: FractionallySizedBox(
                         alignment: Alignment.centerLeft,
@@ -202,12 +202,12 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                             borderRadius: BorderRadius.circular(10),
                             boxShadow: [
                               BoxShadow(
-                                color: accentColor.withOpacity(0.4),
+                                color: accentColor.withValues(alpha: 0.4),
                                 blurRadius: 10,
                                 spreadRadius: 1,
                               ),
                               BoxShadow(
-                                color: const Color(0xFF5CE1E6).withOpacity(0.3),
+                                color: const Color(0xFF5CE1E6).withValues(alpha: 0.3),
                                 blurRadius: 4,
                                 spreadRadius: 0,
                               ),

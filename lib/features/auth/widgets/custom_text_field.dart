@@ -51,7 +51,7 @@ class CustomTextField extends StatelessWidget {
         style: GoogleFonts.outfit(color: AppColors.textBlack, fontSize: 16),
         decoration: InputDecoration(
           hintText: hintText,
-          hintStyle: GoogleFonts.outfit(color: AppColors.textGrey.withOpacity(0.6)),
+          hintStyle: GoogleFonts.outfit(color: AppColors.textGrey.withValues(alpha: 0.6)),
           prefixIcon: Icon(icon, color: isFocused ? AppColors.primaryGreen : AppColors.textGrey, size: 22),
           suffixIcon: suffixIcon ?? (isPassword
               ? IconButton(

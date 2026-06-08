@@ -79,7 +79,7 @@ class _CreditCardsScreenState extends State<CreditCardsScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.credit_card, size: 80, color: AppColors.textGrey.withOpacity(0.5)),
+          Icon(Icons.credit_card, size: 80, color: AppColors.textGrey.withValues(alpha: 0.5)),
           const SizedBox(height: 16),
           Text(
             'No Credit Cards yet',
@@ -138,7 +138,7 @@ class _CreditCardsScreenState extends State<CreditCardsScreen> {
           ),
           boxShadow: [
             BoxShadow(
-              color: gradient[0].withOpacity(0.3),
+              color: gradient[0].withValues(alpha: 0.3),
               blurRadius: 10,
               offset: const Offset(0, 5),
             ),
@@ -150,7 +150,7 @@ class _CreditCardsScreenState extends State<CreditCardsScreen> {
             Positioned(
               right: -20,
               bottom: -20,
-              child: Icon(Icons.credit_card, size: 150, color: Colors.white.withOpacity(0.05)),
+              child: Icon(Icons.credit_card, size: 150, color: Colors.white.withValues(alpha: 0.05)),
             ),
             Padding(
               padding: const EdgeInsets.all(20),
