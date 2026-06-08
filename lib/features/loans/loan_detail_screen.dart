@@ -7,6 +7,7 @@ import 'package:pocketledger/models/account_model.dart';
 import 'package:pocketledger/services/account_service.dart';
 import 'package:pocketledger/features/auth/widgets/custom_text_field.dart';
 import 'package:pocketledger/core/constants/app_constants.dart';
+import 'package:intl/intl.dart';
 
 class LoanDetailScreen extends StatefulWidget {
   final LoanModel loan;
@@ -133,7 +134,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
         bottom: MediaQuery.of(context).viewInsets.bottom + 24,
         top: 32, left: 24, right: 24,
       ),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: AppColors.primaryBackground,
         borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
       ),
@@ -197,7 +198,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: AppColors.cardWhite,
                         borderRadius: BorderRadius.circular(15),
                         border: Border.all(color: AppColors.brandPrimary.withOpacity(0.1)),
                       ),
@@ -217,7 +218,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                       ),
                     ),
                     if (_trackDestination) ...[
-                      const Padding(
+                      Padding(
                         padding: EdgeInsets.symmetric(vertical: 8),
                         child: Icon(Icons.arrow_downward_rounded, color: AppColors.brandPrimary),
                       ),
@@ -241,13 +242,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                       width: double.infinity,
                       height: 60,
                       child: ElevatedButton(
-                        onPressed: _isLoading ? null : () {
-                          if (_sourceAccount == null && !isGiven) {
-                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select source account')));
-                            return;
-                          }
-                          _handleAddPayment();
-                        },
+                        onPressed: _isLoading ? null : _handleAddPayment,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.brandPrimary,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -299,7 +294,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                     isExpanded: true,
                     hint: Text('None (Outside App)', style: GoogleFonts.montserrat(fontSize: 13, color: AppColors.secondaryText)),
                     items: [
-                      const DropdownMenuItem<AccountModel>(
+                      DropdownMenuItem<AccountModel>(
                         value: null,
                         child: Text('None (Outside App)', style: TextStyle(color: AppColors.secondaryText, fontSize: 13)),
                       ),
@@ -345,14 +340,14 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.primaryText),
+          icon: Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.primaryText),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text('Loan Details', style: GoogleFonts.montserrat(color: AppColors.primaryText, fontWeight: FontWeight.bold)),
         centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.edit_rounded, color: AppColors.brandPrimary),
+            icon: Icon(Icons.edit_rounded, color: AppColors.brandPrimary),
             onPressed: _showEditNameDialog,
           ),
           IconButton(
@@ -371,12 +366,155 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
         child: Column(
           children: [
             _buildMainCard(),
+            if (widget.loan.installments.isNotEmpty) ...[
+              const SizedBox(height: 32),
+              _buildInstallmentsTimeline(),
+            ],
             const SizedBox(height: 32),
             _buildRepaymentsList(),
           ],
         ),
       ),
       bottomNavigationBar: widget.loan.status == LoanStatus.pending ? _buildBottomBar() : null,
+    );
+  }
+
+  Widget _buildInstallmentsTimeline() {
+    final installments = widget.loan.installments;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: AppColors.cardBackground,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.brandPrimary.withOpacity(0.05)),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 15, offset: const Offset(0, 8))],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.timeline_rounded, color: AppColors.brandPrimary, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                'INSTALLMENTS TIMELINE',
+                style: GoogleFonts.montserrat(
+                  color: AppColors.primaryText,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                  letterSpacing: 1.2,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          ListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: installments.length,
+            itemBuilder: (context, index) {
+              final inst = installments[index];
+              final due = DateTime(inst.dueDate.year, inst.dueDate.month, inst.dueDate.day);
+              final isOverdue = !inst.isPaid && due.isBefore(today);
+
+              Color statusColor = Colors.grey;
+              IconData statusIcon = Icons.radio_button_unchecked_rounded;
+              String statusLabel = 'Upcoming';
+
+              if (inst.isPaid) {
+                statusColor = AppColors.success;
+                statusIcon = Icons.check_circle_rounded;
+                statusLabel = 'Paid';
+              } else if (isOverdue) {
+                statusColor = AppColors.error;
+                statusIcon = Icons.warning_amber_rounded;
+                statusLabel = 'Overdue';
+              }
+
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Column(
+                    children: [
+                      Icon(statusIcon, color: statusColor, size: 22),
+                      if (index < installments.length - 1)
+                        Container(
+                          width: 2,
+                          height: 40,
+                          color: Colors.grey.shade200,
+                        ),
+                    ],
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Installment #${index + 1}',
+                                style: GoogleFonts.montserrat(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                  color: inst.isPaid ? AppColors.secondaryText : AppColors.primaryText,
+                                  decoration: inst.isPaid ? TextDecoration.lineThrough : null,
+                                ),
+                              ),
+                              Text(
+                                '৳${inst.amount.toInt()}',
+                                style: GoogleFonts.montserrat(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                  color: inst.isPaid ? AppColors.success : AppColors.brandPrimary,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Due: ${DateFormat('MMM dd, yyyy').format(inst.dueDate)}',
+                                style: GoogleFonts.montserrat(
+                                  color: AppColors.secondaryText,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: statusColor.withOpacity(0.08),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  statusLabel,
+                                  style: GoogleFonts.montserrat(
+                                    color: statusColor,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ],
+      ),
     );
   }
 
@@ -421,7 +559,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel', style: TextStyle(color: AppColors.secondaryText))),
+          TextButton(onPressed: () => Navigator.pop(context), child: Text('Cancel', style: TextStyle(color: AppColors.secondaryText))),
           TextButton(
             onPressed: () async {
               final newName = nameController.text.trim();
@@ -437,7 +575,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                 if (mounted) setState(() => _isLoading = false);
               }
             }, 
-            child: const Text('Save', style: TextStyle(color: AppColors.brandPrimary, fontWeight: FontWeight.bold)),
+            child: Text('Save', style: TextStyle(color: AppColors.brandPrimary, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -595,7 +733,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.cardWhite,
         boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 20, offset: const Offset(0, -5))],
       ),
       child: SizedBox(

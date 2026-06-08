@@ -92,4 +92,16 @@ class GoalService {
           .toList();
     });
   }
+
+  // Fetch all transactions for multi-month charting
+  Stream<List<TransactionModel>> getAllTransactions() {
+    if (_uid == null) return Stream.value([]);
+    return _db
+        .collection('transactions')
+        .where('userId', isEqualTo: _uid)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs.map((doc) => TransactionModel.fromFirestore(doc)).toList();
+    });
+  }
 }

@@ -24,6 +24,9 @@ class TransactionModel {
   final String? loanId;
   final String? repaymentId;
 
+  // For credit cards
+  final String? creditCardId;
+
   TransactionModel({
     required this.id,
     required this.accountId,
@@ -40,6 +43,7 @@ class TransactionModel {
     this.toOwner,
     this.loanId,
     this.repaymentId,
+    this.creditCardId,
   });
 
   factory TransactionModel.fromFirestore(DocumentSnapshot doc) {
@@ -63,6 +67,7 @@ class TransactionModel {
       toOwner: data['toOwner'],
       loanId: data['loanId'],
       repaymentId: data['repaymentId'],
+      creditCardId: data['creditCardId'],
     );
   }
 
@@ -86,6 +91,7 @@ class TransactionModel {
       if (toOwner != null) 'toOwner': toOwner,
       if (loanId != null) 'loanId': loanId,
       if (repaymentId != null) 'repaymentId': repaymentId,
+      if (creditCardId != null) 'creditCardId': creditCardId,
     };
   }
 }

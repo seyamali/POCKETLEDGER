@@ -62,8 +62,18 @@ class TransactionService {
         toAccountId: transaction.toAccountId,
         toAccountName: transaction.toAccountName,
         toOwner: transaction.toOwner,
+        creditCardId: transaction.creditCardId,
       );
       tx.set(transRef, transactionWithUserId.toFirestore());
+
+      // If charged to a credit card, increment its outstanding balance
+      if (transaction.type == TransactionType.expense && transaction.creditCardId != null) {
+        final cardRef = _db.collection('users').doc(_uid!).collection('creditCards').doc(transaction.creditCardId);
+        // Using FieldValue.increment inside a transaction
+        tx.update(cardRef, {
+          'outstandingBalance': FieldValue.increment(transaction.amount)
+        });
+      }
       });
     } catch (e, stackTrace) {
       ErrorLogger.logError(e, stackTrace, 'addTransaction');

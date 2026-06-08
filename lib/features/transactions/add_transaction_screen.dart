@@ -7,6 +7,10 @@ import 'package:pocketledger/services/account_service.dart';
 import 'package:pocketledger/services/transaction_service.dart';
 import 'package:pocketledger/features/auth/widgets/custom_text_field.dart';
 import 'package:pocketledger/core/constants/app_constants.dart';
+import 'package:pocketledger/services/category_service.dart';
+import 'package:pocketledger/models/category_model.dart';
+import 'package:pocketledger/models/credit_card_model.dart';
+import 'package:pocketledger/services/credit_card_service.dart';
 
 class AddTransactionScreen extends StatefulWidget {
   final TransactionType initialType;
@@ -19,6 +23,8 @@ class AddTransactionScreen extends StatefulWidget {
 class _AddTransactionScreenState extends State<AddTransactionScreen> {
   final TransactionService _transactionService = TransactionService();
   final AccountService _accountService = AccountService();
+  final CategoryService _categoryService = CategoryService();
+  final CreditCardService _creditCardService = CreditCardService();
   
   late TransactionType _selectedType;
   AccountModel? _selectedAccount;
@@ -29,14 +35,35 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   final _amountController = TextEditingController();
   final _noteController = TextEditingController();
   String? _selectedCategory;
+  String? _selectedCreditCardId;
   
   bool _isLoading = false;
   final List<String> _owners = AppConstants.allowedOwners;
+  bool _initializedArgs = false;
 
   @override
   void initState() {
     super.initState();
     _selectedType = widget.initialType;
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_initializedArgs) {
+      final args = ModalRoute.of(context)?.settings.arguments;
+      if (args is TransactionType) {
+        _selectedType = args;
+      } else if (args is Map<String, dynamic>) {
+        if (args['type'] is TransactionType) {
+          _selectedType = args['type'] as TransactionType;
+        }
+        if (args['account'] is AccountModel) {
+          _selectedAccount = args['account'] as AccountModel;
+        }
+      }
+      _initializedArgs = true;
+    }
   }
 
   void _handleSave() async {
@@ -83,6 +110,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           note: _noteController.text,
           date: DateTime.now(),
           userId: '', // Service handles this
+          creditCardId: _selectedType == TransactionType.expense ? _selectedCreditCardId : null,
         );
         await _transactionService.addTransaction(transaction);
       }
@@ -104,11 +132,11 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         : (_selectedType == TransactionType.expense ? Colors.redAccent : Colors.blueAccent);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F6F5),
+      backgroundColor: AppColors.pageBackground,
       body: StreamBuilder<List<AccountModel>>(
         stream: _accountService.getAccounts(),
         builder: (context, snapshot) {
-          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator(color: AppColors.primaryGreen));
+          if (!snapshot.hasData) return Center(child: CircularProgressIndicator(color: AppColors.primaryGreen));
           final accounts = snapshot.data!;
 
           return Stack(
@@ -119,7 +147,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                   Container(
                     padding: EdgeInsets.fromLTRB(20, MediaQuery.of(context).padding.top + 10, 20, 20),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: AppColors.cardWhite,
                       borderRadius: const BorderRadius.vertical(bottom: Radius.circular(40)),
                       boxShadow: [
                         BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 20, offset: const Offset(0, 10)),
@@ -132,7 +160,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                           children: [
                             IconButton(
                               onPressed: () => Navigator.pop(context),
-                              icon: const Icon(Icons.close_rounded, color: AppColors.textBlack, size: 28),
+                              icon: Icon(Icons.close_rounded, color: AppColors.textBlack, size: 28),
                             ),
                             _buildTypeSwitch(),
                             const SizedBox(width: 48),
@@ -157,9 +185,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                           _buildHorizontalAccountSelector(accounts),
                           
                           const SizedBox(height: 32),
-                          _buildStepTitle('Member', 'Who is involved?'),
+                          _buildStepTitle('Source Member', 'Who is sending?'),
                           const SizedBox(height: 16),
-                          _buildMemberChips(),
+                          _buildMemberChips(isSource: true),
 
                           if (_selectedType == TransactionType.transfer) ...[
                             const SizedBox(height: 32),
@@ -174,12 +202,24 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                             _buildStepTitle('Destination', 'Where is it going?'),
                             const SizedBox(height: 16),
                             _buildHorizontalAccountSelector(accounts, isSource: false),
+                            
+                            const SizedBox(height: 32),
+                            _buildStepTitle('Destination Member', 'Who is receiving?'),
+                            const SizedBox(height: 16),
+                            _buildMemberChips(isSource: false),
                           ],
 
                           const SizedBox(height: 32),
                           _buildStepTitle('Category', 'What kind of transaction?'),
                           const SizedBox(height: 16),
                           _buildCategoryGrid(accentColor),
+
+                          if (_selectedType == TransactionType.expense) ...[
+                            const SizedBox(height: 32),
+                            _buildStepTitle('Charge to Credit Card', 'Optional'),
+                            const SizedBox(height: 16),
+                            _buildCreditCardSelector(),
+                          ],
 
                           const SizedBox(height: 32),
                           _buildStepTitle('Notes', 'Add extra details'),
@@ -220,7 +260,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: const Color(0xFFF4F6F5),
+        color: AppColors.pageBackground,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
@@ -314,7 +354,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
               margin: const EdgeInsets.only(right: 12),
               padding: const EdgeInsets.symmetric(horizontal: 22),
               decoration: BoxDecoration(
-                color: isSelected ? AppColors.primaryGreen : Colors.white,
+                color: isSelected ? AppColors.primaryGreen : AppColors.cardWhite,
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: isSelected 
                   ? [BoxShadow(color: AppColors.primaryGreen.withOpacity(0.2), blurRadius: 10, offset: const Offset(0, 4))]
@@ -334,19 +374,26 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     );
   }
 
-  Widget _buildMemberChips() {
+  Widget _buildMemberChips({bool isSource = true}) {
+    final selectedOwner = isSource ? _selectedOwner : _toOwner;
     return Wrap(
       spacing: 10,
       runSpacing: 10,
       children: _owners.map((owner) {
-        final isSelected = _selectedOwner == owner;
+        final isSelected = selectedOwner == owner;
         return GestureDetector(
-          onTap: () => setState(() => _selectedOwner = owner),
+          onTap: () => setState(() {
+            if (isSource) {
+              _selectedOwner = owner;
+            } else {
+              _toOwner = owner;
+            }
+          }),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             decoration: BoxDecoration(
-              color: isSelected ? AppColors.accentGold : Colors.white,
+              color: isSelected ? AppColors.accentGold : AppColors.cardWhite,
               borderRadius: BorderRadius.circular(14),
               boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 5)],
             ),
@@ -363,30 +410,61 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   }
 
   Widget _buildCategoryGrid(Color color) {
-    List<Map<String, dynamic>> categories = [];
-    if (_selectedType == TransactionType.income) {
-      categories = [
-        {'name': 'Income', 'icon': Icons.payments_rounded},
-        {'name': 'Salary', 'icon': Icons.work_rounded},
-        {'name': 'Business', 'icon': Icons.store_rounded},
-        {'name': 'Other', 'icon': Icons.more_horiz_rounded},
-      ];
-    } else if (_selectedType == TransactionType.expense) {
-      categories = [
-        {'name': 'Home', 'icon': Icons.home_rounded},
-        {'name': 'Food', 'icon': Icons.restaurant_rounded},
-        {'name': 'Transport', 'icon': Icons.directions_bus_rounded},
-        {'name': 'Wife', 'icon': Icons.favorite_rounded},
-        {'name': 'Myself', 'icon': Icons.person_rounded},
-        {'name': 'Other', 'icon': Icons.grid_view_rounded},
-      ];
-    } else {
-      categories = [
+    if (_selectedType == TransactionType.transfer) {
+      final transferCategories = [
         {'name': 'Transfer', 'icon': Icons.swap_horiz_rounded},
         {'name': 'Savings', 'icon': Icons.savings_rounded},
       ];
+      return _buildGrid(transferCategories, color);
     }
 
+    return StreamBuilder<List<CategoryModel>>(
+      stream: _categoryService.getCategories(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return Center(
+            child: CircularProgressIndicator(color: AppColors.primaryGreen),
+          );
+        }
+
+        final typeStr = _selectedType == TransactionType.income ? 'income' : 'expense';
+        final filtered = snapshot.data!
+            .where((cat) => cat.type == typeStr)
+            .toList();
+
+        final items = filtered.map((cat) => {
+          'name': cat.name,
+          'icon': IconData(cat.iconCode, fontFamily: 'MaterialIcons'),
+          'color': Color(cat.colorValue),
+        }).toList();
+
+        if (items.isEmpty) {
+          return Center(
+            child: Text(
+              'No categories found',
+              style: GoogleFonts.outfit(color: AppColors.textGrey, fontSize: 13),
+            ),
+          );
+        }
+
+        // Auto-select first category if selected category is not in list
+        final hasSelected = items.any((item) => item['name'] == _selectedCategory);
+        if (!hasSelected && items.isNotEmpty) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              setState(() {
+                _selectedCategory = items.first['name'] as String;
+              });
+            }
+          });
+        }
+
+        return _buildGrid(items, color);
+      },
+    );
+  }
+
+  Widget _buildGrid(List<Map<String, dynamic>> categories, Color color) {
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -397,23 +475,25 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       itemBuilder: (context, i) {
         final cat = categories[i];
         final isSelected = (_selectedCategory ?? categories.first['name']) == cat['name'];
+        final itemColor = cat['color'] as Color? ?? color;
+
         return GestureDetector(
           onTap: () => setState(() => _selectedCategory = cat['name']),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             decoration: BoxDecoration(
-              color: isSelected ? color : Colors.white,
+              color: isSelected ? itemColor : AppColors.cardWhite,
               borderRadius: BorderRadius.circular(20),
               boxShadow: isSelected 
-                ? [BoxShadow(color: color.withOpacity(0.2), blurRadius: 8)]
+                ? [BoxShadow(color: itemColor.withOpacity(0.2), blurRadius: 8)]
                 : [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 4)],
             ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(cat['icon'], color: isSelected ? Colors.white : color.withOpacity(0.6), size: 24),
+                Icon(cat['icon'] as IconData, color: isSelected ? Colors.white : itemColor.withOpacity(0.8), size: 24),
                 const SizedBox(height: 8),
-                Text(cat['name'], style: GoogleFonts.outfit(color: isSelected ? Colors.white : AppColors.textBlack, fontSize: 11, fontWeight: FontWeight.bold)),
+                Text(cat['name'] as String, maxLines: 1, overflow: TextOverflow.ellipsis, style: GoogleFonts.outfit(color: isSelected ? Colors.white : AppColors.textBlack, fontSize: 11, fontWeight: FontWeight.bold)),
               ],
             ),
           ),
@@ -426,7 +506,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.cardWhite,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10)],
       ),
@@ -464,6 +544,64 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         child: _isLoading 
           ? const CircularProgressIndicator(color: Colors.white)
           : Text('Save Transaction', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold)),
+      ),
+    );
+  }
+
+  Widget _buildCreditCardSelector() {
+    return StreamBuilder<List<CreditCardModel>>(
+      stream: _creditCardService.getCards(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) return const SizedBox.shrink();
+        final cards = snapshot.data!;
+        if (cards.isEmpty) return const SizedBox.shrink();
+
+        return SizedBox(
+          height: 50,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            itemCount: cards.length + 1, // +1 for "None"
+            itemBuilder: (context, i) {
+              if (i == 0) {
+                final isSelected = _selectedCreditCardId == null;
+                return _buildCardChip(isSelected: isSelected, label: 'None', onTap: () => setState(() => _selectedCreditCardId = null));
+              }
+              final card = cards[i - 1];
+              final isSelected = _selectedCreditCardId == card.id;
+              return _buildCardChip(
+                isSelected: isSelected, 
+                label: '${card.bankName} ${card.lastFourDigits}', 
+                onTap: () => setState(() => _selectedCreditCardId = card.id)
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildCardChip({required bool isSelected, required String label, required VoidCallback onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        margin: const EdgeInsets.only(right: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.error : AppColors.cardWhite, // red accent for credit charge
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: isSelected 
+            ? [BoxShadow(color: AppColors.error.withOpacity(0.2), blurRadius: 10, offset: const Offset(0, 4))]
+            : [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 5, offset: const Offset(0, 2))],
+        ),
+        alignment: Alignment.center,
+        child: Text(label, 
+          style: GoogleFonts.outfit(
+            color: isSelected ? Colors.white : AppColors.textBlack, 
+            fontWeight: FontWeight.bold,
+            fontSize: 14,
+          )),
       ),
     );
   }

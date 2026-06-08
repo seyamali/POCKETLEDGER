@@ -37,7 +37,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
         title: Text('Transactions', style: GoogleFonts.montserrat(color: AppColors.primaryText, fontWeight: FontWeight.bold)),
         actions: [
           IconButton(
-            icon: const Icon(Icons.add_circle_rounded, color: AppColors.brandPrimary, size: 30),
+            icon: Icon(Icons.add_circle_rounded, color: AppColors.brandPrimary, size: 30),
             onPressed: () => Navigator.pushNamed(context, '/add-transaction'),
           ),
           const SizedBox(width: 12),
@@ -99,7 +99,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                           child: Center(
                             child: TextButton.icon(
                               onPressed: () => setState(() => _currentLimit += 20),
-                              icon: const Icon(Icons.refresh_rounded, color: AppColors.brandPrimary),
+                              icon: Icon(Icons.refresh_rounded, color: AppColors.brandPrimary),
                               label: Text('Load More', style: GoogleFonts.montserrat(color: AppColors.brandPrimary, fontWeight: FontWeight.bold)),
                               style: TextButton.styleFrom(
                                 backgroundColor: AppColors.brandPrimary.withOpacity(0.1),
@@ -129,7 +129,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
       padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.cardWhite,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
@@ -145,10 +145,10 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
           decoration: InputDecoration(
             hintText: 'Search by note, category, or amount...',
             hintStyle: GoogleFonts.montserrat(color: AppColors.textGrey, fontSize: 14),
-            prefixIcon: const Icon(Icons.search_rounded, color: AppColors.textGrey),
+            prefixIcon: Icon(Icons.search_rounded, color: AppColors.textGrey),
             suffixIcon: _searchQuery.isNotEmpty 
               ? IconButton(
-                  icon: const Icon(Icons.clear_rounded, color: AppColors.textGrey),
+                  icon: Icon(Icons.clear_rounded, color: AppColors.textGrey),
                   onPressed: () {
                     _searchController.clear();
                     setState(() => _searchQuery = '');

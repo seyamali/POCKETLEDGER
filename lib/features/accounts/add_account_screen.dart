@@ -90,7 +90,7 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.close, color: AppColors.primaryText),
+          icon: Icon(Icons.close, color: AppColors.primaryText),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text('New Account', style: GoogleFonts.montserrat(color: AppColors.primaryText, fontWeight: FontWeight.bold)),
@@ -132,7 +132,7 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                 if (_ownerBalances.length < _owners.length)
                   IconButton(
                     onPressed: _addOwnerRow,
-                    icon: const Icon(Icons.add_circle_outline, color: AppColors.brandPrimary),
+                    icon: Icon(Icons.add_circle_outline, color: AppColors.brandPrimary),
                   ),
               ],
             ),

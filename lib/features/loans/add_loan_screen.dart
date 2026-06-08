@@ -29,6 +29,10 @@ class _AddLoanScreenState extends State<AddLoanScreen> {
   String _selectedOwner = AppConstants.ownerSelf;
   bool _isLoading = false;
   bool _adjustBalance = false; // OFF by default — for existing loans, balance is already correct
+
+  bool _isInstallmentEnabled = false;
+  int _installmentCount = 5;
+  String _installmentFrequency = 'Monthly';
   
   List<String> _existingNames = [];
   TextEditingController? _autoCompleteController;
@@ -62,6 +66,26 @@ class _AddLoanScreenState extends State<AddLoanScreen> {
     try {
       final amount = double.tryParse(_amountController.text) ?? 0;
       
+      List<InstallmentModel> installments = [];
+      if (_isInstallmentEnabled) {
+        final double instAmt = amount / _installmentCount;
+        final now = DateTime.now();
+        for (int i = 1; i <= _installmentCount; i++) {
+          DateTime dueDate;
+          if (_installmentFrequency.toLowerCase() == 'weekly') {
+            dueDate = now.add(Duration(days: 7 * i));
+          } else {
+            dueDate = DateTime(now.year, now.month + i, now.day);
+          }
+          installments.add(InstallmentModel(
+            id: 'inst_${i}_${now.millisecondsSinceEpoch}',
+            amount: instAmt,
+            dueDate: dueDate,
+            isPaid: false,
+          ));
+        }
+      }
+      
       final loan = LoanModel(
         id: '', // Will be set by Firestore
         personName: personName,
@@ -75,6 +99,7 @@ class _AddLoanScreenState extends State<AddLoanScreen> {
         date: DateTime.now(),
         note: _noteController.text,
         userId: '', // Will be set in service
+        installments: installments,
       );
 
       await _loanService.addLoan(loan);
@@ -95,7 +120,7 @@ class _AddLoanScreenState extends State<AddLoanScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.close_rounded, color: AppColors.primaryText, size: 28),
+          icon: Icon(Icons.close_rounded, color: AppColors.primaryText, size: 28),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text('New Loan', style: GoogleFonts.montserrat(color: AppColors.primaryText, fontWeight: FontWeight.bold)),
@@ -136,6 +161,9 @@ class _AddLoanScreenState extends State<AddLoanScreen> {
 
                 const SizedBox(height: 24),
                 _buildAdjustBalanceToggle(),
+
+                const SizedBox(height: 24),
+                _buildInstallmentSection(),
 
                 const SizedBox(height: 48),
                 _buildSaveButton(),
@@ -219,7 +247,7 @@ class _AddLoanScreenState extends State<AddLoanScreen> {
             hintText: '0',
             hintStyle: TextStyle(color: AppColors.secondaryText.withOpacity(0.3)),
             prefixText: '৳ ',
-            prefixStyle: const TextStyle(color: AppColors.brandPrimary, fontSize: 32, fontWeight: FontWeight.bold),
+            prefixStyle: TextStyle(color: AppColors.brandPrimary, fontSize: 32, fontWeight: FontWeight.bold),
           ),
         ),
       ),
@@ -346,7 +374,7 @@ class _AddLoanScreenState extends State<AddLoanScreen> {
         child: DropdownButton<String>(
           value: _selectedOwner,
           isExpanded: true,
-          icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.secondaryText),
+          icon: Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.secondaryText),
           items: AppConstants.allowedOwners.map((o) => DropdownMenuItem(
             value: o,
             child: Text(o, style: GoogleFonts.montserrat(fontWeight: FontWeight.w600, fontSize: 16)),
@@ -372,7 +400,7 @@ class _AddLoanScreenState extends State<AddLoanScreen> {
               ? accounts.firstWhere((a) => a.id == _selectedAccount!.id) 
               : null,
           isExpanded: true,
-          icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.secondaryText),
+          icon: Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.secondaryText),
           hint: Text('Select Account', style: GoogleFonts.montserrat(color: AppColors.secondaryText, fontSize: 15)),
           items: accounts.map((acc) => DropdownMenuItem(
             value: acc,
@@ -403,6 +431,135 @@ class _AddLoanScreenState extends State<AddLoanScreen> {
         child: _isLoading 
           ? const CircularProgressIndicator(color: Colors.white)
           : Text('Save Loan', style: GoogleFonts.montserrat(fontWeight: FontWeight.bold, fontSize: 18, letterSpacing: 0.5)),
+      ),
+    );
+  }
+
+  Widget _buildInstallmentSection() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.cardBackground,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.brandPrimary.withOpacity(0.08)),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4))],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Divide into Installments', style: GoogleFonts.montserrat(color: AppColors.primaryText, fontWeight: FontWeight.bold, fontSize: 14)),
+                    const SizedBox(height: 4),
+                    Text('Split this loan into smaller payments', style: GoogleFonts.montserrat(color: AppColors.secondaryText, fontSize: 11)),
+                  ],
+                ),
+              ),
+              Switch(
+                value: _isInstallmentEnabled,
+                activeColor: AppColors.brandPrimary,
+                onChanged: (val) => setState(() => _isInstallmentEnabled = val),
+              ),
+            ],
+          ),
+          if (_isInstallmentEnabled) ...[
+            const SizedBox(height: 20),
+            Divider(color: Colors.grey.shade100, height: 1),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('INSTALLMENTS', style: GoogleFonts.montserrat(color: AppColors.secondaryText, fontSize: 10, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceLight,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.grey.shade200),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<int>(
+                            value: _installmentCount,
+                            isExpanded: true,
+                            items: List.generate(23, (index) => index + 2).map((count) => DropdownMenuItem(
+                              value: count,
+                              child: Text('$count times', style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold)),
+                            )).toList(),
+                            onChanged: (val) => setState(() => _installmentCount = val ?? 5),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('FREQUENCY', style: GoogleFonts.montserrat(color: AppColors.secondaryText, fontSize: 10, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceLight,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.grey.shade200),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            value: _installmentFrequency,
+                            isExpanded: true,
+                            items: ['Weekly', 'Monthly'].map((freq) => DropdownMenuItem(
+                              value: freq,
+                              child: Text(freq, style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold)),
+                            )).toList(),
+                            onChanged: (val) => setState(() => _installmentFrequency = val ?? 'Monthly'),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Builder(
+              builder: (context) {
+                final amt = double.tryParse(_amountController.text) ?? 0;
+                final perInst = amt > 0 ? (amt / _installmentCount).toInt() : 0;
+                return Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: AppColors.brandPrimary.withOpacity(0.04),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.info_outline_rounded, color: AppColors.brandPrimary, size: 18),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Splits this loan into $_installmentCount installments of ৳$perInst paid ${_installmentFrequency.toLowerCase()}.',
+                          style: GoogleFonts.outfit(color: AppColors.brandPrimary, fontSize: 12, fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+            ),
+          ],
+        ],
       ),
     );
   }

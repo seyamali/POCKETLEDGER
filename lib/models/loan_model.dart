@@ -59,6 +59,42 @@ class RepaymentModel {
   }
 }
 
+class InstallmentModel {
+  final String id;
+  final double amount;
+  final DateTime dueDate;
+  final bool isPaid;
+  final String? repaymentId;
+
+  InstallmentModel({
+    required this.id,
+    required this.amount,
+    required this.dueDate,
+    this.isPaid = false,
+    this.repaymentId,
+  });
+
+  factory InstallmentModel.fromMap(Map<String, dynamic> data) {
+    return InstallmentModel(
+      id: data['id'] ?? '',
+      amount: (data['amount'] ?? 0).toDouble(),
+      dueDate: (data['dueDate'] as Timestamp).toDate(),
+      isPaid: data['isPaid'] ?? false,
+      repaymentId: data['repaymentId'],
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'amount': amount,
+      'dueDate': Timestamp.fromDate(dueDate),
+      'isPaid': isPaid,
+      'repaymentId': repaymentId,
+    };
+  }
+}
+
 class LoanModel {
   final String id;
   final String personName;
@@ -73,6 +109,7 @@ class LoanModel {
   final String note;
   final String userId;
   final List<RepaymentModel> repayments;
+  final List<InstallmentModel> installments;
 
   LoanModel({
     required this.id,
@@ -88,6 +125,7 @@ class LoanModel {
     required this.note,
     required this.userId,
     this.repayments = const [],
+    this.installments = const [],
   });
 
   factory LoanModel.fromFirestore(DocumentSnapshot doc) {
@@ -96,6 +134,11 @@ class LoanModel {
     List<RepaymentModel> reps = [];
     if (data['repayments'] != null) {
       reps = (data['repayments'] as List).map((r) => RepaymentModel.fromMap(r)).toList();
+    }
+
+    List<InstallmentModel> insts = [];
+    if (data['installments'] != null) {
+      insts = (data['installments'] as List).map((i) => InstallmentModel.fromMap(i)).toList();
     }
 
     return LoanModel(
@@ -112,6 +155,7 @@ class LoanModel {
       note: data['note'] ?? '',
       userId: data['userId'] ?? '',
       repayments: reps,
+      installments: insts,
     );
   }
 
@@ -129,6 +173,7 @@ class LoanModel {
       'note': note,
       'userId': userId,
       'repayments': repayments.map((r) => r.toMap()).toList(),
+      'installments': installments.map((i) => i.toMap()).toList(),
     };
   }
 }

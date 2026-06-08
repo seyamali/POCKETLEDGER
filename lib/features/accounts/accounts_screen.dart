@@ -18,13 +18,13 @@ class AccountsScreen extends StatelessWidget {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.primaryText, size: 20),
+          icon: Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.primaryText, size: 20),
           onPressed: () => Navigator.maybePop(context),
         ),
         title: Text('Accounts', style: GoogleFonts.montserrat(color: AppColors.primaryText, fontWeight: FontWeight.bold)),
         actions: [
           IconButton(
-            icon: const Icon(Icons.add_circle_rounded, color: AppColors.brandPrimary, size: 30),
+            icon: Icon(Icons.add_circle_rounded, color: AppColors.brandPrimary, size: 30),
             onPressed: () => Navigator.pushNamed(context, '/add-account'),
           ),
           const SizedBox(width: 12),
@@ -34,7 +34,7 @@ class AccountsScreen extends StatelessWidget {
         stream: accountService.getAccounts(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator(color: AppColors.brandPrimary));
+            return Center(child: CircularProgressIndicator(color: AppColors.brandPrimary));
           }
 
           final accounts = snapshot.data ?? [];

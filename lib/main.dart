@@ -3,9 +3,19 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:pocketledger/app/app.dart';
 import 'package:pocketledger/firebase_options.dart';
+import 'package:pocketledger/services/notification_service.dart';
+import 'package:pocketledger/services/theme_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize Theme Service
+  await ThemeService().init();
+
+  // Initialize local notifications
+  final notificationService = NotificationService();
+  await notificationService.init();
+  await notificationService.requestPermissions();
   
   try {
     await Firebase.initializeApp(

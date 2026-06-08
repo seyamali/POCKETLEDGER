@@ -16,6 +16,14 @@ class LoansScreen extends StatefulWidget {
 class _LoansScreenState extends State<LoansScreen> {
   final LoanService _loanService = LoanService();
   int _selectedTabIndex = 0; // 0: Given, 1: Taken, 2: By Person
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -28,7 +36,7 @@ class _LoansScreenState extends State<LoansScreen> {
         centerTitle: false,
         actions: [
           IconButton(
-            icon: const Icon(Icons.add_circle_outline_rounded, color: AppColors.brandPrimary, size: 28),
+            icon: Icon(Icons.add_circle_outline_rounded, color: AppColors.brandPrimary, size: 28),
             onPressed: () {
               Navigator.push(context, MaterialPageRoute(builder: (_) => const AddLoanScreen()));
             },
@@ -40,7 +48,7 @@ class _LoansScreenState extends State<LoansScreen> {
         stream: _loanService.getLoans(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator(color: AppColors.brandPrimary));
+            return Center(child: CircularProgressIndicator(color: AppColors.brandPrimary));
           }
 
           if (snapshot.hasError) {
@@ -48,16 +56,25 @@ class _LoansScreenState extends State<LoansScreen> {
           }
 
           final allLoans = snapshot.data ?? [];
-          final filteredLoans = allLoans.where((l) => 
+          var filteredLoans = allLoans.where((l) => 
             _selectedTabIndex == 0 ? l.type == LoanType.given : l.type == LoanType.taken
           ).toList();
+
+          if (_searchQuery.isNotEmpty) {
+            filteredLoans = filteredLoans.where((l) {
+              final nameMatch = l.personName.toLowerCase().contains(_searchQuery);
+              final noteMatch = l.note.toLowerCase().contains(_searchQuery);
+              return nameMatch || noteMatch;
+            }).toList();
+          }
 
           return Column(
             children: [
               _buildSummaryHeader(allLoans),
               const SizedBox(height: 16),
               _buildToggleSwitch(),
-              const SizedBox(height: 16),
+              _buildSearchBar(),
+              const SizedBox(height: 8),
               Expanded(
                 child: _selectedTabIndex == 2 
                     ? _buildByPersonList(allLoans)
@@ -168,6 +185,47 @@ class _LoansScreenState extends State<LoansScreen> {
     );
   }
 
+  Widget _buildSearchBar() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.cardWhite,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.02),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            )
+          ],
+          border: Border.all(color: AppColors.brandPrimary.withOpacity(0.05)),
+        ),
+        child: TextField(
+          controller: _searchController,
+          onChanged: (value) => setState(() => _searchQuery = value.toLowerCase()),
+          decoration: InputDecoration(
+            hintText: 'Search by person name or note...',
+            hintStyle: GoogleFonts.montserrat(color: AppColors.secondaryText, fontSize: 13),
+            prefixIcon: Icon(Icons.search_rounded, color: AppColors.secondaryText, size: 20),
+            suffixIcon: _searchQuery.isNotEmpty 
+              ? IconButton(
+                  icon: Icon(Icons.clear_rounded, color: AppColors.secondaryText, size: 18),
+                  onPressed: () {
+                    _searchController.clear();
+                    setState(() => _searchQuery = '');
+                  },
+                )
+              : null,
+            border: InputBorder.none,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          ),
+          style: GoogleFonts.montserrat(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.primaryText),
+        ),
+      ),
+    );
+  }
+
   Widget _buildByPersonList(List<LoanModel> allLoans) {
     if (allLoans.isEmpty) return _buildEmptyState();
 
@@ -175,6 +233,10 @@ class _LoansScreenState extends State<LoansScreen> {
     for (var loan in allLoans) {
       String rawName = loan.personName.trim();
       String key = rawName.toLowerCase();
+      
+      if (_searchQuery.isNotEmpty && !key.contains(_searchQuery)) {
+        continue;
+      }
       
       if (!personSummary.containsKey(key)) {
         personSummary[key] = {'name': rawName, 'given': 0.0, 'taken': 0.0, 'net': 0.0, 'count': 0};
@@ -192,6 +254,7 @@ class _LoansScreenState extends State<LoansScreen> {
     }
 
     final personsKeys = personSummary.keys.toList()..sort();
+    if (personsKeys.isEmpty) return _buildEmptyState();
 
     return ListView.builder(
       padding: const EdgeInsets.only(left: 20, right: 20, bottom: 120),
@@ -235,7 +298,7 @@ class _LoansScreenState extends State<LoansScreen> {
                           color: AppColors.brandPrimary.withOpacity(0.1),
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.person, color: AppColors.brandPrimary),
+                        child: Icon(Icons.person, color: AppColors.brandPrimary),
                       ),
                       const SizedBox(width: 12),
                       Column(
@@ -340,7 +403,7 @@ class _LoanCard extends StatelessWidget {
                         color: AppColors.brandPrimary.withOpacity(0.1),
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.person_outline, color: AppColors.brandPrimary),
+                      child: Icon(Icons.person_outline, color: AppColors.brandPrimary),
                     ),
                     const SizedBox(width: 12),
                     Column(

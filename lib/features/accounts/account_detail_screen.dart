@@ -64,13 +64,13 @@ class _AccountDetailScreenState extends State<AccountDetailScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.primaryText, size: 20),
+          icon: Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.primaryText, size: 20),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(_currentName, style: GoogleFonts.montserrat(color: AppColors.primaryText, fontWeight: FontWeight.bold)),
         actions: [
           IconButton(
-            icon: const Icon(Icons.edit_rounded, color: AppColors.brandPrimary, size: 20),
+            icon: Icon(Icons.edit_rounded, color: AppColors.brandPrimary, size: 20),
             onPressed: _showEditNameDialog,
           ),
           const SizedBox(width: 8),
@@ -140,7 +140,7 @@ class _AccountDetailScreenState extends State<AccountDetailScreen> {
               children: [
                 Row(
                   children: [
-                    Container(width: 8, height: 8, decoration: const BoxDecoration(color: AppColors.brandPrimary, shape: BoxShape.circle)),
+                    Container(width: 8, height: 8, decoration: BoxDecoration(color: AppColors.brandPrimary, shape: BoxShape.circle)),
                     const SizedBox(width: 12),
                     Text(entry.key, style: GoogleFonts.montserrat(color: AppColors.secondaryText, fontSize: 14)),
                   ],
@@ -165,7 +165,14 @@ class _AccountDetailScreenState extends State<AccountDetailScreen> {
               'Add Money', 
               Icons.add_rounded, 
               AppColors.brandPrimary,
-              () => Navigator.pushNamed(context, '/add-transaction', arguments: TransactionType.income)
+              () => Navigator.pushNamed(
+                context, 
+                '/add-transaction', 
+                arguments: {
+                  'type': TransactionType.income,
+                  'account': widget.account,
+                },
+              )
             ),
           ),
           const SizedBox(width: 16),
@@ -175,7 +182,14 @@ class _AccountDetailScreenState extends State<AccountDetailScreen> {
               'Withdraw', 
               Icons.remove_rounded, 
               Colors.redAccent,
-              () => Navigator.pushNamed(context, '/add-transaction', arguments: TransactionType.expense)
+              () => Navigator.pushNamed(
+                context, 
+                '/add-transaction', 
+                arguments: {
+                  'type': TransactionType.expense,
+                  'account': widget.account,
+                },
+              )
             ),
           ),
         ],
@@ -212,7 +226,7 @@ class _AccountDetailScreenState extends State<AccountDetailScreen> {
             stream: service.getTransactionsByAccount(widget.account.id),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator(color: AppColors.brandPrimary));
+                return Center(child: CircularProgressIndicator(color: AppColors.brandPrimary));
               }
               if (!snapshot.hasData || snapshot.data!.isEmpty) {
                 return Center(

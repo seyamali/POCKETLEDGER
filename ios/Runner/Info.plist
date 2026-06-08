@@ -49,5 +49,7 @@
 	<string>This app requires access to the photo library to upload your profile picture.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>This app requires access to the camera to take your profile picture.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>This app requires Face ID access to unlock your financial ledger securely.</string>
 </dict>
 </plist>

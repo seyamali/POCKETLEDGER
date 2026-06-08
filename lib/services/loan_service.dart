@@ -163,14 +163,44 @@ class LoanService {
       }
 
       // --- ALL WRITES ---
-      // 1. UPDATE LOAN RECORD
+      // 1. UPDATE LOAN RECORD & MATCH INSTALLMENTS
       List<RepaymentModel> newRepayments = List.from(loan.repayments)..add(repayment);
       double newRemaining = loan.remainingAmount - paymentAmount;
+
+      List<InstallmentModel> updatedInstallments = List.from(loan.installments);
+      double unpaidAmountCovered = paymentAmount;
+
+      for (int i = 0; i < updatedInstallments.length; i++) {
+        final inst = updatedInstallments[i];
+        if (!inst.isPaid) {
+          if (unpaidAmountCovered >= inst.amount) {
+            updatedInstallments[i] = InstallmentModel(
+              id: inst.id,
+              amount: inst.amount,
+              dueDate: inst.dueDate,
+              isPaid: true,
+              repaymentId: repaymentId,
+            );
+            unpaidAmountCovered -= inst.amount;
+          } else if (unpaidAmountCovered > 0) {
+            updatedInstallments[i] = InstallmentModel(
+              id: inst.id,
+              amount: inst.amount,
+              dueDate: inst.dueDate,
+              isPaid: true,
+              repaymentId: repaymentId,
+            );
+            unpaidAmountCovered = 0;
+          }
+        }
+        if (unpaidAmountCovered <= 0) break;
+      }
       
       tx.update(loanRef, {
         'repayments': newRepayments.map((r) => r.toMap()).toList(),
         'remainingAmount': newRemaining,
         'status': newRemaining <= 0 ? 'paid' : 'pending',
+        'installments': updatedInstallments.map((i) => i.toMap()).toList(),
       });
 
       // 4. APPLY CONSOLIDATED UPDATES

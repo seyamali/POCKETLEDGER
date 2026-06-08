@@ -35,7 +35,7 @@ class _SavingsScreenState extends State<SavingsScreen> {
               bottom: MediaQuery.of(context).viewInsets.bottom + 30,
               top: 15, left: 24, right: 24,
             ),
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               color: Color(0xFFF4F6F5),
               borderRadius: BorderRadius.vertical(top: Radius.circular(40)),
             ),
@@ -93,7 +93,7 @@ class _SavingsScreenState extends State<SavingsScreen> {
               bottom: MediaQuery.of(context).viewInsets.bottom + 30,
               top: 15, left: 24, right: 24,
             ),
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               color: Color(0xFFF4F6F5),
               borderRadius: BorderRadius.vertical(top: Radius.circular(40)),
             ),
@@ -107,7 +107,7 @@ class _SavingsScreenState extends State<SavingsScreen> {
                   // Month Picker
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(15)),
+                    decoration: BoxDecoration(color: AppColors.cardWhite, borderRadius: BorderRadius.circular(15)),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -222,7 +222,7 @@ class _SavingsScreenState extends State<SavingsScreen> {
         Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2))),
         Align(
           alignment: Alignment.centerRight,
-          child: IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close_rounded, color: AppColors.textGrey)),
+          child: IconButton(onPressed: () => Navigator.pop(context), icon: Icon(Icons.close_rounded, color: AppColors.textGrey)),
         ),
         Positioned(top: 25, child: Text(title, style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold))),
       ],
@@ -232,7 +232,7 @@ class _SavingsScreenState extends State<SavingsScreen> {
   Widget _buildModalInput(String label, TextEditingController ctrl, IconData icon, Color color, {bool isNumeric = false}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
+      decoration: BoxDecoration(color: AppColors.cardWhite, borderRadius: BorderRadius.circular(20)),
       child: TextField(
         controller: ctrl,
         keyboardType: isNumeric ? TextInputType.number : TextInputType.text,
@@ -251,7 +251,7 @@ class _SavingsScreenState extends State<SavingsScreen> {
   Widget _buildModalDropdown(List<AccountModel> accounts, String hint, AccountModel? value, Function(AccountModel?) onChanged) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
+      decoration: BoxDecoration(color: AppColors.cardWhite, borderRadius: BorderRadius.circular(20)),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<AccountModel>(
           value: value != null && accounts.any((a) => a.id == value.id) ? accounts.firstWhere((a) => a.id == value.id) : null,
@@ -283,18 +283,18 @@ class _SavingsScreenState extends State<SavingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAF9),
+      backgroundColor: AppColors.surfaceLight,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.cardWhite,
         elevation: 0,
         title: Text('Savings Dashboard', style: GoogleFonts.outfit(color: AppColors.textBlack, fontWeight: FontWeight.bold, fontSize: 18)),
         centerTitle: true,
-        leading: IconButton(icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.textBlack, size: 18), onPressed: () => Navigator.pop(context)),
+        leading: IconButton(icon: Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.textBlack, size: 18), onPressed: () => Navigator.pop(context)),
       ),
       body: StreamBuilder<List<AccountModel>>(
         stream: _accountService.getAccounts(),
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator(color: AppColors.primaryGreen));
+          if (snapshot.connectionState == ConnectionState.waiting) return Center(child: CircularProgressIndicator(color: AppColors.primaryGreen));
           final allAccounts = snapshot.data ?? [];
           final savingsAccounts = allAccounts.where((a) => a.type == 'Savings').toList();
           double totalSavings = savingsAccounts.fold(0, (sum, acc) => sum + acc.totalBalance);
@@ -351,7 +351,7 @@ class _SavingsScreenState extends State<SavingsScreen> {
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(25), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10)]),
+        decoration: BoxDecoration(color: AppColors.cardWhite, borderRadius: BorderRadius.circular(25), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10)]),
         child: Column(
           children: [
             Icon(icon, color: color, size: 26),
@@ -367,7 +367,7 @@ class _SavingsScreenState extends State<SavingsScreen> {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(25), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.01), blurRadius: 10)]),
+      decoration: BoxDecoration(color: AppColors.cardWhite, borderRadius: BorderRadius.circular(25), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.01), blurRadius: 10)]),
       child: Row(
         children: [
           Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: Colors.amber.withOpacity(0.1), shape: BoxShape.circle), child: Icon(Icons.account_balance_wallet_rounded, color: Colors.amber.shade600, size: 20)),

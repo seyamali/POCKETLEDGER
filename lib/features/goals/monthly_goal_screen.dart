@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:pocketledger/app/theme.dart';
 import 'package:pocketledger/models/goal_model.dart';
@@ -24,6 +25,24 @@ class _MonthlyGoalScreenState extends State<MonthlyGoalScreen> {
   final TransactionService _transactionService = TransactionService();
   
   DateTime _currentMonth = DateTime.now();
+  late ScrollController _monthScrollController;
+
+  @override
+  void initState() {
+    super.initState();
+    final activeMonthIndex = _currentMonth.month - 1;
+    // Estimate each item width to be ~76px
+    final initialOffset = (activeMonthIndex * 76.0) - 100.0;
+    _monthScrollController = ScrollController(
+      initialScrollOffset: initialOffset > 0 ? initialOffset : 0,
+    );
+  }
+
+  @override
+  void dispose() {
+    _monthScrollController.dispose();
+    super.dispose();
+  }
 
   String get _monthYearKey => "${_currentMonth.month.toString().padLeft(2, '0')}-${_currentMonth.year}";
   String get _monthName => _getMonthName(_currentMonth.month);
@@ -32,6 +51,16 @@ class _MonthlyGoalScreenState extends State<MonthlyGoalScreen> {
     setState(() {
       _currentMonth = DateTime(_currentMonth.year, _currentMonth.month + offset);
     });
+    
+    if (_monthScrollController.hasClients) {
+      final targetIndex = _currentMonth.month - 1;
+      final targetOffset = (targetIndex * 76.0) - (MediaQuery.of(context).size.width / 2) + 38.0;
+      _monthScrollController.animateTo(
+        targetOffset.clamp(0.0, _monthScrollController.position.maxScrollExtent),
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    }
   }
 
   void _showSetGoalModal(GoalModel? currentGoal) {
@@ -63,7 +92,7 @@ class _MonthlyGoalScreenState extends State<MonthlyGoalScreen> {
               bottom: MediaQuery.of(context).viewInsets.bottom + 30,
               top: 15, left: 24, right: 24,
             ),
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               color: Color(0xFFF4F6F5),
               borderRadius: BorderRadius.vertical(top: Radius.circular(40)),
             ),
@@ -93,7 +122,7 @@ class _MonthlyGoalScreenState extends State<MonthlyGoalScreen> {
                               icon: Container(
                                 padding: const EdgeInsets.all(4),
                                 decoration: BoxDecoration(color: Colors.grey.shade200, shape: BoxShape.circle),
-                                child: const Icon(Icons.close_rounded, color: AppColors.textGrey, size: 18),
+                                child: Icon(Icons.close_rounded, color: AppColors.textGrey, size: 18),
                               ),
                             ),
                           ),
@@ -183,7 +212,7 @@ class _MonthlyGoalScreenState extends State<MonthlyGoalScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.cardWhite,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10)],
       ),
@@ -205,57 +234,65 @@ class _MonthlyGoalScreenState extends State<MonthlyGoalScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAF9),
-      body: StreamBuilder<List<TransactionModel>>(
-        stream: _goalService.getTransactionsForMonth(_currentMonth.month, _currentMonth.year),
-        builder: (context, txSnapshot) {
-          return StreamBuilder<GoalModel?>(
-            stream: _goalService.getGoal(_monthYearKey),
-            builder: (context, goalSnapshot) {
-              if (txSnapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator(color: AppColors.primaryGreen));
+    return StreamBuilder<List<TransactionModel>>(
+      stream: _goalService.getAllTransactions(),
+      builder: (context, txSnapshot) {
+        return StreamBuilder<GoalModel?>(
+          stream: _goalService.getGoal(_monthYearKey),
+          builder: (context, goalSnapshot) {
+            if (txSnapshot.connectionState == ConnectionState.waiting) {
+              return Scaffold(
+                backgroundColor: AppColors.surfaceLight,
+                body: Center(child: CircularProgressIndicator(color: AppColors.primaryGreen)),
+              );
+            }
+
+            final allTransactions = txSnapshot.data ?? [];
+            final transactions = allTransactions.where((tx) =>
+              tx.date.month == _currentMonth.month && tx.date.year == _currentMonth.year
+            ).toList();
+            final goal = goalSnapshot.data;
+            final filteredTransactions = transactions.where((tx) {
+              if (tx.owner != AppConstants.ownerSelf) return false;
+              final cat = tx.category.toLowerCase();
+              final note = tx.note.toLowerCase();
+              if (cat.contains('opening') || cat.contains('initial') || 
+                  note.contains('opening') || note.contains('initial')) {
+                return false;
               }
+              return true;
+            }).toList();
 
-              final transactions = txSnapshot.data ?? [];
-              final goal = goalSnapshot.data;
-              final filteredTransactions = transactions.where((tx) {
-                if (tx.owner != AppConstants.ownerSelf) return false;
-                final cat = tx.category.toLowerCase();
-                final note = tx.note.toLowerCase();
-                if (cat.contains('opening') || cat.contains('initial') || 
-                    note.contains('opening') || note.contains('initial')) {
-                  return false;
+            double actualIncome = goal?.initialProgressIncome ?? 0;
+            double actualExpense = goal?.initialProgressExpense ?? 0;
+            double actualSaved = goal?.initialProgressSavings ?? 0;
+            Map<String, double> expenseByCategory = {};
+
+            for (var tx in filteredTransactions) {
+              final cat = tx.category.toLowerCase();
+              bool isSavings = cat.contains('sav') || 
+                               tx.toAccountName?.toLowerCase().contains('sav') == true;
+
+              if (isSavings) {
+                actualSaved += tx.amount;
+              } else {
+                if (tx.type == TransactionType.income && cat == 'salary') {
+                  actualIncome += tx.amount;
                 }
-                return true;
-              }).toList();
-
-              double actualIncome = goal?.initialProgressIncome ?? 0;
-              double actualExpense = goal?.initialProgressExpense ?? 0;
-              double actualSaved = goal?.initialProgressSavings ?? 0;
-              Map<String, double> expenseByCategory = {};
-
-              for (var tx in filteredTransactions) {
-                final cat = tx.category.toLowerCase();
-                bool isSavings = cat.contains('sav') || 
-                                 tx.toAccountName?.toLowerCase().contains('sav') == true;
-
-                if (isSavings) {
-                  actualSaved += tx.amount;
-                } else {
-                  if (tx.type == TransactionType.income) actualIncome += tx.amount;
-                  if (tx.type == TransactionType.expense) {
-                    actualExpense += tx.amount;
-                    expenseByCategory[tx.category] = (expenseByCategory[tx.category] ?? 0) + tx.amount;
-                  }
+                if (tx.type == TransactionType.expense) {
+                  actualExpense += tx.amount;
+                  expenseByCategory[tx.category] = (expenseByCategory[tx.category] ?? 0) + tx.amount;
                 }
               }
+            }
 
-              final passiveRemaining = actualIncome - actualExpense - actualSaved;
+            final passiveRemaining = actualIncome - actualExpense - actualSaved;
 
-              return Column(
+            return Scaffold(
+              backgroundColor: AppColors.surfaceLight,
+              body: Column(
                 children: [
-                  _buildPremiumHeader(goal, actualIncome, actualExpense, actualSaved),
+                  _buildPremiumHeader(goal, actualIncome, actualExpense, actualSaved, filteredTransactions),
                   
                   Expanded(
                     child: SingleChildScrollView(
@@ -286,6 +323,11 @@ class _MonthlyGoalScreenState extends State<MonthlyGoalScreen> {
                           _buildSummaryStats(actualIncome, actualExpense, actualSaved, passiveRemaining),
                           
                           const SizedBox(height: 32),
+                          _buildSectionHeader('Multi-Month Trends', 'Income, Expense, and Savings trends'),
+                          const SizedBox(height: 16),
+                          _buildMultiMonthTrendsChart(allTransactions),
+                          
+                          const SizedBox(height: 32),
                           _buildSectionHeader('Recent Activity', 'Top movements this month'),
                           const SizedBox(height: 16),
                           _buildRecentActivity(filteredTransactions),
@@ -294,24 +336,80 @@ class _MonthlyGoalScreenState extends State<MonthlyGoalScreen> {
                     ),
                   ),
                 ],
-              );
-            },
-          );
-        },
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showSetGoalModal(null),
-        backgroundColor: AppColors.primaryGreen,
-        child: const Icon(Icons.track_changes_rounded, color: Colors.white),
-      ),
+              ),
+              floatingActionButton: FloatingActionButton(
+                onPressed: () => _showSetGoalModal(goal),
+                backgroundColor: AppColors.primaryGreen,
+                child: const Icon(Icons.track_changes_rounded, color: Colors.white),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
-  Widget _buildPremiumHeader(GoalModel? goal, double income, double expense, double saved) {
+  void _exportToCSV(List<TransactionModel> txs) {
+    if (txs.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No transactions to export for this month')),
+      );
+      return;
+    }
+
+    final buffer = StringBuffer();
+    // Headers
+    buffer.writeln('Date,Category,Amount,Type,Note,Account,To Account,Owner');
+
+    for (var tx in txs) {
+      final dateStr = "${tx.date.year}-${tx.date.month.toString().padLeft(2, '0')}-${tx.date.day.toString().padLeft(2, '0')}";
+      
+      String escape(String? val) {
+        if (val == null) return '';
+        final clean = val.replaceAll('"', '""');
+        if (clean.contains(',') || clean.contains('"') || clean.contains('\n')) {
+          return '"$clean"';
+        }
+        return clean;
+      }
+
+      final row = [
+        dateStr,
+        escape(tx.category),
+        tx.amount.toInt().toString(),
+        tx.type.toString().split('.').last,
+        escape(tx.note),
+        escape(tx.accountName),
+        escape(tx.toAccountName),
+        escape(tx.owner),
+      ];
+
+      buffer.writeln(row.join(','));
+    }
+
+    Clipboard.setData(ClipboardData(text: buffer.toString())).then((_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: AppColors.primaryGreen,
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle_rounded, color: Colors.white),
+                const SizedBox(width: 8),
+                Text('Monthly sheet copied to clipboard as CSV!', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+              ],
+            ),
+          ),
+        );
+      }
+    });
+  }
+
+  Widget _buildPremiumHeader(GoalModel? goal, double income, double expense, double saved, List<TransactionModel> txs) {
     return Container(
       padding: EdgeInsets.fromLTRB(24, MediaQuery.of(context).padding.top + 5, 24, 20),
-      decoration: const BoxDecoration(
-        color: Colors.white,
+      decoration: BoxDecoration(
+        color: AppColors.cardWhite,
         borderRadius: BorderRadius.vertical(bottom: Radius.circular(35)),
         boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 20, offset: Offset(0, 8))],
       ),
@@ -327,11 +425,23 @@ class _MonthlyGoalScreenState extends State<MonthlyGoalScreen> {
                 padding: EdgeInsets.zero,
               ),
               Text('Monthly Analytics', style: GoogleFonts.outfit(fontSize: 17, fontWeight: FontWeight.bold)),
-              IconButton(
-                onPressed: () => _showSetGoalModal(goal),
-                icon: const Icon(Icons.tune_rounded, size: 20, color: AppColors.primaryGreen),
-                constraints: const BoxConstraints(),
-                padding: EdgeInsets.zero,
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    onPressed: () => _exportToCSV(txs),
+                    icon: Icon(Icons.share_rounded, size: 20, color: AppColors.primaryGreen),
+                    constraints: const BoxConstraints(),
+                    padding: EdgeInsets.zero,
+                  ),
+                  const SizedBox(width: 16),
+                  IconButton(
+                    onPressed: () => _showSetGoalModal(goal),
+                    icon: Icon(Icons.tune_rounded, size: 20, color: AppColors.primaryGreen),
+                    constraints: const BoxConstraints(),
+                    padding: EdgeInsets.zero,
+                  ),
+                ],
               ),
             ],
           ),
@@ -348,6 +458,7 @@ class _MonthlyGoalScreenState extends State<MonthlyGoalScreen> {
     return SizedBox(
       height: 40,
       child: ListView.builder(
+        controller: _monthScrollController,
         scrollDirection: Axis.horizontal,
         physics: const BouncingScrollPhysics(),
         itemCount: 12,
@@ -355,7 +466,17 @@ class _MonthlyGoalScreenState extends State<MonthlyGoalScreen> {
           final monthDate = DateTime(_currentMonth.year, index + 1);
           final isSelected = monthDate.month == _currentMonth.month;
           return GestureDetector(
-            onTap: () => setState(() => _currentMonth = monthDate),
+            onTap: () {
+              setState(() => _currentMonth = monthDate);
+              if (_monthScrollController.hasClients) {
+                final targetOffset = (index * 76.0) - (MediaQuery.of(context).size.width / 2) + 38.0;
+                _monthScrollController.animateTo(
+                  targetOffset.clamp(0.0, _monthScrollController.position.maxScrollExtent),
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeInOut,
+                );
+              }
+            },
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 300),
               margin: const EdgeInsets.only(right: 10),
@@ -483,7 +604,7 @@ class _MonthlyGoalScreenState extends State<MonthlyGoalScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.cardWhite,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 15, offset: const Offset(0, 5))],
       ),
@@ -527,7 +648,7 @@ class _MonthlyGoalScreenState extends State<MonthlyGoalScreen> {
         return Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppColors.cardWhite,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(color: isOver ? Colors.redAccent.withOpacity(0.1) : Colors.transparent),
           ),
@@ -573,7 +694,7 @@ class _MonthlyGoalScreenState extends State<MonthlyGoalScreen> {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
+        decoration: BoxDecoration(color: AppColors.cardWhite, borderRadius: BorderRadius.circular(20)),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -593,7 +714,7 @@ class _MonthlyGoalScreenState extends State<MonthlyGoalScreen> {
       children: transactions.take(3).map((tx) => Container(
         margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18)),
+        decoration: BoxDecoration(color: AppColors.cardWhite, borderRadius: BorderRadius.circular(18)),
         child: Row(
           children: [
             Container(
@@ -629,6 +750,262 @@ class _MonthlyGoalScreenState extends State<MonthlyGoalScreen> {
 
 
 
+  Widget _buildLegendItem(String label, Color color) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: GoogleFonts.outfit(
+            fontSize: 11,
+            fontWeight: FontWeight.bold,
+            color: AppColors.textBlack,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMultiMonthTrendsChart(List<TransactionModel> allTransactions) {
+    final now = DateTime.now();
+    final months = List.generate(4, (i) {
+      return DateTime(now.year, now.month - (3 - i), 1);
+    });
+
+    final monthlyData = months.map((m) {
+      final filtered = allTransactions.where((tx) {
+        if (tx.owner != AppConstants.ownerSelf) return false;
+        if (tx.date.month != m.month || tx.date.year != m.year) return false;
+        final cat = tx.category.toLowerCase();
+        final note = tx.note.toLowerCase();
+        if (cat.contains('opening') || cat.contains('initial') || 
+            note.contains('opening') || note.contains('initial')) {
+          return false;
+        }
+        return true;
+      }).toList();
+
+      double income = 0;
+      double expense = 0;
+      double savings = 0;
+
+      for (var tx in filtered) {
+        final cat = tx.category.toLowerCase();
+        bool isSavings = cat.contains('sav') || 
+                         tx.toAccountName?.toLowerCase().contains('sav') == true;
+
+        if (isSavings) {
+          savings += tx.amount;
+        } else {
+          if (tx.type == TransactionType.income && cat == 'salary') {
+            income += tx.amount;
+          }
+          if (tx.type == TransactionType.expense) {
+            expense += tx.amount;
+          }
+        }
+      }
+
+      return {
+        'month': m,
+        'income': income,
+        'expense': expense,
+        'savings': savings,
+      };
+    }).toList();
+
+    double maxValue = 1000;
+    for (var data in monthlyData) {
+      if (data['income'] as double > maxValue) maxValue = data['income'] as double;
+      if (data['expense'] as double > maxValue) maxValue = data['expense'] as double;
+      if (data['savings'] as double > maxValue) maxValue = data['savings'] as double;
+    }
+    maxValue = (maxValue / 1000).ceil() * 1000.0;
+
+    final monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+    final groupData = List.generate(4, (index) {
+      final data = monthlyData[index];
+      final income = data['income'] as double;
+      final expense = data['expense'] as double;
+      final savings = data['savings'] as double;
+
+      return BarChartGroupData(
+        x: index,
+        barRods: [
+          BarChartRodData(
+            toY: income,
+            color: AppColors.primaryGreen,
+            width: 7,
+            borderRadius: BorderRadius.circular(3),
+          ),
+          BarChartRodData(
+            toY: expense,
+            color: Colors.redAccent,
+            width: 7,
+            borderRadius: BorderRadius.circular(3),
+          ),
+          BarChartRodData(
+            toY: savings,
+            color: Colors.amber.shade600,
+            width: 7,
+            borderRadius: BorderRadius.circular(3),
+          ),
+        ],
+        barsSpace: 3,
+      );
+    });
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.cardWhite,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                "Trends Analysis",
+                style: GoogleFonts.outfit(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                  color: AppColors.textBlack,
+                ),
+              ),
+              Row(
+                children: [
+                  _buildLegendItem("Income", AppColors.primaryGreen),
+                  const SizedBox(width: 10),
+                  _buildLegendItem("Spent", Colors.redAccent),
+                  const SizedBox(width: 10),
+                  _buildLegendItem("Savings", Colors.amber.shade600),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          SizedBox(
+            height: 200,
+            child: BarChart(
+              BarChartData(
+                alignment: BarChartAlignment.spaceAround,
+                maxY: maxValue,
+                barTouchData: BarTouchData(
+                  touchTooltipData: BarTouchTooltipData(
+                    getTooltipColor: (group) => const Color(0xFF1E293B),
+                    tooltipPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    tooltipRoundedRadius: 8,
+                    getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                      final type = rodIndex == 0 ? "Income" : rodIndex == 1 ? "Spent" : "Savings";
+                      return BarTooltipItem(
+                        "$type\n৳${rod.toY.toInt()}",
+                        GoogleFonts.outfit(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                titlesData: FlTitlesData(
+                  show: true,
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 28,
+                      getTitlesWidget: (value, meta) {
+                        final idx = value.toInt();
+                        if (idx < 0 || idx >= 4) return const SizedBox.shrink();
+                        final date = monthlyData[idx]['month'] as DateTime;
+                        final label = "${monthNames[date.month - 1]} '${date.year.toString().substring(2)}";
+                        return SideTitleWidget(
+                          meta: meta,
+                          space: 6,
+                          child: Text(
+                            label,
+                            style: GoogleFonts.outfit(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textGrey,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 36,
+                      getTitlesWidget: (value, meta) {
+                        if (value == meta.max) return const SizedBox.shrink();
+                        String text;
+                        if (value >= 1000000) {
+                          text = '${(value / 1000000).toStringAsFixed(1)}M';
+                        } else if (value >= 1000) {
+                          text = '${(value / 1000).toInt()}k';
+                        } else {
+                          text = value.toInt().toString();
+                        }
+                        return SideTitleWidget(
+                          meta: meta,
+                          space: 6,
+                          child: Text(
+                            text,
+                            style: GoogleFonts.outfit(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w500,
+                              color: AppColors.textGrey,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  rightTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  topTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                ),
+                gridData: FlGridData(
+                  show: true,
+                  drawVerticalLine: false,
+                  getDrawingHorizontalLine: (value) => FlLine(
+                    color: Colors.grey.shade100,
+                    strokeWidth: 1,
+                  ),
+                ),
+                borderData: FlBorderData(show: false),
+                barGroups: groupData,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   String _getMonthName(int month) {
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     return months[month - 1];
@@ -663,7 +1040,7 @@ class HealthMeter extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.cardWhite,
         borderRadius: BorderRadius.circular(25),
         boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.01), blurRadius: 15)],
       ),
@@ -707,7 +1084,7 @@ class NoGoalPrompt extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(25)),
+      decoration: BoxDecoration(color: AppColors.cardWhite, borderRadius: BorderRadius.circular(25)),
       child: Column(
         children: [
           Icon(Icons.track_changes_rounded, size: 40, color: AppColors.primaryGreen.withOpacity(0.2)),
