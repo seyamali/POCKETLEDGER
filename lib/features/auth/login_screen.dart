@@ -78,180 +78,182 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: AppColors.textBlack),
-          onPressed: () => Navigator.pop(context),
+    return ThemeBuilder(
+      builder: (context) => Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: AppBar(
+          backgroundColor: AppColors.background,
+          elevation: 0,
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back, color: AppColors.textBlack),
+            onPressed: () => Navigator.pop(context),
+          ),
         ),
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 10),
-              Center(child: Image.asset('assets/images/logo.png', height: 60)),
-              const SizedBox(height: 40),
-              Text(
-                'Welcome Back',
-                style: GoogleFonts.outfit(
-                  color: AppColors.textBlack,
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
+        body: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 10),
+                Center(child: Image.asset('assets/images/logo.png', height: 60)),
+                const SizedBox(height: 40),
+                Text(
+                  'Welcome Back',
+                  style: GoogleFonts.outfit(
+                    color: AppColors.textBlack,
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Enter your credentials to continue',
-                style: GoogleFonts.outfit(
-                  color: AppColors.textGrey,
-                  fontSize: 16,
-                ),
-              ),
-              const SizedBox(height: 40),
-              
-              Text(
-                'Email Address',
-                style: GoogleFonts.outfit(
-                  color: AppColors.textBlack,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 10),
-              _buildTextField(
-                controller: _emailController,
-                hint: 'name@example.com',
-                icon: Icons.email_outlined,
-                focusNode: _emailFocus,
-                isFocused: _emailFocus.hasFocus,
-                keyboardType: TextInputType.emailAddress,
-              ),
-              const SizedBox(height: 20),
-              
-              Text(
-                'Password',
-                style: GoogleFonts.outfit(
-                  color: AppColors.textBlack,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 10),
-              _buildTextField(
-                controller: _passwordController,
-                hint: '••••••••',
-                icon: Icons.lock_outline,
-                focusNode: _passwordFocus,
-                isFocused: _passwordFocus.hasFocus,
-                isPassword: true,
-                obscureText: !_isPasswordVisible,
-                suffixIcon: IconButton(
-                  icon: Icon(
-                    _isPasswordVisible ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                const SizedBox(height: 8),
+                Text(
+                  'Enter your credentials to continue',
+                  style: GoogleFonts.outfit(
                     color: AppColors.textGrey,
-                    size: 20,
+                    fontSize: 16,
                   ),
-                  onPressed: () => setState(() => _isPasswordVisible = !_isPasswordVisible),
                 ),
-              ),
-              
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  GestureDetector(
-                    onTap: () => setState(() => _rememberMe = !_rememberMe),
-                    child: Row(
-                      children: [
-                        SizedBox(
-                          height: 24, width: 24,
-                          child: Checkbox(
-                            value: _rememberMe,
-                            activeColor: AppColors.primaryGreen,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                            onChanged: (v) => setState(() => _rememberMe = v ?? false),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Remember Me',
-                          style: GoogleFonts.outfit(
-                            color: AppColors.textBlack,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
+                const SizedBox(height: 40),
+                
+                Text(
+                  'Email Address',
+                  style: GoogleFonts.outfit(
+                    color: AppColors.textBlack,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
                   ),
-                  Text(
-                    'Forgot Password?',
-                    style: GoogleFonts.outfit(
-                      color: AppColors.primaryGreen,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
-                    ),
-                  ),
-                ],
-              ),
-              
-              const SizedBox(height: 40),
-              
-              SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _handleLogin,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primaryGreen,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    elevation: 0,
-                  ),
-                  child: _isLoading
-                      ? const SizedBox(
-                          height: 24,
-                          width: 24,
-                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                        )
-                      : Text(
-                          'Sign In',
-                          style: GoogleFonts.outfit(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
                 ),
-              ),
-              
-              const SizedBox(height: 32),
-              
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    "Don't have an account? ",
-                    style: GoogleFonts.outfit(color: AppColors.textGrey),
+                const SizedBox(height: 10),
+                _buildTextField(
+                  controller: _emailController,
+                  hint: 'name@example.com',
+                  icon: Icons.email_outlined,
+                  focusNode: _emailFocus,
+                  isFocused: _emailFocus.hasFocus,
+                  keyboardType: TextInputType.emailAddress,
+                ),
+                const SizedBox(height: 20),
+                
+                Text(
+                  'Password',
+                  style: GoogleFonts.outfit(
+                    color: AppColors.textBlack,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
                   ),
-                  GestureDetector(
-                    onTap: () => Navigator.pushNamed(context, '/signup'),
-                    child: Text(
-                      'Create Account',
-                      style: GoogleFonts.outfit(
-                        color: AppColors.primaryGreen,
-                        fontWeight: FontWeight.bold,
+                ),
+                const SizedBox(height: 10),
+                _buildTextField(
+                  controller: _passwordController,
+                  hint: '••••••••',
+                  icon: Icons.lock_outline,
+                  focusNode: _passwordFocus,
+                  isFocused: _passwordFocus.hasFocus,
+                  isPassword: true,
+                  obscureText: !_isPasswordVisible,
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _isPasswordVisible ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                      color: AppColors.textGrey,
+                      size: 20,
+                    ),
+                    onPressed: () => setState(() => _isPasswordVisible = !_isPasswordVisible),
+                  ),
+                ),
+                
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    GestureDetector(
+                      onTap: () => setState(() => _rememberMe = !_rememberMe),
+                      child: Row(
+                        children: [
+                          SizedBox(
+                            height: 24, width: 24,
+                            child: Checkbox(
+                              value: _rememberMe,
+                              activeColor: AppColors.primaryGreen,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                              onChanged: (v) => setState(() => _rememberMe = v ?? false),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Remember Me',
+                            style: GoogleFonts.outfit(
+                              color: AppColors.textBlack,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
+                    Text(
+                      'Forgot Password?',
+                      style: GoogleFonts.outfit(
+                        color: AppColors.primaryGreen,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+                
+                const SizedBox(height: 40),
+                
+                SizedBox(
+                  width: double.infinity,
+                  height: 56,
+                  child: ElevatedButton(
+                    onPressed: _isLoading ? null : _handleLogin,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primaryGreen,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      elevation: 0,
+                    ),
+                    child: _isLoading
+                        ? const SizedBox(
+                            height: 24,
+                            width: 24,
+                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                          )
+                        : Text(
+                            'Sign In',
+                            style: GoogleFonts.outfit(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                   ),
-                ],
-              ),
-            ],
+                ),
+                
+                const SizedBox(height: 32),
+                
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      "Don't have an account? ",
+                      style: GoogleFonts.outfit(color: AppColors.textGrey),
+                    ),
+                    GestureDetector(
+                      onTap: () => Navigator.pushNamed(context, '/signup'),
+                      child: Text(
+                        'Create Account',
+                        style: GoogleFonts.outfit(
+                          color: AppColors.primaryGreen,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),

@@ -21,9 +21,14 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
   String _searchQuery = '';
-  String _selectedFilter = 'All';
-  final List<String> _filters = ['All', 'Income', 'Expense', 'Transfer', 'This Month', 'This Week'];
+  String _selectedFilter = 'All'; // Type filter: 'All', 'Income', 'Expense', 'Transfer'
+  String _selectedCategoryFilter = 'All';
+  String _selectedDateFilter = 'This Month'; // Date filter: 'This Month', 'This Week', 'All Time', 'Custom'
+  DateTime? _selectedCustomMonth;
+  DateTimeRange? _selectedCustomDateRange;
   int _currentLimit = 20;
+
+  final List<String> _filters = ['All', 'Income', 'Expense', 'Transfer'];
 
   @override
   void initState() {
@@ -42,7 +47,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Scaffold(
+    return ThemeBuilder(builder: (context) => Scaffold(
       backgroundColor: AppColors.primaryBackground,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -102,6 +107,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
           Column(
             children: [
               _buildSearchBar(isDark),
+              _buildActiveDateBanner(isDark),
               _buildFilterBar(isDark),
               Expanded(
                 child: StreamBuilder<List<TransactionModel>>(
@@ -143,11 +149,17 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                     final transactions = _applyFilter(snapshot.data!);
 
                     if (transactions.isEmpty) {
-                      return _buildEmptyState();
+                      return Column(
+                        children: [
+                          _buildCategoryFilterBar(snapshot.data!, isDark),
+                          Expanded(child: _buildEmptyState()),
+                        ],
+                      );
                     }
 
                     return Column(
                       children: [
+                        _buildCategoryFilterBar(snapshot.data!, isDark),
                         _buildSummaryHeader(transactions, isDark),
                         Expanded(
                           child: ListView.builder(
@@ -201,12 +213,14 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
           ),
         ],
       ),
-    );
+    )); // closes Scaffold + ThemeBuilder
   }
 
   Widget _buildSummaryHeader(List<TransactionModel> transactions, bool isDark) {
     double totalIncome = 0;
     double totalExpense = 0;
+    DateTime? minDate;
+    DateTime? maxDate;
 
     for (final tx in transactions) {
       if (tx.type == TransactionType.income) {
@@ -219,6 +233,13 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
         }
       } else if (tx.type == TransactionType.expense) {
         totalExpense += tx.amount;
+      }
+
+      if (minDate == null || tx.date.isBefore(minDate)) {
+        minDate = tx.date;
+      }
+      if (maxDate == null || tx.date.isAfter(maxDate)) {
+        maxDate = tx.date;
       }
     }
 
@@ -312,6 +333,26 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                   ),
                 ),
               ),
+              if (minDate != null && maxDate != null) ...[
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.calendar_today_rounded, color: AppColors.textGrey, size: 11),
+                    const SizedBox(width: 6),
+                    Text(
+                      minDate.day == maxDate.day && minDate.month == maxDate.month && minDate.year == maxDate.year
+                          ? DateFormat('dd MMM yyyy').format(minDate)
+                          : '${DateFormat('dd MMM yyyy').format(minDate)} - ${DateFormat('dd MMM yyyy').format(maxDate)}',
+                      style: GoogleFonts.outfit(
+                        color: AppColors.textGrey,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ],
           ),
         ),
@@ -350,7 +391,10 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                     },
                     child: Icon(Icons.clear_rounded, color: AppColors.textGrey, size: 18),
                   )
-                : null,
+                : ScaleOnTap(
+                    onTap: () => _showCalendarPickerOptions(context),
+                    child: Icon(Icons.calendar_month_rounded, color: AppColors.brandPrimary, size: 20),
+                  ),
             border: InputBorder.none,
             contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
           ),
@@ -362,8 +406,25 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
 
   List<TransactionModel> _applyFilter(List<TransactionModel> transactions) {
     final now = DateTime.now();
-
     List<TransactionModel> filtered = transactions;
+
+    // 1. Date Filter
+    if (_selectedDateFilter == 'This Month') {
+      filtered = filtered.where((tx) => tx.date.month == now.month && tx.date.year == now.year).toList();
+    } else if (_selectedDateFilter == 'This Week') {
+      final weekAgo = now.subtract(const Duration(days: 7));
+      filtered = filtered.where((tx) => tx.date.isAfter(weekAgo)).toList();
+    } else if (_selectedDateFilter == 'Custom') {
+      if (_selectedCustomDateRange != null) {
+        final startOfDay = DateTime(_selectedCustomDateRange!.start.year, _selectedCustomDateRange!.start.month, _selectedCustomDateRange!.start.day);
+        final endOfDay = DateTime(_selectedCustomDateRange!.end.year, _selectedCustomDateRange!.end.month, _selectedCustomDateRange!.end.day, 23, 59, 59);
+        filtered = filtered.where((tx) => tx.date.isAfter(startOfDay.subtract(const Duration(seconds: 1))) && tx.date.isBefore(endOfDay.add(const Duration(seconds: 1)))).toList();
+      } else if (_selectedCustomMonth != null) {
+        filtered = filtered.where((tx) => tx.date.month == _selectedCustomMonth!.month && tx.date.year == _selectedCustomMonth!.year).toList();
+      }
+    }
+
+    // 2. Search query filter
     if (_searchQuery.isNotEmpty) {
       filtered = filtered.where((tx) {
         final noteMatch = tx.note.toLowerCase().contains(_searchQuery);
@@ -373,21 +434,25 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
       }).toList();
     }
 
+    // 3. Type filter
     switch (_selectedFilter) {
       case 'Income':
-        return filtered.where((tx) => tx.type == TransactionType.income).toList();
+        filtered = filtered.where((tx) => tx.type == TransactionType.income).toList();
+        break;
       case 'Expense':
-        return filtered.where((tx) => tx.type == TransactionType.expense).toList();
+        filtered = filtered.where((tx) => tx.type == TransactionType.expense).toList();
+        break;
       case 'Transfer':
-        return filtered.where((tx) => tx.type == TransactionType.transfer).toList();
-      case 'This Month':
-        return filtered.where((tx) => tx.date.month == now.month && tx.date.year == now.year).toList();
-      case 'This Week':
-        final weekAgo = now.subtract(const Duration(days: 7));
-        return filtered.where((tx) => tx.date.isAfter(weekAgo)).toList();
-      default:
-        return filtered;
+        filtered = filtered.where((tx) => tx.type == TransactionType.transfer).toList();
+        break;
     }
+
+    // 4. Category filter
+    if ((_selectedFilter == 'Income' || _selectedFilter == 'Expense') && _selectedCategoryFilter != 'All') {
+      filtered = filtered.where((tx) => tx.category == _selectedCategoryFilter).toList();
+    }
+
+    return filtered;
   }
 
   Widget _buildFilterBar(bool isDark) {
@@ -412,7 +477,10 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
           return Padding(
             padding: const EdgeInsets.only(right: 10),
             child: ScaleOnTap(
-              onTap: () => setState(() => _selectedFilter = filter),
+              onTap: () => setState(() {
+                _selectedFilter = filter;
+                _selectedCategoryFilter = 'All';
+              }),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
                 padding: const EdgeInsets.symmetric(horizontal: 18),
@@ -454,6 +522,465 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
             ),
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildCategoryFilterBar(List<TransactionModel> rawTransactions, bool isDark) {
+    if (_selectedFilter != 'Income' && _selectedFilter != 'Expense') {
+      return const SizedBox.shrink();
+    }
+
+    final typeStr = _selectedFilter.toLowerCase();
+    final typeTransactions = rawTransactions.where((tx) => tx.type.toString().split('.').last == typeStr);
+    
+    final List<String> categoryFilters = ['All'];
+    final uniqueCategories = typeTransactions.map((tx) => tx.category).toSet().toList();
+    uniqueCategories.sort();
+    categoryFilters.addAll(uniqueCategories);
+
+    if (!categoryFilters.contains(_selectedCategoryFilter)) {
+      _selectedCategoryFilter = 'All';
+    }
+
+    return Container(
+      height: 34,
+      margin: const EdgeInsets.only(bottom: 8),
+      child: ListView.builder(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        itemCount: categoryFilters.length,
+        itemBuilder: (context, index) {
+          final cat = categoryFilters[index];
+          final isSelected = _selectedCategoryFilter == cat;
+          final Color themeColor = _selectedFilter == 'Income' ? AppColors.brandPrimary : Colors.redAccent;
+
+          return Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: ScaleOnTap(
+              onTap: () => setState(() => _selectedCategoryFilter = cat),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 150),
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? themeColor.withValues(alpha: 0.15)
+                      : (isDark ? const Color(0xFF16201D).withValues(alpha: 0.2) : Colors.white.withValues(alpha: 0.3)),
+                  borderRadius: BorderRadius.circular(15),
+                  border: Border.all(
+                    color: isSelected
+                        ? themeColor.withValues(alpha: 0.4)
+                        : AppColors.brandPrimary.withValues(alpha: 0.05),
+                  ),
+                ),
+                alignment: Alignment.center,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (isSelected) ...[
+                      Icon(Icons.check_rounded, color: themeColor, size: 12),
+                      const SizedBox(width: 4),
+                    ],
+                    Text(
+                      cat,
+                      style: GoogleFonts.outfit(
+                        color: isSelected ? themeColor : AppColors.secondaryText,
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                        fontSize: 11.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  void _showCalendarPickerOptions(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF16201D) : Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          border: Border.all(color: AppColors.brandPrimary.withValues(alpha: 0.15)),
+        ),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40, height: 4,
+                    decoration: BoxDecoration(color: AppColors.textGrey.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(2)),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  'Filter Transactions',
+                  style: GoogleFonts.outfit(color: AppColors.textBlack, fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Choose how you want to filter dates',
+                  style: GoogleFonts.outfit(color: AppColors.textGrey, fontSize: 13),
+                ),
+                const SizedBox(height: 20),
+                _buildPickerOption(
+                  icon: Icons.all_inclusive_rounded,
+                  title: 'Show All Time',
+                  subtitle: 'Remove date filters and show all transactions',
+                  onTap: () {
+                    Navigator.pop(context);
+                    setState(() {
+                      _selectedDateFilter = 'All Time';
+                      _selectedCustomMonth = null;
+                      _selectedCustomDateRange = null;
+                    });
+                  },
+                ),
+                const SizedBox(height: 10),
+                _buildPickerOption(
+                  icon: Icons.today_rounded,
+                  title: 'This Week',
+                  subtitle: 'Show transactions from the last 7 days',
+                  onTap: () {
+                    Navigator.pop(context);
+                    setState(() {
+                      _selectedDateFilter = 'This Week';
+                      _selectedCustomMonth = null;
+                      _selectedCustomDateRange = null;
+                    });
+                  },
+                ),
+                const SizedBox(height: 10),
+                _buildPickerOption(
+                  icon: Icons.calendar_month_rounded,
+                  title: 'This Month',
+                  subtitle: 'Show transactions from the current month',
+                  onTap: () {
+                    Navigator.pop(context);
+                    setState(() {
+                      _selectedDateFilter = 'This Month';
+                      _selectedCustomMonth = null;
+                      _selectedCustomDateRange = null;
+                    });
+                  },
+                ),
+                const SizedBox(height: 10),
+                _buildPickerOption(
+                  icon: Icons.calendar_view_month_rounded,
+                  title: 'Select Specific Month & Year',
+                  subtitle: 'Filter by any specific month (e.g. March 2026)',
+                  onTap: () {
+                    Navigator.pop(context);
+                    _showMonthYearPicker(context);
+                  },
+                ),
+                const SizedBox(height: 10),
+                _buildPickerOption(
+                  icon: Icons.date_range_rounded,
+                  title: 'Select Custom Date Range',
+                  subtitle: 'Choose a specific start date and end date',
+                  onTap: () {
+                    Navigator.pop(context);
+                    _selectDateRange(context);
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPickerOption({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+    bool isReset = false,
+  }) {
+    final themeColor = isReset ? Colors.redAccent : AppColors.brandPrimary;
+    return ScaleOnTap(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: themeColor.withValues(alpha: 0.06),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: themeColor.withValues(alpha: 0.12)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(color: themeColor.withValues(alpha: 0.08), shape: BoxShape.circle),
+              child: Icon(icon, color: themeColor, size: 20),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: GoogleFonts.outfit(color: AppColors.textBlack, fontSize: 15, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 2),
+                  Text(subtitle, style: GoogleFonts.outfit(color: AppColors.textGrey, fontSize: 11.5)),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right_rounded, color: AppColors.textGrey, size: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _selectDateRange(BuildContext context) async {
+    final initialRange = _selectedCustomDateRange ?? DateTimeRange(
+      start: DateTime.now().subtract(const Duration(days: 7)),
+      end: DateTime.now(),
+    );
+
+    final pickedRange = await showDateRangePicker(
+      context: context,
+      initialDateRange: initialRange,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2030),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: Theme.of(context).colorScheme.copyWith(
+              primary: AppColors.brandPrimary,
+              onPrimary: Colors.white,
+              surface: AppColors.cardWhite,
+              onSurface: AppColors.textBlack,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (pickedRange != null) {
+      setState(() {
+        _selectedCustomDateRange = pickedRange;
+        _selectedCustomMonth = null;
+        _selectedDateFilter = 'Custom';
+      });
+    }
+  }
+
+  void _showMonthYearPicker(BuildContext context) {
+    int tempYear = (_selectedCustomMonth ?? DateTime.now()).year;
+    int tempMonth = (_selectedCustomMonth ?? DateTime.now()).month;
+    final List<int> years = List.generate(7, (index) => DateTime.now().year - 4 + index);
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF16201D) : Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+            border: Border.all(color: AppColors.brandPrimary.withValues(alpha: 0.15)),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40, height: 4,
+                  decoration: BoxDecoration(color: AppColors.textGrey.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(2)),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  'Select Month & Year',
+                  style: GoogleFonts.outfit(color: AppColors.textBlack, fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    IconButton(
+                      icon: Icon(Icons.chevron_left_rounded, color: AppColors.textBlack),
+                      onPressed: () {
+                        if (tempYear > years.first) {
+                          setModalState(() => tempYear--);
+                        }
+                      },
+                    ),
+                    Text(
+                      '$tempYear',
+                      style: GoogleFonts.outfit(color: AppColors.textBlack, fontSize: 20, fontWeight: FontWeight.bold),
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.chevron_right_rounded, color: AppColors.textBlack),
+                      onPressed: () {
+                        if (tempYear < years.last) {
+                          setModalState(() => tempYear++);
+                        }
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 4,
+                    mainAxisSpacing: 10,
+                    crossAxisSpacing: 10,
+                    childAspectRatio: 1.5,
+                  ),
+                  itemCount: 12,
+                  itemBuilder: (context, index) {
+                    final monthNum = index + 1;
+                    final isSelected = tempMonth == monthNum;
+                    final monthName = DateFormat('MMM').format(DateTime(tempYear, monthNum));
+
+                    return ScaleOnTap(
+                      onTap: () => setModalState(() => tempMonth = monthNum),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 150),
+                        decoration: BoxDecoration(
+                          color: isSelected ? AppColors.brandPrimary : AppColors.brandPrimary.withValues(alpha: 0.05),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: isSelected ? AppColors.brandPrimary : AppColors.brandPrimary.withValues(alpha: 0.1),
+                          ),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          monthName,
+                          style: GoogleFonts.outfit(
+                            color: isSelected ? Colors.white : AppColors.textBlack,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          side: BorderSide(color: AppColors.brandPrimary),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        ),
+                        onPressed: () => Navigator.pop(context),
+                        child: Text('Cancel', style: GoogleFonts.outfit(color: AppColors.brandPrimary, fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.brandPrimary,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          elevation: 0,
+                        ),
+                        onPressed: () {
+                          final selected = DateTime(tempYear, tempMonth);
+                          Navigator.pop(context);
+                          setState(() {
+                            _selectedCustomMonth = selected;
+                            _selectedCustomDateRange = null;
+                            _selectedDateFilter = 'Custom';
+                          });
+                        },
+                        child: Text('Apply', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _getDateRangeLabel() {
+    if (_selectedDateFilter == 'Custom') {
+      if (_selectedCustomDateRange != null) {
+        final startStr = DateFormat('dd MMM yyyy').format(_selectedCustomDateRange!.start);
+        final endStr = DateFormat('dd MMM yyyy').format(_selectedCustomDateRange!.end);
+        return '$startStr - $endStr';
+      } else if (_selectedCustomMonth != null) {
+        return DateFormat('MMMM yyyy').format(_selectedCustomMonth!);
+      }
+    } else if (_selectedDateFilter == 'This Month') {
+      return 'This Month (${DateFormat('MMMM yyyy').format(DateTime.now())})';
+    } else if (_selectedDateFilter == 'This Week') {
+      return 'This Week';
+    }
+    return 'All Time';
+  }
+
+  Widget _buildActiveDateBanner(bool isDark) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF16201D).withValues(alpha: 0.5) : Colors.white.withValues(alpha: 0.65),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.brandPrimary.withValues(alpha: 0.08)),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.calendar_month_rounded, color: AppColors.brandPrimary, size: 16),
+                const SizedBox(width: 8),
+                Text(
+                  _getDateRangeLabel(),
+                  style: GoogleFonts.outfit(
+                    color: AppColors.textBlack,
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            ScaleOnTap(
+              onTap: () => _showCalendarPickerOptions(context),
+              child: Text(
+                'Change',
+                style: GoogleFonts.outfit(
+                  color: AppColors.brandPrimary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

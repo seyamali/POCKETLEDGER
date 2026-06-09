@@ -347,7 +347,7 @@ class _AccountDetailScreenState extends State<AccountDetailScreen> {
     final TransactionService transactionService = TransactionService();
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Scaffold(
+    return ThemeBuilder(builder: (context) => Scaffold(
       backgroundColor: AppColors.primaryBackground,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -418,7 +418,7 @@ class _AccountDetailScreenState extends State<AccountDetailScreen> {
           ),
         ],
       ),
-    );
+    )); // closes Scaffold + ThemeBuilder
   }
 
   Widget _buildBalanceHeader(BuildContext context) {

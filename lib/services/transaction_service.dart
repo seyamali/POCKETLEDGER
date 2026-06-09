@@ -15,36 +15,42 @@ class TransactionService {
 
     try {
       await _db.runTransaction((tx) async {
-      final accountRef = _db.collection('accounts').doc(transaction.accountId);
-      final accountDoc = await tx.get(accountRef);
+      final bool isCreditCardPurchase = transaction.type == TransactionType.expense && 
+          transaction.creditCardId != null && 
+          !transaction.isCreditCardPayment;
 
-      if (!accountDoc.exists) {
-        throw AppException('Account not found');
+      if (!isCreditCardPurchase) {
+        final accountRef = _db.collection('accounts').doc(transaction.accountId);
+        final accountDoc = await tx.get(accountRef);
+
+        if (!accountDoc.exists) {
+          throw AppException('Account not found');
+        }
+
+        final accountData = accountDoc.data() as Map<String, dynamic>;
+        double currentTotal = (accountData['totalBalance'] ?? 0).toDouble();
+        Map<String, double> breakdown = Map<String, double>.from(
+          (accountData['breakdown'] ?? {}).map((key, value) => MapEntry(key, value.toDouble())),
+        );
+
+        double ownerBalance = breakdown[transaction.owner] ?? 0;
+
+        if (transaction.type == TransactionType.income) {
+          currentTotal += transaction.amount;
+          ownerBalance += transaction.amount;
+        } else if (transaction.type == TransactionType.expense) {
+          currentTotal -= transaction.amount;
+          ownerBalance -= transaction.amount;
+        }
+
+        breakdown[transaction.owner] = ownerBalance;
+
+        // Update account
+        tx.update(accountRef, {
+          'totalBalance': currentTotal,
+          'breakdown': breakdown,
+        });
       }
-
-      final accountData = accountDoc.data() as Map<String, dynamic>;
-      double currentTotal = (accountData['totalBalance'] ?? 0).toDouble();
-      Map<String, double> breakdown = Map<String, double>.from(
-        (accountData['breakdown'] ?? {}).map((key, value) => MapEntry(key, value.toDouble())),
-      );
-
-      double ownerBalance = breakdown[transaction.owner] ?? 0;
-
-      if (transaction.type == TransactionType.income) {
-        currentTotal += transaction.amount;
-        ownerBalance += transaction.amount;
-      } else if (transaction.type == TransactionType.expense) {
-        currentTotal -= transaction.amount;
-        ownerBalance -= transaction.amount;
-      }
-
-      breakdown[transaction.owner] = ownerBalance;
-
-      // Update account
-      tx.update(accountRef, {
-        'totalBalance': currentTotal,
-        'breakdown': breakdown,
-      });
 
       // Create transaction record — always stamp the real userId from auth
       final transRef = _db.collection('transactions').doc();
@@ -63,15 +69,16 @@ class TransactionService {
         toAccountName: transaction.toAccountName,
         toOwner: transaction.toOwner,
         creditCardId: transaction.creditCardId,
+        isCreditCardPayment: transaction.isCreditCardPayment,
       );
       tx.set(transRef, transactionWithUserId.toFirestore());
 
-      // If charged to a credit card, increment its outstanding balance
+      // If charged to or paying a credit card, update outstanding balance
       if (transaction.type == TransactionType.expense && transaction.creditCardId != null) {
         final cardRef = _db.collection('users').doc(_uid!).collection('creditCards').doc(transaction.creditCardId);
-        // Using FieldValue.increment inside a transaction
+        final double incrementVal = transaction.isCreditCardPayment ? -transaction.amount : transaction.amount;
         tx.update(cardRef, {
-          'outstandingBalance': FieldValue.increment(transaction.amount)
+          'outstandingBalance': FieldValue.increment(incrementVal)
         });
       }
       });

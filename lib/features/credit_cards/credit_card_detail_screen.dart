@@ -4,6 +4,8 @@ import 'package:pocketledger/app/theme.dart';
 import 'package:pocketledger/models/credit_card_model.dart';
 import 'package:pocketledger/services/credit_card_service.dart';
 import 'package:pocketledger/features/credit_cards/add_credit_card_screen.dart';
+import 'package:pocketledger/app/routes.dart';
+import 'package:pocketledger/models/transaction_model.dart';
 
 class CreditCardDetailScreen extends StatefulWidget {
   final String cardId;
@@ -19,7 +21,7 @@ class _CreditCardDetailScreenState extends State<CreditCardDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return ThemeBuilder(builder: (context) => Scaffold(
       backgroundColor: AppColors.pageBackground,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -73,7 +75,7 @@ class _CreditCardDetailScreenState extends State<CreditCardDetailScreen> {
           );
         },
       ),
-    );
+    )); // closes Scaffold + ThemeBuilder
   }
 
   Widget _buildCardVisual(CreditCardModel card) {
@@ -230,7 +232,17 @@ class _CreditCardDetailScreenState extends State<CreditCardDetailScreen> {
         Expanded(
           child: ElevatedButton.icon(
             onPressed: () {
-              // TODO: Navigate to AddTransactionScreen with creditCardId pre-filled for payment
+              Navigator.pushNamed(
+                context,
+                AppRoutes.addTransaction,
+                arguments: {
+                  'type': TransactionType.expense,
+                  'category': 'Credit Card Payment',
+                  'creditCardId': card.id,
+                  'creditCardName': '${card.bankName} ${card.cardNickname}',
+                  'isCreditCardPayment': true,
+                },
+              );
             },
             icon: const Icon(Icons.payment, color: Colors.white),
             label: Text('Pay Bill', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold)),

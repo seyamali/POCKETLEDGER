@@ -77,7 +77,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return ThemeBuilder(builder: (context) => Scaffold(
       extendBody: true,
       backgroundColor: AppColors.pageBackground,
       body: StreamBuilder<List<AccountModel>>(
@@ -248,7 +248,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         },
       ),
       bottomNavigationBar: _buildBottomNavBar(),
-    );
+    )); // closes Scaffold + ThemeBuilder
   }
 
   // ─────────────────── FINANCIAL PANEL ───────────────────
@@ -864,16 +864,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   // ─────────────────── BOTTOM NAV BAR ───────────────────
   Widget _buildBottomNavBar() {
+    final isDark = AppColors.isDark;
     return Container(
       padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
       color: Colors.transparent,
       child: GlassCard(
         blur: 20,
-        opacity: 0.8,
-        color: AppColors.cardWhite,
+        opacity: isDark ? 0.85 : 0.8,
+        color: isDark ? const Color(0xFF16201D) : Colors.white,
         borderRadius: 35,
         border: Border.all(
-          color: Colors.white.withValues(alpha: 0.15),
+          color: isDark
+              ? AppColors.primaryGreen.withValues(alpha: 0.18)
+              : Colors.white.withValues(alpha: 0.15),
           width: 1.5,
         ),
         child: SizedBox(
@@ -891,13 +894,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   width: 50, height: 50,
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      colors: [AppColors.primaryGreen, Color(0xFF003829)],
+                      colors: [AppColors.primaryGreen, isDark ? const Color(0xFF1A3A2A) : const Color(0xFF003829)],
                       begin: Alignment.topLeft, end: Alignment.bottomRight,
                     ),
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: AppColors.primaryGreen.withValues(alpha: 0.35),
+                        color: AppColors.primaryGreen.withValues(alpha: isDark ? 0.25 : 0.35),
                         blurRadius: 15,
                         offset: const Offset(0, 8),
                       ),
@@ -923,7 +926,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(icon, 
-            color: isActive ? AppColors.primaryGreen : Colors.grey.shade400, 
+            color: isActive ? AppColors.primaryGreen : AppColors.secondaryText, 
             size: 26),
           const SizedBox(height: 4),
           if (isActive)
@@ -957,10 +960,16 @@ class _StickyHeaderDelegate extends SliverPersistentHeaderDelegate {
           decoration: BoxDecoration(
             color: isScrolled 
               ? const Color(0xFF003829).withValues(alpha: 0.85) 
-              : const Color(0xFFF4F6F5).withValues(alpha: 0.7),
+              : (AppColors.isDark
+                  ? const Color(0xFF0F1715).withValues(alpha: 0.92)
+                  : const Color(0xFFF4F6F5).withValues(alpha: 0.7)),
             border: Border(
               bottom: BorderSide(
-                color: isScrolled ? Colors.white.withValues(alpha: 0.05) : Colors.transparent,
+                color: isScrolled
+                    ? Colors.white.withValues(alpha: 0.05)
+                    : (AppColors.isDark
+                        ? AppColors.primaryGreen.withValues(alpha: 0.08)
+                        : Colors.transparent),
                 width: 1,
               ),
             ),
@@ -1031,9 +1040,16 @@ class _StickyHeaderDelegate extends SliverPersistentHeaderDelegate {
                     child: Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: isScrolled ? Colors.white.withValues(alpha: 0.15) : Colors.white,
+                        color: isScrolled
+                            ? Colors.white.withValues(alpha: 0.15)
+                            : (AppColors.isDark
+                                ? AppColors.primaryGreen.withValues(alpha: 0.12)
+                                : Colors.white),
                         shape: BoxShape.circle,
-                        boxShadow: isScrolled ? [] : [
+                        border: !isScrolled && AppColors.isDark
+                            ? Border.all(color: AppColors.primaryGreen.withValues(alpha: 0.2), width: 1)
+                            : null,
+                        boxShadow: isScrolled || AppColors.isDark ? [] : [
                           BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 4)),
                         ],
                       ),

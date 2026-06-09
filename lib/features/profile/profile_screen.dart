@@ -35,7 +35,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return ThemeBuilder(builder: (context) => Scaffold(
       backgroundColor: AppColors.pageBackground,
       body: StreamBuilder<DocumentSnapshot>(
         stream: _authService.getUserProfile(),
@@ -146,7 +146,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           );
         },
       ),
-    );
+    )); // closes Scaffold + ThemeBuilder
   }
 
   Widget _buildHeader(String name, String email, String? profilePic) {

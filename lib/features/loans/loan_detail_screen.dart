@@ -363,7 +363,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Scaffold(
+    return ThemeBuilder(builder: (context) => Scaffold(
       backgroundColor: AppColors.primaryBackground,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -449,7 +449,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
         ],
       ),
       bottomNavigationBar: widget.loan.status == LoanStatus.pending ? _buildBottomBar() : null,
-    );
+    )); // closes Scaffold + ThemeBuilder
   }
 
   Widget _buildReminderTemplateCard(bool isDark) {

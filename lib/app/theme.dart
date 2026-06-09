@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pocketledger/services/theme_service.dart';
 
 class AppColors {
   static bool isDark = false;
@@ -89,3 +90,22 @@ final ThemeData darkTheme = ThemeData(
     titleTextStyle: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
   ),
 );
+
+/// Wraps [builder] in a [ValueListenableBuilder] that listens to the theme
+/// notifier. Whenever dark mode is toggled, [AppColors.isDark] is synced and
+/// the subtree is rebuilt immediately — no navigation required.
+class ThemeBuilder extends StatelessWidget {
+  final WidgetBuilder builder;
+  const ThemeBuilder({super.key, required this.builder});
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: ThemeService().themeModeNotifier,
+      builder: (ctx, mode, _) {
+        AppColors.isDark = mode == ThemeMode.dark;
+        return builder(ctx);
+      },
+    );
+  }
+}

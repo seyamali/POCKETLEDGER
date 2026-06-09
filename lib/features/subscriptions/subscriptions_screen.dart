@@ -320,7 +320,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                   return sum + (bill.amount / 12);
                 });
 
-                return Scaffold(
+                return ThemeBuilder(builder: (context) => Scaffold(
                   backgroundColor: AppColors.primaryBackground,
                   appBar: AppBar(
                     backgroundColor: Colors.transparent,
@@ -423,7 +423,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                       child: const Icon(Icons.add_rounded, color: Colors.white, size: 28),
                     ),
                   ),
-                );
+                )); // closes Scaffold + ThemeBuilder
               });
         });
   }

@@ -119,7 +119,7 @@ class _AddLoanScreenState extends State<AddLoanScreen> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Scaffold(
+    return ThemeBuilder(builder: (context) => Scaffold(
       backgroundColor: AppColors.primaryBackground,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -212,7 +212,7 @@ class _AddLoanScreenState extends State<AddLoanScreen> {
           );
         },
       ),
-    );
+    )); // closes Scaffold + ThemeBuilder
   }
 
   Widget _buildSectionLabel(String label) {

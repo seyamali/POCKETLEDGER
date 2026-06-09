@@ -36,6 +36,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   final _noteController = TextEditingController();
   String? _selectedCategory;
   String? _selectedCreditCardId;
+  String? _selectedCreditCardName;
+  bool _isCreditCardPayment = false;
   
   bool _isLoading = false;
   final List<String> _owners = AppConstants.allowedOwners;
@@ -61,15 +63,38 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         if (args['account'] is AccountModel) {
           _selectedAccount = args['account'] as AccountModel;
         }
+        if (args['creditCardId'] is String) {
+          _selectedCreditCardId = args['creditCardId'] as String;
+        }
+        if (args['creditCardName'] is String) {
+          _selectedCreditCardName = args['creditCardName'] as String;
+        }
+        if (args['isCreditCardPayment'] is bool) {
+          _isCreditCardPayment = args['isCreditCardPayment'] as bool;
+        }
+        if (args['category'] is String) {
+          _selectedCategory = args['category'] as String;
+        }
       }
       _initializedArgs = true;
     }
   }
 
   void _handleSave() async {
-    if (_selectedAccount == null || _amountController.text.isEmpty) {
+    final bool isCreditCard = _selectedType == TransactionType.expense && 
+        _selectedCreditCardId != null && 
+        !_isCreditCardPayment;
+
+    if (!isCreditCard && _selectedAccount == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select account and enter amount')),
+        const SnackBar(content: Text('Please select payment source')),
+      );
+      return;
+    }
+
+    if (_amountController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter amount')),
       );
       return;
     }
@@ -101,9 +126,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       } else {
         final transaction = TransactionModel(
           id: '',
-          accountId: _selectedAccount!.id,
-          accountName: _selectedAccount!.name,
-          owner: _selectedOwner,
+          accountId: isCreditCard ? '' : _selectedAccount!.id,
+          accountName: isCreditCard ? (_selectedCreditCardName ?? 'Credit Card') : _selectedAccount!.name,
+          owner: isCreditCard ? 'Self' : _selectedOwner,
           amount: amount,
           type: _selectedType,
           category: _selectedCategory ?? (_selectedType == TransactionType.income ? 'Income' : 'Expense'),
@@ -111,6 +136,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           date: DateTime.now(),
           userId: '', // Service handles this
           creditCardId: _selectedType == TransactionType.expense ? _selectedCreditCardId : null,
+          isCreditCardPayment: _isCreditCardPayment,
         );
         await _transactionService.addTransaction(transaction);
       }
@@ -131,119 +157,149 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         ? AppColors.primaryGreen 
         : (_selectedType == TransactionType.expense ? Colors.redAccent : Colors.blueAccent);
 
-    return Scaffold(
+    return ThemeBuilder(builder: (context) => Scaffold(
       backgroundColor: AppColors.pageBackground,
       body: StreamBuilder<List<AccountModel>>(
         stream: _accountService.getAccounts(),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) return Center(child: CircularProgressIndicator(color: AppColors.primaryGreen));
-          final accounts = snapshot.data!;
+        builder: (context, accountSnapshot) {
+          if (!accountSnapshot.hasData) return Center(child: CircularProgressIndicator(color: AppColors.primaryGreen));
+          final accounts = accountSnapshot.data!;
 
-          return Stack(
-            children: [
-              Column(
+          return StreamBuilder<List<CreditCardModel>>(
+            stream: _creditCardService.getCards(),
+            builder: (context, cardSnapshot) {
+              final cards = cardSnapshot.data ?? [];
+
+              return Stack(
                 children: [
-                  // ── Premium Header ──
-                  Container(
-                    padding: EdgeInsets.fromLTRB(20, MediaQuery.of(context).padding.top + 10, 20, 20),
-                    decoration: BoxDecoration(
-                      color: AppColors.cardWhite,
-                      borderRadius: const BorderRadius.vertical(bottom: Radius.circular(40)),
-                      boxShadow: [
-                        BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 20, offset: const Offset(0, 10)),
-                      ],
-                    ),
-                    child: Column(
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            IconButton(
-                              onPressed: () => Navigator.pop(context),
-                              icon: Icon(Icons.close_rounded, color: AppColors.textBlack, size: 28),
-                            ),
-                            _buildTypeSwitch(),
-                            const SizedBox(width: 48),
+                  Column(
+                    children: [
+                      // ── Premium Header ──
+                      Container(
+                        padding: EdgeInsets.fromLTRB(20, MediaQuery.of(context).padding.top + 10, 20, 20),
+                        decoration: BoxDecoration(
+                          color: AppColors.cardWhite,
+                          borderRadius: const BorderRadius.vertical(bottom: Radius.circular(40)),
+                          boxShadow: [
+                            BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 20, offset: const Offset(0, 10)),
                           ],
                         ),
-                        const SizedBox(height: 30),
-                        _buildMassiveAmountInput(accentColor),
-                        const SizedBox(height: 10),
-                      ],
-                    ),
+                        child: Column(
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                IconButton(
+                                  onPressed: () => Navigator.pop(context),
+                                  icon: Icon(Icons.close_rounded, color: AppColors.textBlack, size: 28),
+                                ),
+                                _buildTypeSwitch(),
+                                const SizedBox(width: 48),
+                              ],
+                            ),
+                            const SizedBox(height: 30),
+                            _buildMassiveAmountInput(accentColor),
+                            const SizedBox(height: 10),
+                          ],
+                        ),
+                      ),
+
+                      Expanded(
+                        child: SingleChildScrollView(
+                          physics: const BouncingScrollPhysics(),
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 30),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildStepTitle('Source', 'Where is this from?'),
+                              const SizedBox(height: 16),
+                              _buildHorizontalPaymentSourceSelector(accounts: accounts, cards: cards),
+                              
+                              if (_isCreditCardPayment) ...[
+                                const SizedBox(height: 24),
+                                _buildStepTitle('Paying Bill For', 'Destination card'),
+                                const SizedBox(height: 16),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.error.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.credit_card_rounded, color: AppColors.error),
+                                      const SizedBox(width: 12),
+                                      Text(
+                                        _selectedCreditCardName ?? 'Credit Card',
+                                        style: GoogleFonts.outfit(
+                                          color: AppColors.textBlack,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 15,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                              
+                              if (_selectedCreditCardId == null && !_isCreditCardPayment) ...[
+                                const SizedBox(height: 32),
+                                _buildStepTitle('Source Member', 'Who is sending?'),
+                                const SizedBox(height: 16),
+                                _buildMemberChips(isSource: true),
+                              ],
+
+                              if (_selectedType == TransactionType.transfer) ...[
+                                const SizedBox(height: 32),
+                                Center(
+                                  child: Container(
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(color: Colors.blueAccent.withValues(alpha: 0.1), shape: BoxShape.circle),
+                                    child: const Icon(Icons.swap_vert_rounded, color: Colors.blueAccent, size: 24),
+                                  ),
+                                ),
+                                const SizedBox(height: 32),
+                                _buildStepTitle('Destination', 'Where is it going?'),
+                                const SizedBox(height: 16),
+                                _buildHorizontalAccountSelector(accounts, isSource: false),
+                                
+                                const SizedBox(height: 32),
+                                _buildStepTitle('Destination Member', 'Who is receiving?'),
+                                const SizedBox(height: 16),
+                                _buildMemberChips(isSource: false),
+                              ],
+
+                              const SizedBox(height: 32),
+                              _buildStepTitle('Category', 'What kind of transaction?'),
+                              const SizedBox(height: 16),
+                              _buildCategoryGrid(accentColor),
+
+                              const SizedBox(height: 32),
+                              _buildStepTitle('Notes', 'Add extra details'),
+                              const SizedBox(height: 16),
+                              _buildNoteInput(),
+                              
+                              const SizedBox(height: 120),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
 
-                  Expanded(
-                    child: SingleChildScrollView(
-                      physics: const BouncingScrollPhysics(),
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 30),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildStepTitle('Source', 'Where is this from?'),
-                          const SizedBox(height: 16),
-                          _buildHorizontalAccountSelector(accounts),
-                          
-                          const SizedBox(height: 32),
-                          _buildStepTitle('Source Member', 'Who is sending?'),
-                          const SizedBox(height: 16),
-                          _buildMemberChips(isSource: true),
-
-                          if (_selectedType == TransactionType.transfer) ...[
-                            const SizedBox(height: 32),
-                            Center(
-                              child: Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(color: Colors.blueAccent.withValues(alpha: 0.1), shape: BoxShape.circle),
-                                child: const Icon(Icons.swap_vert_rounded, color: Colors.blueAccent, size: 24),
-                              ),
-                            ),
-                            const SizedBox(height: 32),
-                            _buildStepTitle('Destination', 'Where is it going?'),
-                            const SizedBox(height: 16),
-                            _buildHorizontalAccountSelector(accounts, isSource: false),
-                            
-                            const SizedBox(height: 32),
-                            _buildStepTitle('Destination Member', 'Who is receiving?'),
-                            const SizedBox(height: 16),
-                            _buildMemberChips(isSource: false),
-                          ],
-
-                          const SizedBox(height: 32),
-                          _buildStepTitle('Category', 'What kind of transaction?'),
-                          const SizedBox(height: 16),
-                          _buildCategoryGrid(accentColor),
-
-                          if (_selectedType == TransactionType.expense) ...[
-                            const SizedBox(height: 32),
-                            _buildStepTitle('Charge to Credit Card', 'Optional'),
-                            const SizedBox(height: 16),
-                            _buildCreditCardSelector(),
-                          ],
-
-                          const SizedBox(height: 32),
-                          _buildStepTitle('Notes', 'Add extra details'),
-                          const SizedBox(height: 16),
-                          _buildNoteInput(),
-                          
-                          const SizedBox(height: 120),
-                        ],
-                      ),
-                    ),
+                  // ── Confirm Button ──
+                  Positioned(
+                    bottom: 30, left: 24, right: 24,
+                    child: _buildActionBtn(accentColor),
                   ),
                 ],
-              ),
-
-              // ── Confirm Button ──
-              Positioned(
-                bottom: 30, left: 24, right: 24,
-                child: _buildActionBtn(accentColor),
-              ),
-            ],
+              );
+            },
           );
         },
       ),
-    );
+    )); // closes Scaffold + ThemeBuilder
   }
 
   Widget _buildStepTitle(String title, String subtitle) {
@@ -257,6 +313,26 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   }
 
   Widget _buildTypeSwitch() {
+    if (_isCreditCardPayment) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.redAccent.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(15),
+          border: Border.all(color: Colors.redAccent.withValues(alpha: 0.3)),
+        ),
+        child: Text(
+          'CARD PAYMENT',
+          style: GoogleFonts.outfit(
+            color: Colors.redAccent,
+            fontWeight: FontWeight.bold,
+            fontSize: 13,
+            letterSpacing: 1,
+          ),
+        ),
+      );
+    }
+
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
@@ -410,6 +486,22 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   }
 
   Widget _buildCategoryGrid(Color color) {
+    if (_isCreditCardPayment) {
+      final cardPaymentCategories = [
+        {'name': 'Credit Card Payment', 'icon': Icons.credit_card_rounded, 'color': color},
+      ];
+      if (_selectedCategory != 'Credit Card Payment') {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            setState(() {
+              _selectedCategory = 'Credit Card Payment';
+            });
+          }
+        });
+      }
+      return _buildGrid(cardPaymentCategories, color);
+    }
+
     if (_selectedType == TransactionType.transfer) {
       final transferCategories = [
         {'name': 'Transfer', 'icon': Icons.swap_horiz_rounded},
@@ -560,60 +652,105 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     );
   }
 
-  Widget _buildCreditCardSelector() {
-    return StreamBuilder<List<CreditCardModel>>(
-      stream: _creditCardService.getCards(),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) return const SizedBox.shrink();
-        final cards = snapshot.data!;
-        if (cards.isEmpty) return const SizedBox.shrink();
+  Widget _buildHorizontalPaymentSourceSelector({
+    required List<AccountModel> accounts,
+    required List<CreditCardModel> cards,
+    bool isSource = true,
+  }) {
+    if (_selectedType != TransactionType.expense || !isSource || _isCreditCardPayment) {
+      return _buildHorizontalAccountSelector(accounts, isSource: isSource);
+    }
 
-        return SizedBox(
-          height: 50,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            physics: const BouncingScrollPhysics(),
-            itemCount: cards.length + 1, // +1 for "None"
-            itemBuilder: (context, i) {
-              if (i == 0) {
-                final isSelected = _selectedCreditCardId == null;
-                return _buildCardChip(isSelected: isSelected, label: 'None', onTap: () => setState(() => _selectedCreditCardId = null));
-              }
-              final card = cards[i - 1];
-              final isSelected = _selectedCreditCardId == card.id;
-              return _buildCardChip(
-                isSelected: isSelected, 
-                label: '${card.bankName} ${card.lastFourDigits}', 
-                onTap: () => setState(() => _selectedCreditCardId = card.id)
-              );
-            },
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildCardChip({required bool isSelected, required String label, required VoidCallback onTap}) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        margin: const EdgeInsets.only(right: 12),
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        decoration: BoxDecoration(
-          color: isSelected ? AppColors.error : AppColors.cardWhite, // red accent for credit charge
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: isSelected 
-            ? [BoxShadow(color: AppColors.error.withValues(alpha: 0.2), blurRadius: 10, offset: const Offset(0, 4))]
-            : [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 5, offset: const Offset(0, 2))],
-        ),
-        alignment: Alignment.center,
-        child: Text(label, 
-          style: GoogleFonts.outfit(
-            color: isSelected ? Colors.white : AppColors.textBlack, 
-            fontWeight: FontWeight.bold,
-            fontSize: 14,
-          )),
+    final int totalCount = accounts.length + cards.length;
+    return SizedBox(
+      height: 54,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        itemCount: totalCount,
+        itemBuilder: (context, i) {
+          if (i < accounts.length) {
+            final acc = accounts[i];
+            final isSelected = _selectedAccount?.id == acc.id && _selectedCreditCardId == null;
+            return GestureDetector(
+              onTap: () => setState(() {
+                _selectedAccount = acc;
+                _selectedCreditCardId = null;
+                _selectedCreditCardName = null;
+              }),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                margin: const EdgeInsets.only(right: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 22),
+                decoration: BoxDecoration(
+                  color: isSelected ? AppColors.primaryGreen : AppColors.cardWhite,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: isSelected 
+                    ? [BoxShadow(color: AppColors.primaryGreen.withValues(alpha: 0.2), blurRadius: 10, offset: const Offset(0, 4))]
+                    : [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 5, offset: const Offset(0, 2))],
+                ),
+                alignment: Alignment.center,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.account_balance_wallet_rounded,
+                      color: isSelected ? Colors.white : AppColors.primaryGreen.withValues(alpha: 0.7),
+                      size: 16,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(acc.name, 
+                      style: GoogleFonts.outfit(
+                        color: isSelected ? Colors.white : AppColors.textBlack, 
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      )),
+                  ],
+                ),
+              ),
+            );
+          } else {
+            final card = cards[i - accounts.length];
+            final isSelected = _selectedCreditCardId == card.id;
+            return GestureDetector(
+              onTap: () => setState(() {
+                _selectedCreditCardId = card.id;
+                _selectedCreditCardName = '${card.bankName} ${card.cardNickname}';
+                _selectedAccount = null;
+              }),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                margin: const EdgeInsets.only(right: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 22),
+                decoration: BoxDecoration(
+                  color: isSelected ? AppColors.error : AppColors.cardWhite,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: isSelected 
+                    ? [BoxShadow(color: AppColors.error.withValues(alpha: 0.2), blurRadius: 10, offset: const Offset(0, 4))]
+                    : [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 5, offset: const Offset(0, 2))],
+                ),
+                alignment: Alignment.center,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.credit_card_rounded,
+                      color: isSelected ? Colors.white : AppColors.error.withValues(alpha: 0.7),
+                      size: 16,
+                    ),
+                    const SizedBox(width: 8),
+                    Text('${card.bankName} (${card.lastFourDigits})', 
+                      style: GoogleFonts.outfit(
+                        color: isSelected ? Colors.white : AppColors.textBlack, 
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      )),
+                  ],
+                ),
+              ),
+            );
+          }
+        },
       ),
     );
   }

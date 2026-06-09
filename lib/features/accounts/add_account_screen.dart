@@ -113,7 +113,7 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Scaffold(
+    return ThemeBuilder(builder: (context) => Scaffold(
       backgroundColor: AppColors.primaryBackground,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -292,7 +292,7 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
           ),
         ],
       ),
-    );
+    )); // closes Scaffold + ThemeBuilder
   }
 
   Widget _buildSectionHeader(String title) {

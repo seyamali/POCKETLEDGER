@@ -41,7 +41,7 @@ class _LoansScreenState extends State<LoansScreen> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Scaffold(
+    return ThemeBuilder(builder: (context) => Scaffold(
       backgroundColor: AppColors.primaryBackground,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -158,7 +158,7 @@ class _LoansScreenState extends State<LoansScreen> {
           );
         },
       ),
-    );
+    )); // closes Scaffold + ThemeBuilder
   }
 
   Widget _buildSummaryHeader(List<LoanModel> allLoans, bool isDark) {

@@ -282,7 +282,7 @@ class _SavingsScreenState extends State<SavingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return ThemeBuilder(builder: (context) => Scaffold(
       backgroundColor: AppColors.surfaceLight,
       appBar: AppBar(
         backgroundColor: AppColors.cardWhite,
@@ -322,7 +322,7 @@ class _SavingsScreenState extends State<SavingsScreen> {
           );
         }
       ),
-    );
+    )); // closes Scaffold + ThemeBuilder
   }
 
   Widget _buildTotalSavingsCard(double total) {

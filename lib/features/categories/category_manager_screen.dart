@@ -292,7 +292,7 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen> with Sing
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return ThemeBuilder(builder: (context) => Scaffold(
       backgroundColor: AppColors.pageBackground,
       body: StreamBuilder<List<CategoryModel>>(
         stream: _categoryService.getCategories(),
@@ -325,10 +325,15 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen> with Sing
                 padding: EdgeInsets.fromLTRB(20, MediaQuery.of(context).padding.top + 16, 20, 24),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [AppColors.primaryGreen, Color(0xFF2D6A4F)],
+                    colors: AppColors.isDark
+                        ? [const Color(0xFF1A3A2A), const Color(0xFF0F2218)]
+                        : [AppColors.primaryGreen, const Color(0xFF2D6A4F)],
                     begin: Alignment.topLeft, end: Alignment.bottomRight,
                   ),
-                  borderRadius: BorderRadius.vertical(bottom: Radius.circular(32)),
+                  borderRadius: const BorderRadius.vertical(bottom: Radius.circular(32)),
+                  border: AppColors.isDark
+                      ? Border.all(color: AppColors.primaryGreen.withValues(alpha: 0.2), width: 1)
+                      : null,
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -338,15 +343,19 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen> with Sing
                       children: [
                         IconButton(
                           onPressed: () => Navigator.pop(context),
-                          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 18),
+                          icon: Icon(Icons.arrow_back_ios_new_rounded,
+                              color: AppColors.isDark ? AppColors.primaryGreen : Colors.white, size: 18),
                         ),
                         Text(
                           'Category Manager',
-                          style: GoogleFonts.outfit(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                          style: GoogleFonts.outfit(
+                              color: AppColors.isDark ? AppColors.primaryGreen : Colors.white,
+                              fontSize: 20, fontWeight: FontWeight.bold),
                         ),
                         IconButton(
                           onPressed: () => _showAddEditCategoryModal(),
-                          icon: const Icon(Icons.add_rounded, color: Colors.white, size: 28),
+                          icon: Icon(Icons.add_rounded,
+                              color: AppColors.isDark ? AppColors.primaryGreen : Colors.white, size: 28),
                         ),
                       ],
                     ),
@@ -355,18 +364,31 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen> with Sing
                     Container(
                       padding: const EdgeInsets.all(4),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.15),
+                        color: AppColors.isDark
+                            ? AppColors.primaryGreen.withValues(alpha: 0.12)
+                            : Colors.white.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(16),
+                        border: AppColors.isDark
+                            ? Border.all(color: AppColors.primaryGreen.withValues(alpha: 0.2), width: 1)
+                            : null,
                       ),
                       child: TabBar(
                         controller: _tabController,
+                        dividerColor: Colors.transparent,
                         indicator: BoxDecoration(
-                          color: Colors.white,
+                          color: AppColors.isDark
+                              ? AppColors.primaryGreen.withValues(alpha: 0.25)
+                              : Colors.white,
                           borderRadius: BorderRadius.circular(12),
+                          border: AppColors.isDark
+                              ? Border.all(color: AppColors.primaryGreen.withValues(alpha: 0.4), width: 1)
+                              : null,
                         ),
                         indicatorSize: TabBarIndicatorSize.tab,
-                        labelColor: AppColors.primaryGreen,
-                        unselectedLabelColor: Colors.white,
+                        labelColor: AppColors.isDark ? AppColors.primaryGreen : AppColors.primaryGreen,
+                        unselectedLabelColor: AppColors.isDark
+                            ? AppColors.primaryGreen.withValues(alpha: 0.5)
+                            : Colors.white,
                         labelStyle: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 14),
                         tabs: const [
                           Tab(text: 'Expenses'),
@@ -392,7 +414,7 @@ class _CategoryManagerScreenState extends State<CategoryManagerScreen> with Sing
           );
         },
       ),
-    );
+    )); // closes Scaffold + ThemeBuilder
   }
 
   Widget _buildCategoryList(List<CategoryModel> list) {

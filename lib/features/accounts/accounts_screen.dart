@@ -16,7 +16,7 @@ class AccountsScreen extends StatelessWidget {
     final AccountService accountService = AccountService();
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Scaffold(
+    return ThemeBuilder(builder: (context) => Scaffold(
       extendBody: true,
       backgroundColor: AppColors.primaryBackground,
       appBar: AppBar(
@@ -103,7 +103,7 @@ class AccountsScreen extends StatelessWidget {
           );
         },
       ),
-    );
+    )); // closes Scaffold + ThemeBuilder
   }
 
   Widget _buildSummaryHeader(BuildContext context, double total) {
@@ -217,23 +217,35 @@ class _AccountCard extends StatelessWidget {
   final AccountModel account;
   const _AccountCard({required this.account});
 
-  List<Color> _getCardGradient(String type, bool isDark) {
+  List<Color> _getCardGradient(String type, String name, bool isDark) {
     final t = type.toLowerCase();
+    final n = name.toLowerCase();
     if (t.contains('bank')) {
       return [
-        const Color(0xFF0F2027),
-        const Color(0xFF203A43),
-        const Color(0xFF2C5364),
+        const Color(0xFF0B1416),
+        const Color(0xFF1E3A42),
+        const Color(0xFF294E5B),
       ];
-    } else if (t.contains('mfs') || t.contains('bkash') || t.contains('nagad')) {
+    } else if (n.contains('bkash') || (t.contains('mfs') && n.contains('bkash'))) {
       return [
-        const Color(0xFFE2125B),
-        const Color(0xFFFF5E62),
+        const Color(0xFF800C39),
+        const Color(0xFFC2185B),
+      ];
+    } else if (n.contains('nagad') || (t.contains('mfs') && n.contains('nagad'))) {
+      return [
+        const Color(0xFF8D2E15),
+        const Color(0xFFE65100),
+      ];
+    } else if (t.contains('mfs')) {
+      return [
+        const Color(0xFF4A0E4E),
+        const Color(0xFF8E24AA),
       ];
     } else if (t.contains('cash')) {
       return [
-        const Color(0xFF005B41),
-        const Color(0xFF008967),
+        const Color(0xFF003D2E),
+        const Color(0xFF006D51),
+        const Color(0xFF008765),
       ];
     } else {
       return isDark
@@ -257,7 +269,7 @@ class _AccountCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final gradient = _getCardGradient(account.type, isDark);
+    final gradient = _getCardGradient(account.type, account.name, isDark);
     final isSpecialGradient = account.type.toLowerCase().contains('bank') ||
         account.type.toLowerCase().contains('mfs') ||
         account.type.toLowerCase().contains('cash');
@@ -303,6 +315,25 @@ class _AccountCard extends StatelessWidget {
                     color: Colors.white.withValues(alpha: isSpecialGradient ? 0.05 : (isDark ? 0.03 : 0.05)),
                   ),
                 ),
+                // Glossy refraction overlay for premium look
+                Positioned.fill(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(28),
+                      gradient: LinearGradient(
+                        colors: [
+                          Colors.white.withValues(alpha: 0.12),
+                          Colors.white.withValues(alpha: 0.02),
+                          Colors.transparent,
+                          Colors.black.withValues(alpha: 0.06),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        stops: const [0.0, 0.3, 0.6, 1.0],
+                      ),
+                    ),
+                  ),
+                ),
                 // Visual simulated smart card chip
                 Positioned(
                   left: 24,
@@ -311,7 +342,15 @@ class _AccountCard extends StatelessWidget {
                     width: 36,
                     height: 26,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFFB800).withValues(alpha: 0.8),
+                      gradient: const LinearGradient(
+                        colors: [
+                          Color(0xFFE5A93B),
+                          Color(0xFFFFF2B2),
+                          Color(0xFFB57C1E),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
                       borderRadius: BorderRadius.circular(6),
                       border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
                     ),

@@ -25,7 +25,7 @@ class _CreditCardsScreenState extends State<CreditCardsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return ThemeBuilder(builder: (context) => Scaffold(
       backgroundColor: AppColors.pageBackground,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -71,7 +71,7 @@ class _CreditCardsScreenState extends State<CreditCardsScreen> {
           );
         },
       ),
-    );
+    )); // closes Scaffold + ThemeBuilder
   }
 
   Widget _buildEmptyState() {

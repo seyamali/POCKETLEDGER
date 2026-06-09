@@ -279,7 +279,7 @@ class _MonthlyGoalScreenState extends State<MonthlyGoalScreen> {
 
             final passiveRemaining = actualIncome - actualExpense - actualSaved;
 
-            return Scaffold(
+            return ThemeBuilder(builder: (context) => Scaffold(
               backgroundColor: AppColors.primaryBackground,
               body: Stack(
                 children: [
@@ -376,7 +376,7 @@ class _MonthlyGoalScreenState extends State<MonthlyGoalScreen> {
                   child: const Icon(Icons.track_changes_rounded, color: Colors.white, size: 28),
                 ),
               ),
-            );
+            )); // closes Scaffold + ThemeBuilder
           },
         );
       },
