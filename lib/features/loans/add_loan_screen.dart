@@ -110,7 +110,7 @@ class _AddLoanScreenState extends State<AddLoanScreen> {
 
       if (mounted) Navigator.pop(context);
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${AppLocalizations.get('error')}: $e')));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -132,7 +132,7 @@ class _AddLoanScreenState extends State<AddLoanScreen> {
             child: Icon(Icons.close_rounded, color: AppColors.primaryText, size: 24),
           ),
         ),
-        title: Text('New Loan', style: GoogleFonts.outfit(color: AppColors.primaryText, fontWeight: FontWeight.bold, fontSize: 20)),
+        title: Text(AppLocalizations.get('new_loan'), style: GoogleFonts.outfit(color: AppColors.primaryText, fontWeight: FontWeight.bold, fontSize: 20)),
         centerTitle: true,
       ),
       body: StreamBuilder<List<AccountModel>>(
@@ -178,22 +178,22 @@ class _AddLoanScreenState extends State<AddLoanScreen> {
                     _buildTypeSelector(),
                     const SizedBox(height: 40),
 
-                    Text('AMOUNT', style: GoogleFonts.outfit(color: AppColors.textGrey, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.5)),
+                    Text(AppLocalizations.get('amount'), style: GoogleFonts.outfit(color: AppColors.textGrey, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.5)),
                     const SizedBox(height: 10),
                     _buildAmountInput(),
 
                     const SizedBox(height: 40),
-                    _buildSectionLabel('PERSON NAME'),
+                    _buildSectionLabel(AppLocalizations.get('person_name')),
                     const SizedBox(height: 12),
                     _buildDetailsInputs(isDark),
 
                     const SizedBox(height: 24),
-                    _buildSectionLabel('LOAN OWNER / PORTION'),
+                    _buildSectionLabel(AppLocalizations.get('loan_owner_portion')),
                     const SizedBox(height: 12),
                     _buildOwnerDropdown(isDark),
 
                     const SizedBox(height: 24),
-                    _buildSectionLabel('LINK ACCOUNT (OPTIONAL)'),
+                    _buildSectionLabel(AppLocalizations.get('link_account_optional')),
                     const SizedBox(height: 12),
                     _buildAccountDropdown(accounts, isDark),
 
@@ -234,8 +234,8 @@ class _AddLoanScreenState extends State<AddLoanScreen> {
       ),
       child: Row(
         children: [
-          _typeButton(LoanType.given, 'Given Loan'),
-          _typeButton(LoanType.taken, 'Taken Loan'),
+          _typeButton(LoanType.given, AppLocalizations.get('given_loan')),
+          _typeButton(LoanType.taken, AppLocalizations.get('taken_loan')),
         ],
       ),
     );
@@ -384,12 +384,12 @@ class _AddLoanScreenState extends State<AddLoanScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Adjust Account Balance', style: GoogleFonts.outfit(color: AppColors.primaryText, fontWeight: FontWeight.bold, fontSize: 14)),
+                  Text(AppLocalizations.get('adjust_account_balance'), style: GoogleFonts.outfit(color: AppColors.primaryText, fontWeight: FontWeight.bold, fontSize: 14)),
                   const SizedBox(height: 4),
                   Text(
                     _adjustBalance
-                        ? 'ON — Balance will be updated now'
-                        : 'OFF — Only records the loan (balance already correct)',
+                        ? AppLocalizations.get('balance_update_on')
+                        : AppLocalizations.get('balance_update_off'),
                     style: GoogleFonts.outfit(color: AppColors.secondaryText, fontSize: 11),
                   ),
                 ],
@@ -449,7 +449,7 @@ class _AddLoanScreenState extends State<AddLoanScreen> {
                 : null,
             isExpanded: true,
             icon: Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.secondaryText),
-            hint: Text('Select Account', style: GoogleFonts.outfit(color: AppColors.secondaryText, fontSize: 14)),
+            hint: Text(AppLocalizations.get('select_account'), style: GoogleFonts.outfit(color: AppColors.secondaryText, fontSize: 14)),
             items: accounts
                 .map((acc) => DropdownMenuItem(
                       value: acc,
@@ -480,9 +480,20 @@ class _AddLoanScreenState extends State<AddLoanScreen> {
         alignment: Alignment.center,
         child: _isLoading
             ? const CircularProgressIndicator(color: Colors.white)
-            : Text('Save Loan', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white, letterSpacing: 0.5)),
+            : Text(AppLocalizations.get('save_loan'), style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white, letterSpacing: 0.5)),
       ),
     );
+  }
+
+  String _frequencyLabel(String frequency) {
+    switch (frequency) {
+      case 'Weekly':
+        return AppLocalizations.get('weekly');
+      case 'Monthly':
+        return AppLocalizations.get('monthly');
+      default:
+        return frequency;
+    }
   }
 
   Widget _buildInstallmentSection(bool isDark) {
@@ -504,9 +515,9 @@ class _AddLoanScreenState extends State<AddLoanScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Divide into Installments', style: GoogleFonts.outfit(color: AppColors.primaryText, fontWeight: FontWeight.bold, fontSize: 14)),
+                      Text(AppLocalizations.get('divide_into_installments'), style: GoogleFonts.outfit(color: AppColors.primaryText, fontWeight: FontWeight.bold, fontSize: 14)),
                       const SizedBox(height: 4),
-                      Text('Split this loan into smaller payments', style: GoogleFonts.outfit(color: AppColors.secondaryText, fontSize: 11)),
+                      Text(AppLocalizations.get('split_this_loan_into'), style: GoogleFonts.outfit(color: AppColors.secondaryText, fontSize: 11)),
                     ],
                   ),
                 ),
@@ -527,7 +538,7 @@ class _AddLoanScreenState extends State<AddLoanScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('INSTALLMENTS', style: GoogleFonts.outfit(color: AppColors.secondaryText, fontSize: 10, fontWeight: FontWeight.bold)),
+                        Text(AppLocalizations.get('installments'), style: GoogleFonts.outfit(color: AppColors.secondaryText, fontSize: 10, fontWeight: FontWeight.bold)),
                         const SizedBox(height: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -543,7 +554,7 @@ class _AddLoanScreenState extends State<AddLoanScreen> {
                               items: List.generate(23, (index) => index + 2)
                                   .map((count) => DropdownMenuItem(
                                         value: count,
-                                        child: Text('$count times', style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold)),
+                                        child: Text(AppLocalizations.get('installment_times').replaceFirst('{count}', count.toString()), style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold)),
                                       ))
                                   .toList(),
                               onChanged: (val) => setState(() => _installmentCount = val ?? 5),
@@ -558,7 +569,7 @@ class _AddLoanScreenState extends State<AddLoanScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('FREQUENCY', style: GoogleFonts.outfit(color: AppColors.secondaryText, fontSize: 10, fontWeight: FontWeight.bold)),
+                        Text(AppLocalizations.get('frequency'), style: GoogleFonts.outfit(color: AppColors.secondaryText, fontSize: 10, fontWeight: FontWeight.bold)),
                         const SizedBox(height: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -574,7 +585,7 @@ class _AddLoanScreenState extends State<AddLoanScreen> {
                               items: ['Weekly', 'Monthly']
                                   .map((freq) => DropdownMenuItem(
                                         value: freq,
-                                        child: Text(freq, style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold)),
+                                        child: Text(_frequencyLabel(freq), style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold)),
                                       ))
                                   .toList(),
                               onChanged: (val) => setState(() => _installmentFrequency = val ?? 'Monthly'),
@@ -602,7 +613,10 @@ class _AddLoanScreenState extends State<AddLoanScreen> {
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          'Splits this loan into $_installmentCount installments of ৳$perInst paid ${_installmentFrequency.toLowerCase()}.',
+                          AppLocalizations.get('installment_summary')
+                              .replaceFirst('{count}', _installmentCount.toString())
+                              .replaceFirst('{amount}', perInst.toString())
+                              .replaceFirst('{frequency}', _frequencyLabel(_installmentFrequency).toLowerCase()),
                           style: GoogleFonts.outfit(color: AppColors.brandPrimary, fontSize: 12, fontWeight: FontWeight.w600),
                         ),
                       ),

@@ -48,7 +48,7 @@ class _LoansScreenState extends State<LoansScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: Text(
-          'Loans',
+          AppLocalizations.get('loans'),
           style: GoogleFonts.outfit(
             color: AppColors.primaryText,
             fontWeight: FontWeight.bold,
@@ -85,7 +85,7 @@ class _LoansScreenState extends State<LoansScreen> {
               child: Padding(
                 padding: const EdgeInsets.all(24),
                 child: Text(
-                  'Error: ${snapshot.error}',
+                  '${AppLocalizations.get('error')}: ${snapshot.error}',
                   style: GoogleFonts.outfit(color: Colors.redAccent, fontWeight: FontWeight.w500),
                 ),
               ),
@@ -190,9 +190,9 @@ class _LoansScreenState extends State<LoansScreen> {
           padding: const EdgeInsets.all(20),
           child: Row(
             children: [
-              Expanded(child: _summaryStat('GIVEN TOTAL', totalGiven, 'Pending: ৳${totalGivenPending.toInt()}', AppColors.brandPrimary)),
+              Expanded(child: _summaryStat(AppLocalizations.get('given_total'), totalGiven, '${AppLocalizations.get('pending')}: ৳${totalGivenPending.toInt()}', AppColors.brandPrimary)),
               Container(width: 1, height: 44, color: AppColors.brandPrimary.withValues(alpha: 0.08)),
-              Expanded(child: _summaryStat('TAKEN TOTAL', totalTaken, 'Pending: ৳${totalTakenPending.toInt()}', Colors.redAccent)),
+              Expanded(child: _summaryStat(AppLocalizations.get('taken_total'), totalTaken, '${AppLocalizations.get('pending')}: ৳${totalTakenPending.toInt()}', Colors.redAccent)),
             ],
           ),
         ),
@@ -232,9 +232,9 @@ class _LoansScreenState extends State<LoansScreen> {
       ),
       child: Row(
         children: [
-          _toggleButton(0, 'Given'),
-          _toggleButton(1, 'Taken'),
-          _toggleButton(2, 'By Person'),
+          _toggleButton(0, AppLocalizations.get('given')),
+          _toggleButton(1, AppLocalizations.get('taken')),
+          _toggleButton(2, AppLocalizations.get('by_person')),
         ],
       ),
     );
@@ -403,7 +403,7 @@ class _LoansScreenState extends State<LoansScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(name, style: GoogleFonts.outfit(color: AppColors.textBlack, fontWeight: FontWeight.bold, fontSize: 16)),
-                              Text('$count loan${count > 1 ? "s" : ""}', style: GoogleFonts.outfit(color: AppColors.textGrey, fontSize: 11.5, fontWeight: FontWeight.w500)),
+                              Text(_loanCountLabel(count), style: GoogleFonts.outfit(color: AppColors.textGrey, fontSize: 11.5, fontWeight: FontWeight.w500)),
                             ],
                           ),
                         ],
@@ -415,7 +415,7 @@ class _LoansScreenState extends State<LoansScreen> {
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
-                          settled ? 'SETTLED' : (theyOwe ? 'THEY OWE' : 'YOU OWE'),
+                          settled ? AppLocalizations.get('settled') : (theyOwe ? AppLocalizations.get('they_owe') : AppLocalizations.get('you_owe')),
                           style: GoogleFonts.outfit(
                             color: settled ? AppColors.brandPrimary : (theyOwe ? AppColors.brandPrimary : Colors.redAccent),
                             fontSize: 9.5,
@@ -430,9 +430,9 @@ class _LoansScreenState extends State<LoansScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      _detailStat('Given (Pending)', given, AppColors.textGrey),
-                      _detailStat('Taken (Pending)', taken, AppColors.textGrey),
-                      _detailStat('Net Balance', net.abs(), netColor),
+                      _detailStat(AppLocalizations.get('given_pending'), given, AppColors.textGrey),
+                      _detailStat(AppLocalizations.get('taken_pending'), taken, AppColors.textGrey),
+                      _detailStat(AppLocalizations.get('net_balance'), net.abs(), netColor),
                     ],
                   ),
                 ],
@@ -459,12 +459,19 @@ class _LoansScreenState extends State<LoansScreen> {
           ),
           const SizedBox(height: 20),
           Text(
-            'No loans found',
+            AppLocalizations.get('no_loans_found'),
             style: GoogleFonts.outfit(color: AppColors.secondaryText, fontSize: 15, fontWeight: FontWeight.w600),
           ),
         ],
       ),
     );
+  }
+
+  String _loanCountLabel(int count) {
+    final template = count == 1
+        ? AppLocalizations.get('loan_count_one')
+        : AppLocalizations.get('loan_count_many');
+    return template.replaceFirst('{count}', count.toString());
   }
 
   Widget _detailStat(String label, double value, Color color) {
@@ -545,7 +552,7 @@ class _LoanCard extends StatelessWidget {
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
-                        isPaid ? 'PAID' : 'PENDING',
+                        isPaid ? AppLocalizations.get('paid') : AppLocalizations.get('pending'),
                         style: GoogleFonts.outfit(
                           color: isPaid ? AppColors.brandPrimary : Colors.orangeAccent,
                           fontSize: 9.5,
@@ -560,9 +567,9 @@ class _LoanCard extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    _detailStat('Total ${isGiven ? "Given" : "Taken"}', loan.amount, AppColors.textGrey),
-                    _detailStat('Paid Back', loan.amount - loan.remainingAmount, AppColors.brandPrimary),
-                    _detailStat('Remaining', loan.remainingAmount, loan.remainingAmount > 0 ? Colors.redAccent : AppColors.brandPrimary),
+                    _detailStat(isGiven ? AppLocalizations.get('total_given') : AppLocalizations.get('total_taken'), loan.amount, AppColors.textGrey),
+                    _detailStat(AppLocalizations.get('paid_back'), loan.amount - loan.remainingAmount, AppColors.brandPrimary),
+                    _detailStat(AppLocalizations.get('remaining'), loan.remainingAmount, loan.remainingAmount > 0 ? Colors.redAccent : AppColors.brandPrimary),
                   ],
                 ),
               ],

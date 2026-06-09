@@ -43,13 +43,13 @@ class _SavingsScreenState extends State<SavingsScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                _modalHeader(context, 'New Savings Account'),
+                _modalHeader(context, AppLocalizations.get('new_savings_account')),
                 const SizedBox(height: 24),
-                _buildModalInput('Account Name (e.g. DPS, bKash)', nameCtrl, Icons.edit_note_rounded, Colors.amber.shade600, isNumeric: false),
+                _buildModalInput(AppLocalizations.get('account_name_eg_savings'), nameCtrl, Icons.edit_note_rounded, Colors.amber.shade600, isNumeric: false),
                 const SizedBox(height: 16),
-                _buildModalInput('Opening Balance', balanceCtrl, Icons.savings_rounded, Colors.amber.shade600, isNumeric: true),
+                _buildModalInput(AppLocalizations.get('opening_balance'), balanceCtrl, Icons.savings_rounded, Colors.amber.shade600, isNumeric: true),
                 const SizedBox(height: 32),
-                _primaryBtn('Create Account', isLoading, () async {
+                _primaryBtn(AppLocalizations.get('create_account'), isLoading, () async {
                   if (nameCtrl.text.isEmpty || balanceCtrl.text.isEmpty) return;
                   setModalState(() => isLoading = true);
                   await _accountService.createAccount(
@@ -102,7 +102,7 @@ class _SavingsScreenState extends State<SavingsScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  _modalHeader(context, 'Add to Savings'),
+                  _modalHeader(context, AppLocalizations.get('add_to_savings')),
                   const SizedBox(height: 24),
                   
                   // Month Picker
@@ -120,7 +120,7 @@ class _SavingsScreenState extends State<SavingsScreen> {
                   ),
                   const SizedBox(height: 20),
 
-                  _buildModalInput('Amount to Save', amountCtrl, Icons.add_circle_rounded, AppColors.primaryGreen, isNumeric: true),
+                  _buildModalInput(AppLocalizations.get('amount_to_save'), amountCtrl, Icons.add_circle_rounded, AppColors.primaryGreen, isNumeric: true),
                   const SizedBox(height: 16),
                   
                   // Toggle for "Already Paid"
@@ -141,8 +141,8 @@ class _SavingsScreenState extends State<SavingsScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('Already paid/deducted?', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 13)),
-                                Text('Won\'t cut from your wallet/cash balance', style: GoogleFonts.outfit(fontSize: 11, color: AppColors.textGrey)),
+                                Text(AppLocalizations.get('already_paiddeducted'), style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 13)),
+                                Text(AppLocalizations.get('wont_cut_balance'), style: GoogleFonts.outfit(fontSize: 11, color: AppColors.textGrey)),
                               ],
                             ),
                           ),
@@ -158,14 +158,14 @@ class _SavingsScreenState extends State<SavingsScreen> {
                   const SizedBox(height: 16),
 
                   if (!alreadyPaid) ...[
-                    _buildModalDropdown(standardAccounts, 'Deduct From', fromAccount, (val) => setModalState(() => fromAccount = val)),
+                    _buildModalDropdown(standardAccounts, AppLocalizations.get('deduct_from'), fromAccount, (val) => setModalState(() => fromAccount = val)),
                     const SizedBox(height: 16),
                   ],
                   
-                  _buildModalDropdown(savingsAccounts, 'Save Into', toSavingsAccount, (val) => setModalState(() => toSavingsAccount = val)),
+                  _buildModalDropdown(savingsAccounts, AppLocalizations.get('save_into'), toSavingsAccount, (val) => setModalState(() => toSavingsAccount = val)),
                   
                   const SizedBox(height: 32),
-                  _primaryBtn('Complete Saving', isLoading, () async {
+                  _primaryBtn(AppLocalizations.get('complete_saving'), isLoading, () async {
                     if (amountCtrl.text.isEmpty || toSavingsAccount == null || (!alreadyPaid && fromAccount == null)) return;
                     setModalState(() => isLoading = true);
                     
@@ -288,7 +288,7 @@ class _SavingsScreenState extends State<SavingsScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.cardWhite,
         elevation: 0,
-        title: Text('Savings Dashboard', style: GoogleFonts.outfit(color: AppColors.textBlack, fontWeight: FontWeight.bold, fontSize: 18)),
+        title: Text(AppLocalizations.get('savings_dashboard'), style: GoogleFonts.outfit(color: AppColors.textBlack, fontWeight: FontWeight.bold, fontSize: 18)),
         centerTitle: true,
         leading: IconButton(icon: Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.textBlack, size: 18), onPressed: () => Navigator.pop(context)),
       ),
@@ -309,13 +309,13 @@ class _SavingsScreenState extends State<SavingsScreen> {
                 const SizedBox(height: 24),
                 Row(
                   children: [
-                    Expanded(child: _buildActionBtn('Add Account', Icons.add_business_rounded, Colors.blueAccent, _showAddOpeningSavingsModal)),
+                    Expanded(child: _buildActionBtn(AppLocalizations.get('add_account'), Icons.add_business_rounded, Colors.blueAccent, _showAddOpeningSavingsModal)),
                     const SizedBox(width: 12),
-                    Expanded(child: _buildActionBtn('Log Savings', Icons.auto_graph_rounded, AppColors.primaryGreen, () => _showAddSavingsTransferModal(allAccounts))),
+                    Expanded(child: _buildActionBtn(AppLocalizations.get('log_savings'), Icons.auto_graph_rounded, AppColors.primaryGreen, () => _showAddSavingsTransferModal(allAccounts))),
                   ],
                 ),
                 const SizedBox(height: 32),
-                Align(alignment: Alignment.centerLeft, child: Text('YOUR SAVINGS VAULTS', style: GoogleFonts.outfit(color: AppColors.textGrey, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.5))),
+                Align(alignment: Alignment.centerLeft, child: Text(AppLocalizations.get('your_savings_vaults'), style: GoogleFonts.outfit(color: AppColors.textGrey, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.5))),
                 const SizedBox(height: 16),
                 if (savingsAccounts.isEmpty) _buildEmptyState() else ...savingsAccounts.map((acc) => _buildSavingsCard(acc)),
               ],
@@ -339,7 +339,7 @@ class _SavingsScreenState extends State<SavingsScreen> {
         children: [
           Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), shape: BoxShape.circle), child: const Icon(Icons.savings_rounded, color: Colors.white, size: 30)),
           const SizedBox(height: 20),
-          Text('Total Net Savings', style: GoogleFonts.outfit(color: Colors.white.withValues(alpha: 0.9), fontSize: 14, fontWeight: FontWeight.w500)),
+          Text(AppLocalizations.get('total_net_savings'), style: GoogleFonts.outfit(color: Colors.white.withValues(alpha: 0.9), fontSize: 14, fontWeight: FontWeight.w500)),
           const SizedBox(height: 8),
           Text('৳${total.toInt()}', style: GoogleFonts.outfit(color: Colors.white, fontSize: 48, fontWeight: FontWeight.bold, letterSpacing: -1)),
         ],
@@ -378,7 +378,7 @@ class _SavingsScreenState extends State<SavingsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(acc.name, style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16)),
-                Text('Secure Savings Vault', style: GoogleFonts.outfit(color: AppColors.textGrey, fontSize: 11)),
+                Text(AppLocalizations.get('secure_savings_vault'), style: GoogleFonts.outfit(color: AppColors.textGrey, fontSize: 11)),
               ],
             ),
           ),
@@ -389,11 +389,11 @@ class _SavingsScreenState extends State<SavingsScreen> {
   }
 
   Widget _buildEmptyState() {
-    return Padding(padding: const EdgeInsets.all(40), child: Text('No vaults found. Tap Add Account to create your first savings vault.', textAlign: TextAlign.center, style: GoogleFonts.outfit(color: AppColors.textGrey, fontSize: 13)));
+    return Padding(padding: const EdgeInsets.all(40), child: Text(AppLocalizations.get('no_vaults_found_tap'), textAlign: TextAlign.center, style: GoogleFonts.outfit(color: AppColors.textGrey, fontSize: 13)));
   }
 
   String _getMonthName(int month) {
-    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    return months[month - 1];
+    final key = 'month_short_$month';
+    return AppLocalizations.get(key);
   }
 }

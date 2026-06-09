@@ -5,6 +5,7 @@ import 'package:pocketledger/app/theme.dart';
 import 'package:pocketledger/models/account_model.dart';
 import 'package:pocketledger/services/account_service.dart';
 import 'package:pocketledger/features/accounts/account_detail_screen.dart';
+import 'package:pocketledger/core/localization/app_localizations.dart';
 import 'package:pocketledger/core/widgets/scale_on_tap.dart';
 import 'package:pocketledger/core/widgets/glass_card.dart';
 
@@ -30,7 +31,7 @@ class AccountsScreen extends StatelessWidget {
           ),
         ),
         title: Text(
-          'Accounts',
+          AppLocalizations.get('accounts'),
           style: GoogleFonts.outfit(
             color: AppColors.primaryText,
             fontWeight: FontWeight.bold,
@@ -140,7 +141,7 @@ class AccountsScreen extends StatelessWidget {
                   Icon(Icons.wallet_rounded, color: AppColors.brandPrimary, size: 16),
                   const SizedBox(width: 8),
                   Text(
-                    'COMBINED PORTFOLIO BALANCE',
+                    AppLocalizations.get('combined_portfolio_balance'),
                     style: GoogleFonts.outfit(
                       color: isDark ? Colors.white70 : AppColors.brandPrimary.withValues(alpha: 0.8),
                       fontSize: 10,
@@ -161,7 +162,7 @@ class AccountsScreen extends StatelessWidget {
               ),
               const SizedBox(height: 6),
               Text(
-                '“Combined balance of all MFS, Bank & Cash accounts”',
+                AppLocalizations.get('combined_balance_of_all'),
                 style: GoogleFonts.outfit(
                   color: AppColors.textGrey,
                   fontSize: 11.5,
@@ -191,7 +192,7 @@ class AccountsScreen extends StatelessWidget {
           ),
           const SizedBox(height: 24),
           Text(
-            'Where is my money?',
+            AppLocalizations.get('where_is_my_money'),
             style: GoogleFonts.outfit(
               color: AppColors.textBlack,
               fontSize: 18,
@@ -200,7 +201,7 @@ class AccountsScreen extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Add an account to see your assets here',
+            AppLocalizations.get('add_an_account_to'),
             style: GoogleFonts.outfit(
               color: AppColors.textGrey,
               fontSize: 13.5,
@@ -415,7 +416,7 @@ class _AccountCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 20),
                       Text(
-                        'TOTAL BALANCE',
+                        AppLocalizations.get('total_balance'),
                         style: GoogleFonts.outfit(
                           color: isSpecialGradient
                               ? Colors.white.withValues(alpha: 0.6)
@@ -442,7 +443,7 @@ class _AccountCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        'OWNER SPLIT',
+                        AppLocalizations.get('owner_split'),
                         style: GoogleFonts.outfit(
                           color: isSpecialGradient
                               ? Colors.white.withValues(alpha: 0.7)

@@ -114,7 +114,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
         Navigator.pop(context);
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${AppLocalizations.get('error')}: $e')));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -154,18 +154,20 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      isGiven ? 'Receive from ${widget.loan.personName}' : 'Repay to ${widget.loan.personName}',
+                      isGiven
+                          ? AppLocalizations.get('receive_from').replaceFirst('{name}', widget.loan.personName)
+                          : AppLocalizations.get('repay_to').replaceFirst('{name}', widget.loan.personName),
                       style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.primaryText),
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      isGiven ? 'Money will be added to your account' : 'Record where the money is moving',
+                      isGiven ? AppLocalizations.get('money_added_to_account') : AppLocalizations.get('record_money_movement'),
                       style: GoogleFonts.outfit(fontSize: 12, color: AppColors.secondaryText),
                     ),
                     const SizedBox(height: 24),
                     CustomTextField(
                       controller: _amountController,
-                      hintText: 'Amount (Max: ${widget.loan.remainingAmount.toInt()})',
+                      hintText: AppLocalizations.get('amount_max').replaceFirst('{amount}', widget.loan.remainingAmount.toInt().toString()),
                       icon: Icons.attach_money_rounded,
                       keyboardType: TextInputType.number,
                     ),
@@ -183,7 +185,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'GIVEN BY',
+                              AppLocalizations.get('given_by'),
                               style: GoogleFonts.outfit(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.secondaryText, letterSpacing: 1),
                             ),
                             const SizedBox(height: 12),
@@ -196,7 +198,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                       )
                     else
                       _buildFlowSection(
-                        label: 'REPAY FROM (MY POCKET)',
+                        label: AppLocalizations.get('repay_from_my_pocket'),
                         account: _sourceAccount,
                         owner: _sourceOwner,
                         accounts: accounts,
@@ -215,7 +217,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            isGiven ? 'Add to my App Account?' : 'Return to an App Account?',
+                            isGiven ? AppLocalizations.get('add_to_my_app_account') : AppLocalizations.get('return_to_app_account'),
                             style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primaryText),
                           ),
                           Switch(
@@ -232,7 +234,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                         child: Icon(Icons.arrow_downward_rounded, color: AppColors.brandPrimary),
                       ),
                       _buildFlowSection(
-                        label: isGiven ? 'RECEIVE INTO (MY POCKET)' : 'RETURN TO (THEIR POCKET)',
+                        label: isGiven ? AppLocalizations.get('receive_into_my_pocket') : AppLocalizations.get('return_to_their_pocket'),
                         account: _destAccount,
                         owner: _destOwner,
                         accounts: accounts,
@@ -270,7 +272,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                         child: _isLoading
                             ? const CircularProgressIndicator(color: Colors.white)
                             : Text(
-                                'Confirm Transaction',
+                                AppLocalizations.get('confirm_transaction'),
                                 style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
                               ),
                       ),
@@ -318,11 +320,11 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                         ? accounts.firstWhere((a) => a.id == account.id)
                         : null,
                     isExpanded: true,
-                    hint: Text('None (Outside App)', style: GoogleFonts.outfit(fontSize: 13, color: AppColors.secondaryText)),
+                    hint: Text(AppLocalizations.get('none_outside_app'), style: GoogleFonts.outfit(fontSize: 13, color: AppColors.secondaryText)),
                     items: [
                       DropdownMenuItem<AccountModel>(
                         value: null,
-                        child: Text('None (Outside App)', style: TextStyle(color: AppColors.secondaryText, fontSize: 13)),
+                        child: Text(AppLocalizations.get('none_outside_app'), style: TextStyle(color: AppColors.secondaryText, fontSize: 13)),
                       ),
                       ...accounts.map((acc) => DropdownMenuItem(
                             value: acc,
@@ -353,7 +355,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
           ),
           if (account != null) ...[
             const SizedBox(height: 8),
-            Text('Current: ৳${account.breakdown[owner]?.toInt() ?? 0}', style: GoogleFonts.outfit(fontSize: 11, color: AppColors.secondaryText)),
+            Text('${AppLocalizations.get('current')}: ৳${account.breakdown[owner]?.toInt() ?? 0}', style: GoogleFonts.outfit(fontSize: 11, color: AppColors.secondaryText)),
           ]
         ],
       ),
@@ -377,7 +379,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
           ),
         ),
         title: Text(
-          'Loan Details',
+          AppLocalizations.get('loan_details'),
           style: GoogleFonts.outfit(color: AppColors.primaryText, fontWeight: FontWeight.bold, fontSize: 20),
         ),
         centerTitle: true,
@@ -391,8 +393,8 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
           ),
           ScaleOnTap(
             onTap: () => _showDeleteConfirmation(
-              title: 'Delete Loan?',
-              content: 'This will revert all balances and delete this loan forever.',
+              title: AppLocalizations.get('delete_loan'),
+              content: AppLocalizations.get('delete_loan_message'),
               onConfirm: _handleDeleteLoan,
             ),
             child: const Padding(
@@ -458,7 +460,9 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
       return const SizedBox.shrink();
     }
 
-    final reminderText = "Hey ${widget.loan.personName}! Just a gentle reminder regarding the loan balance of ৳${widget.loan.remainingAmount.toInt()} when you get a moment. Thank you! 🙏";
+    final reminderText = AppLocalizations.get('loan_reminder_message')
+        .replaceFirst('{name}', widget.loan.personName)
+        .replaceFirst('{amount}', widget.loan.remainingAmount.toInt().toString());
 
     return Padding(
       padding: const EdgeInsets.only(top: 24),
@@ -478,7 +482,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                   Icon(Icons.chat_bubble_outline_rounded, color: AppColors.brandPrimary, size: 16),
                   const SizedBox(width: 8),
                   Text(
-                    'REPAYMENT REMINDER TEMPLATE',
+                    AppLocalizations.get('repayment_reminder_template'),
                     style: GoogleFonts.outfit(
                       color: AppColors.textGrey,
                       fontSize: 10,
@@ -511,7 +515,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       backgroundColor: AppColors.brandPrimary,
-                      content: Text('Reminder template copied!', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white)),
+                      content: Text(AppLocalizations.get('reminder_template_copied'), style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white)),
                     ),
                   );
                 },
@@ -529,7 +533,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                       Icon(Icons.copy_rounded, color: AppColors.brandPrimary, size: 14),
                       const SizedBox(width: 6),
                       Text(
-                        'Copy Reminder Template',
+                        AppLocalizations.get('copy_reminder_template'),
                         style: GoogleFonts.outfit(
                           color: AppColors.brandPrimary,
                           fontSize: 12,
@@ -568,7 +572,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                 Icon(Icons.timeline_rounded, color: AppColors.brandPrimary, size: 20),
                 const SizedBox(width: 8),
                 Text(
-                  'INSTALLMENT TIMELINE',
+                  AppLocalizations.get('installment_timeline'),
                   style: GoogleFonts.outfit(color: AppColors.textBlack, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.0),
                 ),
               ],
@@ -599,11 +603,11 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Installment #${index + 1}',
+                              AppLocalizations.get('installment_number').replaceFirst('{number}', (index + 1).toString()),
                               style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.textBlack),
                             ),
                             Text(
-                              'Due: ${DateFormat('dd MMM yyyy').format(inst.dueDate)}',
+                              '${AppLocalizations.get('due')}: ${DateFormat('dd MMM yyyy').format(inst.dueDate)}',
                               style: GoogleFonts.outfit(color: AppColors.textGrey, fontSize: 11.5),
                             ),
                           ],
@@ -630,7 +634,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
       await _loanService.deleteLoan(widget.loan);
       if (mounted) Navigator.pop(context);
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${AppLocalizations.get('error')}: $e')));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -642,7 +646,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
       await _loanService.deleteRepayment(widget.loan.id, repayment);
       if (mounted) Navigator.pop(context);
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${AppLocalizations.get('error')}: $e')));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -682,7 +686,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    isPaid ? 'PAID' : 'PENDING',
+                    isPaid ? AppLocalizations.get('paid') : AppLocalizations.get('pending'),
                     style: GoogleFonts.outfit(
                       color: isPaid ? AppColors.brandPrimary : Colors.orangeAccent,
                       fontSize: 10,
@@ -697,7 +701,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
             Align(
               alignment: Alignment.centerLeft,
               child: Text(
-                isGiven ? 'Money you gave' : 'Money you took',
+                isGiven ? AppLocalizations.get('money_you_gave') : AppLocalizations.get('money_you_took'),
                 style: GoogleFonts.outfit(color: AppColors.textGrey, fontSize: 13),
               ),
             ),
@@ -705,9 +709,9 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _statColumn('Total Amount', widget.loan.amount, AppColors.textBlack),
-                _statColumn('Paid Back', widget.loan.amount - widget.loan.remainingAmount, AppColors.brandPrimary),
-                _statColumn('Remaining', widget.loan.remainingAmount, widget.loan.remainingAmount > 0 ? Colors.redAccent : AppColors.brandPrimary),
+                _statColumn(AppLocalizations.get('total_amount'), widget.loan.amount, AppColors.textBlack),
+                _statColumn(AppLocalizations.get('paid_back'), widget.loan.amount - widget.loan.remainingAmount, AppColors.brandPrimary),
+                _statColumn(AppLocalizations.get('remaining'), widget.loan.remainingAmount, widget.loan.remainingAmount > 0 ? Colors.redAccent : AppColors.brandPrimary),
               ],
             ),
           ],
@@ -735,7 +739,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
       return Center(
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 40),
-          child: Text('No repayments yet.', style: GoogleFonts.outfit(color: AppColors.textGrey, fontSize: 13.5)),
+          child: Text(AppLocalizations.get('no_repayments_yet'), style: GoogleFonts.outfit(color: AppColors.textGrey, fontSize: 13.5)),
         ),
       );
     }
@@ -744,7 +748,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
       children: [
         Padding(
           padding: const EdgeInsets.only(left: 4, bottom: 12),
-          child: Text('Repayment History', style: GoogleFonts.outfit(color: AppColors.textBlack, fontSize: 15, fontWeight: FontWeight.bold)),
+          child: Text(AppLocalizations.get('repayment_history'), style: GoogleFonts.outfit(color: AppColors.textBlack, fontSize: 15, fontWeight: FontWeight.bold)),
         ),
         ...widget.loan.repayments.map((rep) => Padding(
               padding: const EdgeInsets.only(bottom: 12),
@@ -763,7 +767,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Payment Recieved', style: GoogleFonts.outfit(color: AppColors.textBlack, fontWeight: FontWeight.w600, fontSize: 14)),
+                            Text(AppLocalizations.get('payment_recieved'), style: GoogleFonts.outfit(color: AppColors.textBlack, fontWeight: FontWeight.w600, fontSize: 14)),
                             const SizedBox(height: 2),
                             Text(DateFormat('dd MMM yyyy').format(rep.date), style: GoogleFonts.outfit(color: AppColors.textGrey, fontSize: 11.5)),
                             if (rep.note.isNotEmpty) ...[
@@ -782,8 +786,8 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                           const SizedBox(width: 12),
                           ScaleOnTap(
                             onTap: () => _showDeleteConfirmation(
-                              title: 'Delete Payment?',
-                              content: 'This will restore the loan balance and revert account changes.',
+                              title: AppLocalizations.get('delete_payment'),
+                              content: AppLocalizations.get('delete_payment_message'),
                               onConfirm: () => _handleDeleteRepayment(rep),
                             ),
                             child: Container(
@@ -812,19 +816,19 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('Edit Person Name', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+        title: Text(AppLocalizations.get('edit_person_name'), style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
         content: TextField(
           controller: ctrl,
           style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
           decoration: InputDecoration(
-            labelText: 'Name',
+            labelText: AppLocalizations.get('name'),
             labelStyle: GoogleFonts.outfit(color: AppColors.textGrey),
             enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.brandPrimary)),
             focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.brandPrimary, width: 2)),
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: Text('Cancel', style: GoogleFonts.outfit(color: AppColors.textGrey))),
+          TextButton(onPressed: () => Navigator.pop(context), child: Text(AppLocalizations.get('cancel'), style: GoogleFonts.outfit(color: AppColors.textGrey))),
           ElevatedButton(
             onPressed: () async {
               if (ctrl.text.trim().isEmpty) return;
@@ -835,7 +839,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                 // Redraw
                 setState(() {});
               } catch (e) {
-                if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+                if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${AppLocalizations.get('error')}: $e')));
               } finally {
                 if (mounted) setState(() => _isLoading = false);
               }
@@ -878,7 +882,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                 const Icon(Icons.payment_rounded, color: Colors.white, size: 20),
                 const SizedBox(width: 8),
                 Text(
-                  widget.loan.type == LoanType.given ? 'Receive Payment' : 'Repay Loan',
+                  widget.loan.type == LoanType.given ? AppLocalizations.get('receive_payment') : AppLocalizations.get('repay_loan'),
                   style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
                 ),
               ],
@@ -901,7 +905,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
         title: Text(title, style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
         content: Text(content, style: GoogleFonts.outfit(color: AppColors.textGrey)),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: Text('Cancel', style: GoogleFonts.outfit(color: AppColors.textGrey))),
+          TextButton(onPressed: () => Navigator.pop(context), child: Text(AppLocalizations.get('cancel'), style: GoogleFonts.outfit(color: AppColors.textGrey))),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);

@@ -145,7 +145,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       if (mounted) Navigator.pop(context);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${AppLocalizations.get('error')}: $e')),
+        );
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -212,13 +214,13 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              _buildStepTitle('Source', 'Where is this from?'),
+                              _buildStepTitle(AppLocalizations.get('source'), AppLocalizations.get('source_subtitle')),
                               const SizedBox(height: 16),
                               _buildHorizontalPaymentSourceSelector(accounts: accounts, cards: cards),
                               
                               if (_isCreditCardPayment) ...[
                                 const SizedBox(height: 24),
-                                _buildStepTitle('Paying Bill For', 'Destination card'),
+                                _buildStepTitle(AppLocalizations.get('paying_bill_for'), AppLocalizations.get('destination_card')),
                                 const SizedBox(height: 16),
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
@@ -246,7 +248,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                               
                               if (_selectedCreditCardId == null && !_isCreditCardPayment) ...[
                                 const SizedBox(height: 32),
-                                _buildStepTitle('Source Member', 'Who is sending?'),
+                                _buildStepTitle(AppLocalizations.get('source_member'), AppLocalizations.get('who_is_sending')),
                                 const SizedBox(height: 16),
                                 _buildMemberChips(isSource: true),
                               ],
@@ -261,23 +263,23 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                                   ),
                                 ),
                                 const SizedBox(height: 32),
-                                _buildStepTitle('Destination', 'Where is it going?'),
+                                _buildStepTitle(AppLocalizations.get('destination'), AppLocalizations.get('destination_subtitle')),
                                 const SizedBox(height: 16),
                                 _buildHorizontalAccountSelector(accounts, isSource: false),
                                 
                                 const SizedBox(height: 32),
-                                _buildStepTitle('Destination Member', 'Who is receiving?'),
+                                _buildStepTitle(AppLocalizations.get('destination_member'), AppLocalizations.get('who_is_receiving')),
                                 const SizedBox(height: 16),
                                 _buildMemberChips(isSource: false),
                               ],
 
                               const SizedBox(height: 32),
-                              _buildStepTitle('Category', 'What kind of transaction?'),
+                              _buildStepTitle(AppLocalizations.get('category'), AppLocalizations.get('category_subtitle')),
                               const SizedBox(height: 16),
                               _buildCategoryGrid(accentColor),
 
                               const SizedBox(height: 32),
-                              _buildStepTitle('Notes', 'Add extra details'),
+                              _buildStepTitle(AppLocalizations.get('notes'), AppLocalizations.get('notes_subtitle')),
                               const SizedBox(height: 16),
                               _buildNoteInput(),
                               
@@ -323,7 +325,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           border: Border.all(color: Colors.redAccent.withValues(alpha: 0.3)),
         ),
         child: Text(
-          'CARD PAYMENT',
+          AppLocalizations.get('card_payment'),
           style: GoogleFonts.outfit(
             color: Colors.redAccent,
             fontWeight: FontWeight.bold,
@@ -404,7 +406,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
             ],
           ),
         ),
-        Text(_selectedType.toString().split('.').last.toUpperCase(), 
+        Text(_transactionTypeLabel(_selectedType).toUpperCase(), 
           style: GoogleFonts.outfit(color: color.withValues(alpha: 0.5), fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 2)),
       ],
     );
@@ -519,7 +521,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
             child: Padding(
               padding: const EdgeInsets.all(16.0),
               child: Text(
-                'Error: ${snapshot.error}',
+              '${AppLocalizations.get('error')}: ${snapshot.error}',
                 style: GoogleFonts.outfit(color: Colors.redAccent, fontSize: 13),
                 textAlign: TextAlign.center,
               ),
@@ -546,7 +548,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         if (items.isEmpty) {
           return Center(
             child: Text(
-              'No categories found',
+              AppLocalizations.get('no_categories_found'),
               style: GoogleFonts.outfit(color: AppColors.textGrey, fontSize: 13),
             ),
           );
@@ -598,7 +600,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
               children: [
                 Icon(cat['icon'] as IconData, color: isSelected ? Colors.white : itemColor.withValues(alpha: 0.8), size: 24),
                 const SizedBox(height: 8),
-                Text(cat['name'] as String, maxLines: 1, overflow: TextOverflow.ellipsis, style: GoogleFonts.outfit(color: isSelected ? Colors.white : AppColors.textBlack, fontSize: 11, fontWeight: FontWeight.bold)),
+                Text(_categoryDisplayName(cat['name'] as String), maxLines: 1, overflow: TextOverflow.ellipsis, style: GoogleFonts.outfit(color: isSelected ? Colors.white : AppColors.textBlack, fontSize: 11, fontWeight: FontWeight.bold)),
               ],
             ),
           ),
@@ -628,6 +630,32 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     );
   }
 
+  String _transactionTypeLabel(TransactionType type) {
+    switch (type) {
+      case TransactionType.income:
+        return AppLocalizations.get('income');
+      case TransactionType.expense:
+        return AppLocalizations.get('expense');
+      case TransactionType.transfer:
+        return AppLocalizations.get('transfer');
+      case TransactionType.others:
+        return AppLocalizations.get('others');
+    }
+  }
+
+  String _categoryDisplayName(String category) {
+    switch (category) {
+      case 'Credit Card Payment':
+        return AppLocalizations.get('credit_card_payment');
+      case 'Transfer':
+        return AppLocalizations.get('transfer');
+      case 'Savings':
+        return AppLocalizations.get('savings');
+      default:
+        return category;
+    }
+  }
+
   Widget _buildActionBtn(Color color) {
     return Container(
       width: double.infinity,
@@ -648,7 +676,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         ),
         child: _isLoading 
           ? const CircularProgressIndicator(color: Colors.white)
-          : Text('Save Transaction', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold)),
+          : Text(AppLocalizations.get('save_transaction'), style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold)),
       ),
     );
   }

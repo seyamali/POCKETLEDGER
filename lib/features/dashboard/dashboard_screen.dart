@@ -63,8 +63,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
     super.dispose();
   }
 
-  String _fmt(double v) => v.toInt().toString().replaceAllMapped(
-    RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},');
+  String _fmt(double v) => AppLocalizations.convertDigits(
+        v.toInt().toString().replaceAllMapped(
+              RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+              (Match m) => '${m[1]},',
+            ),
+      );
 
   static String getGreeting() {
     final hour = DateTime.now().hour;
@@ -97,7 +101,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               Map<String, List<Map<String, dynamic>>> ownerAccounts = {};
 
               for (var acc in accounts) {
-                if (acc.type == AppLocalizations.get('savings')) {
+                if (acc.type == 'Savings') {
                   savingsTotal += acc.totalBalance;
                 } else {
                   grandTotal += acc.totalBalance;
@@ -616,7 +620,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   // ─────────────────── ACCOUNTS ───────────────────
   Widget _buildAccountsSection(List<AccountModel> accounts) {
-    final regular = accounts.where((a) => a.type != AppLocalizations.get('savings')).take(3).toList();
+    final regular = accounts.where((a) => a.type != 'Savings').take(3).toList();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -812,7 +816,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             if (isIncome) {
               prefix = '+';
             } else if (isOthers) {
-              if (tx.category.contains(AppLocalizations.get('taken')) || tx.category.contains(AppLocalizations.get('received'))) {
+              if (tx.category.contains('Taken') || tx.category.contains('Received')) {
                 prefix = '+';
               } else {
                 prefix = '-';

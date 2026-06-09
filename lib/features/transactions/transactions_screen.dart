@@ -54,7 +54,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: Text(
-          'Transactions',
+          AppLocalizations.get('transactions'),
           style: GoogleFonts.outfit(
             color: AppColors.primaryText,
             fontWeight: FontWeight.bold,
@@ -132,7 +132,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                         child: Padding(
                           padding: const EdgeInsets.all(24),
                           child: Text(
-                            'Error loading transactions:\n${snapshot.error}',
+                            '${AppLocalizations.get('error_loading_transactions')}:\n${snapshot.error}',
                             textAlign: TextAlign.center,
                             style: GoogleFonts.outfit(
                               color: Colors.redAccent,
@@ -188,7 +188,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                                               Icon(Icons.refresh_rounded, color: AppColors.brandPrimary, size: 18),
                                               const SizedBox(width: 8),
                                               Text(
-                                                'Load More',
+                                                AppLocalizations.get('load_more'),
                                                 style: GoogleFonts.outfit(color: AppColors.brandPrimary, fontWeight: FontWeight.bold),
                                               ),
                                             ],
@@ -270,7 +270,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                           Icon(Icons.arrow_downward_rounded, color: AppColors.brandPrimary, size: 14),
                           const SizedBox(width: 4),
                           Text(
-                            'TOTAL INCOME',
+                            AppLocalizations.get('total_income'),
                             style: GoogleFonts.outfit(
                               color: AppColors.textGrey,
                               fontSize: 10,
@@ -299,7 +299,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                           Icon(Icons.arrow_upward_rounded, color: Colors.redAccent, size: 14),
                           const SizedBox(width: 4),
                           Text(
-                            'TOTAL EXPENSE',
+                            AppLocalizations.get('total_expense'),
                             style: GoogleFonts.outfit(
                               color: AppColors.textGrey,
                               fontSize: 10,
@@ -512,7 +512,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                 ),
                 alignment: Alignment.center,
                 child: Text(
-                  filter,
+                  _filterLabel(filter),
                   style: GoogleFonts.outfit(
                     color: isSelected ? Colors.white : AppColors.secondaryText,
                     fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
@@ -525,6 +525,21 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
         },
       ),
     );
+  }
+
+  String _filterLabel(String filter) {
+    switch (filter) {
+      case 'All':
+        return AppLocalizations.get('all');
+      case 'Income':
+        return AppLocalizations.get('income');
+      case 'Expense':
+        return AppLocalizations.get('expense');
+      case 'Transfer':
+        return AppLocalizations.get('transfer');
+      default:
+        return filter;
+    }
   }
 
   Widget _buildCategoryFilterBar(List<TransactionModel> rawTransactions, bool isDark) {
@@ -584,7 +599,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                       const SizedBox(width: 4),
                     ],
                     Text(
-                      cat,
+                      cat == 'All' ? AppLocalizations.get('all') : cat,
                       style: GoogleFonts.outfit(
                         color: isSelected ? themeColor : AppColors.secondaryText,
                         fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
@@ -628,19 +643,19 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                 ),
                 const SizedBox(height: 20),
                 Text(
-                  'Filter Transactions',
+                  AppLocalizations.get('filter_transactions'),
                   style: GoogleFonts.outfit(color: AppColors.textBlack, fontSize: 20, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Choose how you want to filter dates',
+                  AppLocalizations.get('choose_how_you_want'),
                   style: GoogleFonts.outfit(color: AppColors.textGrey, fontSize: 13),
                 ),
                 const SizedBox(height: 20),
                 _buildPickerOption(
                   icon: Icons.all_inclusive_rounded,
-                  title: 'Show All Time',
-                  subtitle: 'Remove date filters and show all transactions',
+                  title: AppLocalizations.get('show_all_time'),
+                  subtitle: AppLocalizations.get('show_all_time_subtitle'),
                   onTap: () {
                     Navigator.pop(context);
                     setState(() {
@@ -653,8 +668,8 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                 const SizedBox(height: 10),
                 _buildPickerOption(
                   icon: Icons.today_rounded,
-                  title: 'This Week',
-                  subtitle: 'Show transactions from the last 7 days',
+                  title: AppLocalizations.get('this_week'),
+                  subtitle: AppLocalizations.get('this_week_subtitle'),
                   onTap: () {
                     Navigator.pop(context);
                     setState(() {
@@ -667,8 +682,8 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                 const SizedBox(height: 10),
                 _buildPickerOption(
                   icon: Icons.calendar_month_rounded,
-                  title: 'This Month',
-                  subtitle: 'Show transactions from the current month',
+                  title: AppLocalizations.get('this_month'),
+                  subtitle: AppLocalizations.get('this_month_subtitle'),
                   onTap: () {
                     Navigator.pop(context);
                     setState(() {
@@ -681,8 +696,8 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                 const SizedBox(height: 10),
                 _buildPickerOption(
                   icon: Icons.calendar_view_month_rounded,
-                  title: 'Select Specific Month & Year',
-                  subtitle: 'Filter by any specific month (e.g. March 2026)',
+                  title: AppLocalizations.get('select_specific_month_year'),
+                  subtitle: AppLocalizations.get('select_specific_month_year_subtitle'),
                   onTap: () {
                     Navigator.pop(context);
                     _showMonthYearPicker(context);
@@ -691,8 +706,8 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                 const SizedBox(height: 10),
                 _buildPickerOption(
                   icon: Icons.date_range_rounded,
-                  title: 'Select Custom Date Range',
-                  subtitle: 'Choose a specific start date and end date',
+                  title: AppLocalizations.get('select_custom_date_range'),
+                  subtitle: AppLocalizations.get('select_custom_date_range_subtitle'),
                   onTap: () {
                     Navigator.pop(context);
                     _selectDateRange(context);
@@ -810,7 +825,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                 ),
                 const SizedBox(height: 20),
                 Text(
-                  'Select Month & Year',
+                  AppLocalizations.get('select_month_year'),
                   style: GoogleFonts.outfit(color: AppColors.textBlack, fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 20),
@@ -890,7 +905,10 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                         ),
                         onPressed: () => Navigator.pop(context),
-                        child: Text('Cancel', style: GoogleFonts.outfit(color: AppColors.brandPrimary, fontWeight: FontWeight.bold)),
+                        child: Text(
+                          AppLocalizations.get('cancel'),
+                          style: GoogleFonts.outfit(color: AppColors.brandPrimary, fontWeight: FontWeight.bold),
+                        ),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -912,7 +930,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                             _selectedDateFilter = 'Custom';
                           });
                         },
-                        child: Text('Apply', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+                        child: Text(AppLocalizations.get('apply'), style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
                       ),
                     ),
                   ],
@@ -935,11 +953,11 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
         return DateFormat('MMMM yyyy').format(_selectedCustomMonth!);
       }
     } else if (_selectedDateFilter == 'This Month') {
-      return 'This Month (${DateFormat('MMMM yyyy').format(DateTime.now())})';
+      return '${AppLocalizations.get('this_month')} (${DateFormat('MMMM yyyy').format(DateTime.now())})';
     } else if (_selectedDateFilter == 'This Week') {
-      return 'This Week';
+      return AppLocalizations.get('this_week');
     }
-    return 'All Time';
+    return AppLocalizations.get('all_time');
   }
 
   Widget _buildActiveDateBanner(bool isDark) {
@@ -972,7 +990,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
             ScaleOnTap(
               onTap: () => _showCalendarPickerOptions(context),
               child: Text(
-                'Change',
+                AppLocalizations.get('change'),
                 style: GoogleFonts.outfit(
                   color: AppColors.brandPrimary,
                   fontSize: 12,
@@ -1001,12 +1019,12 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
           ),
           const SizedBox(height: 20),
           Text(
-            'No Transactions Found',
+            AppLocalizations.get('no_transactions_found'),
             style: GoogleFonts.outfit(color: AppColors.primaryText, fontSize: 16, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 6),
           Text(
-            'Tap the add button to insert a transaction',
+            AppLocalizations.get('tap_the_add_button'),
             style: GoogleFonts.outfit(color: AppColors.secondaryText, fontSize: 12.5),
           ),
         ],
@@ -1192,15 +1210,15 @@ class _TransactionCardState extends State<_TransactionCard> {
                       const SizedBox(height: 12),
                       Divider(color: AppColors.brandPrimary.withValues(alpha: 0.08)),
                       const SizedBox(height: 8),
-                      _buildDetailRow('Owner Split', widget.transaction.owner),
+                      _buildDetailRow(AppLocalizations.get('owner_split'), widget.transaction.owner),
                       if (isTransfer)
                         _buildDetailRow(
-                          'To Owner',
-                          widget.transaction.toOwner ?? 'Self',
+                          AppLocalizations.get('to_owner'),
+                          widget.transaction.toOwner ?? AppLocalizations.get('self'),
                         ),
-                      _buildDetailRow('Tx Type', widget.transaction.type.name.toUpperCase()),
+                      _buildDetailRow(AppLocalizations.get('tx_type'), _transactionTypeLabel(widget.transaction.type)),
                       if (widget.transaction.note.isNotEmpty)
-                        _buildDetailRow('Note', widget.transaction.note),
+                        _buildDetailRow(AppLocalizations.get('note'), widget.transaction.note),
                     ],
                   ),
                 ),
@@ -1241,5 +1259,18 @@ class _TransactionCardState extends State<_TransactionCard> {
         ],
       ),
     );
+  }
+
+  String _transactionTypeLabel(TransactionType type) {
+    switch (type) {
+      case TransactionType.income:
+        return AppLocalizations.get('income');
+      case TransactionType.expense:
+        return AppLocalizations.get('expense');
+      case TransactionType.transfer:
+        return AppLocalizations.get('transfer');
+      case TransactionType.others:
+        return AppLocalizations.get('others');
+    }
   }
 }

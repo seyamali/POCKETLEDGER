@@ -51,7 +51,7 @@ class _AccountDetailScreenState extends State<AccountDetailScreen> {
             const Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
             const SizedBox(width: 8),
             Text(
-              '$label copied to clipboard!',
+              AppLocalizations.get('copied_to_clipboard').replaceFirst('{label}', label),
               style: GoogleFonts.outfit(fontWeight: FontWeight.w600, fontSize: 13),
             ),
           ],
@@ -67,31 +67,31 @@ class _AccountDetailScreenState extends State<AccountDetailScreen> {
 
   void _copyAllBankDetails() {
     final buffer = StringBuffer();
-    buffer.writeln('🏦 BANK ACCOUNT DETAILS');
-    buffer.writeln('Bank: $_currentName');
+    buffer.writeln(AppLocalizations.get('bank_account_details'));
+    buffer.writeln('${AppLocalizations.get('bank')}: $_currentName');
     if (_currentAccountNumber != null && _currentAccountNumber!.isNotEmpty) {
-      buffer.writeln('Account Number: $_currentAccountNumber');
+      buffer.writeln('${AppLocalizations.get('account_number')}: $_currentAccountNumber');
     }
     if (_currentCardNumber != null && _currentCardNumber!.isNotEmpty) {
-      buffer.writeln('Card Number: $_currentCardNumber');
+      buffer.writeln('${AppLocalizations.get('card_number')}: $_currentCardNumber');
     }
     if (_currentBranchName != null && _currentBranchName!.isNotEmpty) {
-      buffer.writeln('Branch Name: $_currentBranchName');
+      buffer.writeln('${AppLocalizations.get('branch_name')}: $_currentBranchName');
     }
     if (_currentRoutingNumber != null && _currentRoutingNumber!.isNotEmpty) {
-      buffer.writeln('Routing Number: $_currentRoutingNumber');
+      buffer.writeln('${AppLocalizations.get('routing_number')}: $_currentRoutingNumber');
     }
-    _copyToClipboard('All bank details', buffer.toString().trim());
+    _copyToClipboard(AppLocalizations.get('all_bank_details'), buffer.toString().trim());
   }
 
   void _copyAllMfsDetails() {
     final buffer = StringBuffer();
-    buffer.writeln('📱 MOBILE WALLET DETAILS');
-    buffer.writeln('Wallet Name: $_currentName');
+    buffer.writeln(AppLocalizations.get('mobile_wallet_details'));
+    buffer.writeln('${AppLocalizations.get('wallet_name')}: $_currentName');
     if (_currentMobileNumber != null && _currentMobileNumber!.isNotEmpty) {
-      buffer.writeln('Mobile Number: $_currentMobileNumber');
+      buffer.writeln('${AppLocalizations.get('mobile_number')}: $_currentMobileNumber');
     }
-    _copyToClipboard('Wallet details', buffer.toString().trim());
+    _copyToClipboard(AppLocalizations.get('wallet_details'), buffer.toString().trim());
   }
 
   String _maskCardNumber(String cardNumber) {
@@ -168,7 +168,7 @@ class _AccountDetailScreenState extends State<AccountDetailScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Edit Account Info',
+                    AppLocalizations.get('edit_account_info'),
                     style: GoogleFonts.outfit(
                       fontWeight: FontWeight.bold,
                       fontSize: 20,
@@ -183,7 +183,7 @@ class _AccountDetailScreenState extends State<AccountDetailScreen> {
               ),
               const SizedBox(height: 24),
               Text(
-                'ACCOUNT NAME',
+                AppLocalizations.get('account_name'),
                 style: GoogleFonts.outfit(
                   color: AppColors.textGrey,
                   fontSize: 11,
@@ -200,7 +200,7 @@ class _AccountDetailScreenState extends State<AccountDetailScreen> {
               if (widget.account.type.toLowerCase().contains('bank')) ...[
                 const SizedBox(height: 24),
                 Text(
-                  'BANK ACCOUNT DETAILS',
+                  AppLocalizations.get('bank_account_details'),
                   style: GoogleFonts.outfit(
                     color: AppColors.textGrey,
                     fontSize: 11,
@@ -215,7 +215,7 @@ class _AccountDetailScreenState extends State<AccountDetailScreen> {
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
-                        'For security, do not enter PINs, CVVs, or passwords.',
+                        AppLocalizations.get('for_security_do_not'),
                         style: GoogleFonts.outfit(
                           color: Colors.redAccent,
                           fontSize: 11,
@@ -255,7 +255,7 @@ class _AccountDetailScreenState extends State<AccountDetailScreen> {
               ] else if (widget.account.type.toLowerCase().contains('mfs') || widget.account.type.toLowerCase().contains('phone')) ...[
                 const SizedBox(height: 24),
                 Text(
-                  'MOBILE WALLET DETAILS',
+                  AppLocalizations.get('mobile_wallet_details'),
                   style: GoogleFonts.outfit(
                     color: AppColors.textGrey,
                     fontSize: 11,
@@ -326,7 +326,7 @@ class _AccountDetailScreenState extends State<AccountDetailScreen> {
                       ],
                     ),
                     child: Text(
-                      'Save Changes',
+                      AppLocalizations.get('save_changes'),
                       style: GoogleFonts.outfit(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
@@ -430,7 +430,7 @@ class _AccountDetailScreenState extends State<AccountDetailScreen> {
       child: Column(
         children: [
           Text(
-            'FULL BALANCE',
+            AppLocalizations.get('full_balance'),
             style: GoogleFonts.outfit(
               color: AppColors.textGrey,
               fontSize: 11,
@@ -510,7 +510,7 @@ class _AccountDetailScreenState extends State<AccountDetailScreen> {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            'ACCOUNT INFORMATION',
+                            AppLocalizations.get('account_information'),
                             overflow: TextOverflow.ellipsis,
                             maxLines: 1,
                             style: GoogleFonts.outfit(
@@ -539,7 +539,7 @@ class _AccountDetailScreenState extends State<AccountDetailScreen> {
                           Icon(Icons.copy_all_rounded, color: AppColors.brandPrimary, size: 14),
                           const SizedBox(width: 4),
                           Text(
-                            'COPY ALL',
+                            AppLocalizations.get('copy_all'),
                             style: GoogleFonts.outfit(
                               color: AppColors.brandPrimary,
                               fontSize: 9.5,
@@ -556,15 +556,15 @@ class _AccountDetailScreenState extends State<AccountDetailScreen> {
               const SizedBox(height: 16),
               if (hasBankDetails) ...[
                 if (_currentAccountNumber != null && _currentAccountNumber!.isNotEmpty)
-                  _buildDetailRow('Account Number', _currentAccountNumber!, Icons.badge_outlined),
+                  _buildDetailRow(AppLocalizations.get('account_number'), _currentAccountNumber!, Icons.badge_outlined),
                 if (_currentCardNumber != null && _currentCardNumber!.isNotEmpty)
-                  _buildDetailRow('Card Number', _maskCardNumber(_currentCardNumber!), Icons.credit_card_rounded, rawValue: _currentCardNumber),
+                  _buildDetailRow(AppLocalizations.get('card_number'), _maskCardNumber(_currentCardNumber!), Icons.credit_card_rounded, rawValue: _currentCardNumber),
                 if (_currentBranchName != null && _currentBranchName!.isNotEmpty)
-                  _buildDetailRow('Branch Name', _currentBranchName!, Icons.location_on_outlined),
+                  _buildDetailRow(AppLocalizations.get('branch_name'), _currentBranchName!, Icons.location_on_outlined),
                 if (_currentRoutingNumber != null && _currentRoutingNumber!.isNotEmpty)
-                  _buildDetailRow('Routing Number', _currentRoutingNumber!, Icons.tag_rounded),
+                  _buildDetailRow(AppLocalizations.get('routing_number'), _currentRoutingNumber!, Icons.tag_rounded),
               ] else if (hasMfsDetails) ...[
-                _buildDetailRow('Mobile Number', _currentMobileNumber!, Icons.phone_android_rounded),
+                _buildDetailRow(AppLocalizations.get('mobile_number'), _currentMobileNumber!, Icons.phone_android_rounded),
               ],
             ],
           ),
@@ -653,7 +653,7 @@ class _AccountDetailScreenState extends State<AccountDetailScreen> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'OWNER SHARE DISTRIBUTION',
+                      AppLocalizations.get('owner_share_distribution'),
                       overflow: TextOverflow.ellipsis,
                       maxLines: 1,
                       style: GoogleFonts.outfit(
@@ -753,7 +753,7 @@ class _AccountDetailScreenState extends State<AccountDetailScreen> {
           Expanded(
             child: _actionButton(
               context, 
-              'Add Money', 
+              AppLocalizations.get('add_money'), 
               Icons.add_rounded, 
               AppColors.brandPrimary,
               () => Navigator.pushNamed(
@@ -770,7 +770,7 @@ class _AccountDetailScreenState extends State<AccountDetailScreen> {
           Expanded(
             child: _actionButton(
               context, 
-              'Withdraw', 
+              AppLocalizations.get('withdraw'), 
               Icons.remove_rounded, 
               Colors.redAccent,
               () => Navigator.pushNamed(
@@ -831,7 +831,7 @@ class _AccountDetailScreenState extends State<AccountDetailScreen> {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'TRANSACTION HISTORY',
+                  AppLocalizations.get('transaction_history'),
                   overflow: TextOverflow.ellipsis,
                   maxLines: 1,
                   style: GoogleFonts.outfit(
@@ -856,7 +856,7 @@ class _AccountDetailScreenState extends State<AccountDetailScreen> {
                   child: Padding(
                     padding: const EdgeInsets.all(40),
                     child: Text(
-                      'No transactions recorded yet',
+                      AppLocalizations.get('no_transactions_recorded_yet'),
                       style: GoogleFonts.outfit(color: AppColors.textGrey, fontSize: 13.5),
                     ),
                   ),
