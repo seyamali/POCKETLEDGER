@@ -7,6 +7,7 @@ import 'package:pocketledger/features/auth/widgets/custom_text_field.dart';
 import 'package:pocketledger/core/constants/app_constants.dart';
 import 'package:pocketledger/core/widgets/scale_on_tap.dart';
 import 'package:pocketledger/core/widgets/glass_card.dart';
+import 'package:pocketledger/core/localization/app_localizations.dart';
 
 class AddAccountScreen extends StatefulWidget {
   const AddAccountScreen({super.key});
@@ -75,7 +76,7 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
 
   void _handleCreate() async {
     if (_nameController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter account name')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppLocalizations.get('please_enter_account_name'))));
       return;
     }
 
@@ -188,7 +189,7 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                     padding: const EdgeInsets.all(16),
                     child: CustomTextField(
                       controller: _nameController,
-                      hintText: 'e.g. DBBL, bKash, My Wallet',
+                      hintText: AppLocalizations.get('eg_dbbl_bkash_my'),
                       icon: Icons.edit_note_outlined,
                     ),
                   ),
@@ -230,34 +231,34 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                             const SizedBox(height: 18),
                             CustomTextField(
                               controller: _accountNumberController,
-                              hintText: 'Account Number',
+                              hintText: AppLocalizations.get('account_number'),
                               icon: Icons.badge_outlined,
                               keyboardType: TextInputType.number,
                             ),
                             const SizedBox(height: 16),
                             CustomTextField(
                               controller: _cardNumberController,
-                              hintText: 'Card Number (e.g. last 4 digits)',
+                              hintText: AppLocalizations.get('card_number_eg_last'),
                               icon: Icons.credit_card_rounded,
                               keyboardType: TextInputType.number,
                             ),
                             const SizedBox(height: 16),
                             CustomTextField(
                               controller: _branchNameController,
-                              hintText: 'Branch Name',
+                              hintText: AppLocalizations.get('branch_name'),
                               icon: Icons.location_on_outlined,
                             ),
                             const SizedBox(height: 16),
                             CustomTextField(
                               controller: _routingNumberController,
-                              hintText: 'Routing Number',
+                              hintText: AppLocalizations.get('routing_number'),
                               icon: Icons.tag_rounded,
                               keyboardType: TextInputType.number,
                             ),
                           ] else if (_selectedType == 'MFS') ...[
                             CustomTextField(
                               controller: _mobileNumberController,
-                              hintText: 'Wallet Mobile Number',
+                              hintText: AppLocalizations.get('wallet_mobile_number'),
                               icon: Icons.phone_android_rounded,
                               keyboardType: TextInputType.phone,
                             ),

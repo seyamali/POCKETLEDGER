@@ -7,6 +7,7 @@ import 'package:pocketledger/services/account_service.dart';
 import 'package:pocketledger/services/transaction_service.dart';
 import 'package:pocketledger/features/auth/widgets/custom_text_field.dart';
 import 'package:pocketledger/core/constants/app_constants.dart';
+import 'package:pocketledger/core/localization/app_localizations.dart';
 
 class SavingsScreen extends StatefulWidget {
   const SavingsScreen({super.key});
@@ -78,7 +79,7 @@ class _SavingsScreenState extends State<SavingsScreen> {
     final savingsAccounts = allAccounts.where((a) => a.type == 'Savings').toList();
 
     if (savingsAccounts.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Add a savings account first!')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppLocalizations.get('add_a_savings_account'))));
       return;
     }
 

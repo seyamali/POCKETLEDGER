@@ -17,6 +17,8 @@ import 'package:pocketledger/models/transaction_model.dart';
 import 'package:pocketledger/services/goal_service.dart';
 import 'package:pocketledger/core/constants/app_constants.dart';
 import 'package:pocketledger/services/theme_service.dart';
+import 'package:pocketledger/core/localization/app_localizations.dart';
+import 'package:pocketledger/services/language_service.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -35,11 +37,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return ThemeBuilder(builder: (context) => Scaffold(
-      backgroundColor: AppColors.pageBackground,
-      body: StreamBuilder<DocumentSnapshot>(
-        stream: _authService.getUserProfile(),
-        builder: (context, snapshot) {
+    return ValueListenableBuilder<String>(
+      valueListenable: LanguageService().languageNotifier,
+      builder: (context, lang, _) {
+        return ThemeBuilder(builder: (context) => Scaffold(
+          backgroundColor: AppColors.pageBackground,
+          body: StreamBuilder<DocumentSnapshot>(
+            stream: _authService.getUserProfile(),
+            builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return Center(child: CircularProgressIndicator(color: AppColors.primaryGreen));
           }
@@ -65,11 +70,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   padding: const EdgeInsets.fromLTRB(20, 24, 20, 40),
                   child: Column(
                     children: [
-                      _buildSectionTitle('Account Management'),
+                      _buildSectionTitle(AppLocalizations.get('account_settings')),
                       const SizedBox(height: 16),
                       _buildSettingItem(
                         icon: Icons.edit_rounded,
-                        title: 'Edit Profile',
+                        title: AppLocalizations.get('edit_profile'),
                         subtitle: 'Change your name and avatar',
                         onTap: () => _showEditProfile(name, profilePic),
                       ),
@@ -96,12 +101,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         subtitle: 'Alerts and reminders',
                         onTap: () {},
                       ),
-                      _buildSettingItem(
-                        icon: Icons.language_rounded,
-                        title: 'Language',
-                        subtitle: 'English (US)',
-                        onTap: () {},
-                      ),
+                      _buildLanguageToggle(),
 
                       const SizedBox(height: 32),
                       _buildSectionTitle('Reports & Data'),
@@ -133,7 +133,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             children: [
                               const Icon(Icons.logout_rounded, color: Colors.red, size: 20),
                               const SizedBox(width: 10),
-                              Text('Sign Out', style: GoogleFonts.outfit(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 16)),
+                              Text(AppLocalizations.get('log_out'), style: GoogleFonts.outfit(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 16)),
                             ],
                           ),
                         ),
@@ -147,6 +147,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         },
       ),
     )); // closes Scaffold + ThemeBuilder
+      },
+    );
   }
 
   Widget _buildHeader(String name, String email, String? profilePic) {
@@ -183,7 +185,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         onPressed: () => Navigator.pop(context),
                         icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 18),
                       ),
-                      Text('Profile', style: GoogleFonts.outfit(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                      Text(AppLocalizations.get('profile'), style: GoogleFonts.outfit(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
                       const SizedBox(width: 48),
                     ],
                   ),
@@ -316,7 +318,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Dark Mode', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textBlack)),
+                    Text(AppLocalizations.get('dark_mode'), style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textBlack)),
                     Text(isDark ? 'Sleek dark interface active' : 'Switch to dark interface', style: GoogleFonts.outfit(fontSize: 13, color: AppColors.textGrey)),
                   ],
                 ),
@@ -327,6 +329,83 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 onChanged: (val) async {
                   await _themeService.toggleTheme(val);
                 },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildLanguageToggle() {
+    return ValueListenableBuilder<String>(
+      valueListenable: LanguageService().languageNotifier,
+      builder: (context, langCode, _) {
+        final isBengali = langCode == 'bn';
+        return Container(
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: AppColors.cardWhite,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 10, offset: const Offset(0, 4))],
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryGreen.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(
+                  Icons.language_rounded,
+                  color: AppColors.primaryGreen,
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(AppLocalizations.get('language'), style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textBlack)),
+                    Text(isBengali ? 'বাংলা' : 'English', style: GoogleFonts.outfit(fontSize: 13, color: AppColors.textGrey)),
+                  ],
+                ),
+              ),
+              Container(
+                decoration: BoxDecoration(
+                  color: AppColors.pageBackground,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    GestureDetector(
+                      onTap: () => LanguageService().setLanguage('en'),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: !isBengali ? AppColors.primaryGreen : Colors.transparent,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text('Eng', style: GoogleFonts.outfit(color: !isBengali ? Colors.white : AppColors.textGrey, fontWeight: FontWeight.bold, fontSize: 13)),
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () => LanguageService().setLanguage('bn'),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: isBengali ? AppColors.primaryGreen : Colors.transparent,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text('বাং', style: GoogleFonts.outfit(color: isBengali ? Colors.white : AppColors.textGrey, fontWeight: FontWeight.bold, fontSize: 13)),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),

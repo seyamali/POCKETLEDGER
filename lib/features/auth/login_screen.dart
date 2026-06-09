@@ -4,6 +4,8 @@ import 'package:pocketledger/services/auth_service.dart';
 import 'package:pocketledger/app/theme.dart';
 import 'package:pocketledger/features/auth/widgets/custom_text_field.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:pocketledger/core/localization/app_localizations.dart';
+import 'package:pocketledger/services/language_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -78,16 +80,23 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return ThemeBuilder(
-      builder: (context) => Scaffold(
-        backgroundColor: AppColors.background,
-        appBar: AppBar(
+    return ValueListenableBuilder<String>(
+      valueListenable: LanguageService().languageNotifier,
+      builder: (context, lang, _) {
+        return ThemeBuilder(
+          builder: (context) => Scaffold(
+            backgroundColor: AppColors.background,
+            appBar: AppBar(
           backgroundColor: AppColors.background,
           elevation: 0,
           leading: IconButton(
             icon: Icon(Icons.arrow_back, color: AppColors.textBlack),
             onPressed: () => Navigator.pop(context),
           ),
+          actions: [
+            _buildLanguageToggle(),
+            const SizedBox(width: 8),
+          ],
         ),
         body: SafeArea(
           child: SingleChildScrollView(
@@ -99,7 +108,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 Center(child: Image.asset('assets/images/logo.png', height: 60)),
                 const SizedBox(height: 40),
                 Text(
-                  'Welcome Back',
+                  AppLocalizations.get('welcome_back'),
                   style: GoogleFonts.outfit(
                     color: AppColors.textBlack,
                     fontSize: 32,
@@ -108,7 +117,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Enter your credentials to continue',
+                  AppLocalizations.get('login_subtitle'),
                   style: GoogleFonts.outfit(
                     color: AppColors.textGrey,
                     fontSize: 16,
@@ -117,7 +126,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 40),
                 
                 Text(
-                  'Email Address',
+                  AppLocalizations.get('email'),
                   style: GoogleFonts.outfit(
                     color: AppColors.textBlack,
                     fontSize: 14,
@@ -127,7 +136,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 10),
                 _buildTextField(
                   controller: _emailController,
-                  hint: 'name@example.com',
+                  hint: AppLocalizations.get('email_hint'),
                   icon: Icons.email_outlined,
                   focusNode: _emailFocus,
                   isFocused: _emailFocus.hasFocus,
@@ -136,7 +145,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 20),
                 
                 Text(
-                  'Password',
+                  AppLocalizations.get('password'),
                   style: GoogleFonts.outfit(
                     color: AppColors.textBlack,
                     fontSize: 14,
@@ -146,7 +155,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 10),
                 _buildTextField(
                   controller: _passwordController,
-                  hint: '••••••••',
+                  hint: AppLocalizations.get('password_hint'),
                   icon: Icons.lock_outline,
                   focusNode: _passwordFocus,
                   isFocused: _passwordFocus.hasFocus,
@@ -222,7 +231,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
                           )
                         : Text(
-                            'Sign In',
+                            AppLocalizations.get('sign_in'),
                             style: GoogleFonts.outfit(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -237,13 +246,13 @@ class _LoginScreenState extends State<LoginScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      "Don't have an account? ",
+                      AppLocalizations.get('no_account'),
                       style: GoogleFonts.outfit(color: AppColors.textGrey),
                     ),
                     GestureDetector(
                       onTap: () => Navigator.pushNamed(context, '/signup'),
                       child: Text(
-                        'Create Account',
+                        AppLocalizations.get('sign_up_now'),
                         style: GoogleFonts.outfit(
                           color: AppColors.primaryGreen,
                           fontWeight: FontWeight.bold,
@@ -257,6 +266,8 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ),
       ),
+    );
+      },
     );
   }
 
@@ -280,6 +291,61 @@ class _LoginScreenState extends State<LoginScreen> {
       obscureText: obscureText,
       suffixIcon: suffixIcon,
       keyboardType: keyboardType ?? TextInputType.text,
+    );
+  }
+
+  Widget _buildLanguageToggle() {
+    final bool isBengali = LanguageService().isBengali;
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 10),
+      decoration: BoxDecoration(
+        color: AppColors.cardWhite,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.primaryGreen.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          GestureDetector(
+            onTap: () => LanguageService().setLanguage('en'),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              decoration: BoxDecoration(
+                color: !isBengali ? AppColors.primaryGreen : Colors.transparent,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                'Eng',
+                style: GoogleFonts.outfit(
+                  color: !isBengali ? Colors.white : AppColors.textGrey,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+          ),
+          GestureDetector(
+            onTap: () => LanguageService().setLanguage('bn'),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              decoration: BoxDecoration(
+                color: isBengali ? AppColors.primaryGreen : Colors.transparent,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                'বাং',
+                style: GoogleFonts.outfit(
+                  color: isBengali ? Colors.white : AppColors.textGrey,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

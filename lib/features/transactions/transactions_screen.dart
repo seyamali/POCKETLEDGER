@@ -8,6 +8,7 @@ import 'package:pocketledger/core/widgets/skeleton_loader.dart';
 import 'package:intl/intl.dart';
 import 'package:pocketledger/core/widgets/scale_on_tap.dart';
 import 'package:pocketledger/core/widgets/glass_card.dart';
+import 'package:pocketledger/core/localization/app_localizations.dart';
 
 class TransactionsScreen extends StatefulWidget {
   const TransactionsScreen({super.key});
@@ -380,7 +381,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
           focusNode: _searchFocusNode,
           onChanged: (value) => setState(() => _searchQuery = value.toLowerCase()),
           decoration: InputDecoration(
-            hintText: 'Search by note, category, or amount...',
+            hintText: AppLocalizations.get('search_by_note_category'),
             hintStyle: GoogleFonts.outfit(color: AppColors.textGrey, fontSize: 14),
             prefixIcon: Icon(Icons.search_rounded, color: isFocused ? AppColors.brandPrimary : AppColors.textGrey, size: 20),
             suffixIcon: _searchQuery.isNotEmpty

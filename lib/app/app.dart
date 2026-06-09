@@ -5,27 +5,35 @@ import 'package:pocketledger/features/auth/lock_screen.dart';
 import 'package:pocketledger/services/security_service.dart';
 
 import 'package:pocketledger/services/theme_service.dart';
+import 'package:pocketledger/services/language_service.dart';
 
 class PocketLedgerApp extends StatelessWidget {
   const PocketLedgerApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<ThemeMode>(
-      valueListenable: ThemeService().themeModeNotifier,
-      builder: (context, themeMode, _) {
-        return MaterialApp(
-          title: 'PocketLedger',
-          navigatorKey: AppRoutes.navigatorKey,
-          debugShowCheckedModeBanner: false,
-          theme: appTheme,
-          darkTheme: darkTheme,
-          themeMode: themeMode,
-          initialRoute: AppRoutes.splash,
-          routes: AppRoutes.routes,
-          builder: (context, child) {
-            if (child == null) return const SizedBox();
-            return SecurityLifecycleWrapper(child: child);
+    return ValueListenableBuilder<String>(
+      valueListenable: LanguageService().languageNotifier,
+      builder: (context, langCode, _) {
+          return ValueListenableBuilder<ThemeMode>(
+            valueListenable: ThemeService().themeModeNotifier,
+            builder: (context, themeMode, _) {
+              return MaterialApp(
+                key: ValueKey(langCode),
+                title: 'PocketLedger',
+              navigatorKey: AppRoutes.navigatorKey,
+              debugShowCheckedModeBanner: false,
+              theme: appTheme,
+              darkTheme: darkTheme,
+              themeMode: themeMode,
+              locale: Locale(langCode),
+              initialRoute: AppRoutes.splash,
+              routes: AppRoutes.routes,
+              builder: (context, child) {
+                if (child == null) return const SizedBox();
+                return SecurityLifecycleWrapper(child: child);
+              },
+            );
           },
         );
       },

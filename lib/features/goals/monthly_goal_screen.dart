@@ -14,6 +14,7 @@ import 'package:pocketledger/core/constants/app_constants.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:pocketledger/core/widgets/scale_on_tap.dart';
 import 'package:pocketledger/core/widgets/glass_card.dart';
+import 'package:pocketledger/core/localization/app_localizations.dart';
 
 class MonthlyGoalScreen extends StatefulWidget {
   const MonthlyGoalScreen({super.key});
@@ -386,7 +387,7 @@ class _MonthlyGoalScreenState extends State<MonthlyGoalScreen> {
   void _exportToCSV(List<TransactionModel> txs) {
     if (txs.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No transactions to export for this month')),
+        SnackBar(content: Text(AppLocalizations.get('no_transactions_to_export'))),
       );
       return;
     }

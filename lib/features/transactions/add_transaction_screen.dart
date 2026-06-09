@@ -11,6 +11,7 @@ import 'package:pocketledger/models/category_model.dart';
 import 'package:pocketledger/models/credit_card_model.dart';
 import 'package:pocketledger/services/credit_card_service.dart';
 import 'package:pocketledger/core/constants/app_icons.dart';
+import 'package:pocketledger/core/localization/app_localizations.dart';
 
 class AddTransactionScreen extends StatefulWidget {
   final TransactionType initialType;
@@ -87,21 +88,21 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
     if (!isCreditCard && _selectedAccount == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select payment source')),
+        SnackBar(content: Text(AppLocalizations.get('please_select_payment_source'))),
       );
       return;
     }
 
     if (_amountController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter amount')),
+        SnackBar(content: Text(AppLocalizations.get('please_enter_amount'))),
       );
       return;
     }
 
     if (_selectedType == TransactionType.transfer && _toAccount == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select destination account')),
+        SnackBar(content: Text(AppLocalizations.get('please_select_destination_account'))),
       );
       return;
     }
@@ -618,7 +619,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         controller: _noteController,
         style: GoogleFonts.outfit(color: AppColors.textBlack, fontSize: 15),
         decoration: InputDecoration(
-          hintText: 'Add a note...',
+          hintText: AppLocalizations.get('add_a_note'),
           hintStyle: TextStyle(color: Colors.grey.shade400),
           border: InputBorder.none,
           icon: Icon(Icons.sticky_note_2_rounded, color: AppColors.primaryGreen.withValues(alpha: 0.5), size: 20),

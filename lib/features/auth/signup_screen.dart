@@ -3,6 +3,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:pocketledger/services/auth_service.dart';
 import 'package:pocketledger/features/auth/widgets/custom_text_field.dart';
 import 'package:pocketledger/app/theme.dart';
+import 'package:pocketledger/services/language_service.dart';
+import 'package:pocketledger/core/localization/app_localizations.dart';
 
 class SignupScreen extends StatefulWidget {
    const SignupScreen({super.key});
@@ -63,31 +65,42 @@ class _SignupScreenState extends State<SignupScreen> {
  
    @override
    Widget build(BuildContext context) {
-     return ThemeBuilder(
-       builder: (context) => Scaffold(
-         backgroundColor: AppColors.background,
-         body: SafeArea(
-           child: SingleChildScrollView(
-             padding: const EdgeInsets.all(24.0),
-             child: Column(
-               crossAxisAlignment: CrossAxisAlignment.start,
-               children: [
-                 const SizedBox(height: 30),
-                 IconButton(
-                   icon: Icon(Icons.arrow_back_ios_new, color: AppColors.textBlack),
-                   onPressed: () => Navigator.pop(context),
-                 ),
-                 const SizedBox(height: 20),
-                 Text(
-                   'Create Account',
-                   style: GoogleFonts.outfit(
-                     color: AppColors.textBlack,
-                     fontSize: 32,
-                     fontWeight: FontWeight.bold,
-                   ),
-                 ),
-                 Text(
-                   'Start your journey to financial freedom',
+     return ValueListenableBuilder<String>(
+       valueListenable: LanguageService().languageNotifier,
+       builder: (context, lang, _) {
+         return ThemeBuilder(
+           builder: (context) => Scaffold(
+             backgroundColor: AppColors.background,
+             appBar: AppBar(
+               backgroundColor: AppColors.background,
+               elevation: 0,
+               leading: IconButton(
+                 icon: Icon(Icons.arrow_back, color: AppColors.textBlack),
+                 onPressed: () => Navigator.pop(context),
+               ),
+               actions: [
+                 _buildLanguageToggle(),
+                 const SizedBox(width: 8),
+               ],
+             ),
+             body: SafeArea(
+               child: SingleChildScrollView(
+                 padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                 child: Column(
+                   crossAxisAlignment: CrossAxisAlignment.start,
+                   children: [
+                     const SizedBox(height: 10),
+                     Text(
+                       AppLocalizations.get('create_account'),
+                       style: GoogleFonts.outfit(
+                         color: AppColors.textBlack,
+                         fontSize: 32,
+                         fontWeight: FontWeight.bold,
+                       ),
+                     ),
+                     const SizedBox(height: 8),
+                     Text(
+                       AppLocalizations.get('signup_subtitle'),
                    style: GoogleFonts.outfit(
                      color: AppColors.textGrey,
                      fontSize: 16,
@@ -115,7 +128,7 @@ class _SignupScreenState extends State<SignupScreen> {
                          listenable: _nameFocus,
                          builder: (context, child) => CustomTextField(
                            controller: _nameController,
-                           hintText: 'Full Name',
+                           hintText: AppLocalizations.get('full_name'),
                            icon: Icons.person_outline,
                            focusNode: _nameFocus,
                            isFocused: _nameFocus.hasFocus,
@@ -126,7 +139,7 @@ class _SignupScreenState extends State<SignupScreen> {
                          listenable: _emailFocus,
                          builder: (context, child) => CustomTextField(
                            controller: _emailController,
-                           hintText: 'Email Address',
+                           hintText: AppLocalizations.get('email'),
                            icon: Icons.email_outlined,
                            keyboardType: TextInputType.emailAddress,
                            focusNode: _emailFocus,
@@ -138,7 +151,7 @@ class _SignupScreenState extends State<SignupScreen> {
                          listenable: _passwordFocus,
                          builder: (context, child) => CustomTextField(
                            controller: _passwordController,
-                           hintText: 'Password',
+                           hintText: AppLocalizations.get('password'),
                            icon: Icons.lock_outline,
                            obscureText: !_isPasswordVisible,
                            focusNode: _passwordFocus,
@@ -158,7 +171,7 @@ class _SignupScreenState extends State<SignupScreen> {
                          listenable: _confirmFocus,
                          builder: (context, child) => CustomTextField(
                            controller: _confirmPasswordController,
-                           hintText: 'Confirm Password',
+                           hintText: AppLocalizations.get('confirm_password'),
                            icon: Icons.lock_reset_outlined,
                            obscureText: true,
                            focusNode: _confirmFocus,
@@ -180,7 +193,7 @@ class _SignupScreenState extends State<SignupScreen> {
                            child: _isLoading 
                              ? const CircularProgressIndicator(color: Colors.white)
                              : Text(
-                                 'Create Account',
+                                 AppLocalizations.get('create_account'),
                                  style: GoogleFonts.outfit(
                                    fontWeight: FontWeight.bold,
                                    fontSize: 16,
@@ -197,11 +210,11 @@ class _SignupScreenState extends State<SignupScreen> {
                    child: Row(
                      mainAxisAlignment: MainAxisAlignment.center,
                      children: [
-                       Text("Already have an account? ", style: GoogleFonts.outfit(color: AppColors.textGrey)),
+                       Text(AppLocalizations.get('already_have_account'), style: GoogleFonts.outfit(color: AppColors.textGrey)),
                        GestureDetector(
                          onTap: () => Navigator.pop(context),
                          child: Text(
-                           'Sign In',
+                           AppLocalizations.get('sign_in'),
                            style: GoogleFonts.outfit(
                              color: AppColors.primaryGreen,
                              fontWeight: FontWeight.bold,
@@ -217,6 +230,63 @@ class _SignupScreenState extends State<SignupScreen> {
            ),
          ),
        ),
-     );
+      );
+     },
+    );
    }
+
+  Widget _buildLanguageToggle() {
+    final bool isBengali = LanguageService().isBengali;
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 10),
+      decoration: BoxDecoration(
+        color: AppColors.cardWhite,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.primaryGreen.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          GestureDetector(
+            onTap: () => LanguageService().setLanguage('en'),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              decoration: BoxDecoration(
+                color: !isBengali ? AppColors.primaryGreen : Colors.transparent,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                'Eng',
+                style: GoogleFonts.outfit(
+                  color: !isBengali ? Colors.white : AppColors.textGrey,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+          ),
+          GestureDetector(
+            onTap: () => LanguageService().setLanguage('bn'),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              decoration: BoxDecoration(
+                color: isBengali ? AppColors.primaryGreen : Colors.transparent,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                'বাং',
+                style: GoogleFonts.outfit(
+                  color: isBengali ? Colors.white : AppColors.textGrey,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

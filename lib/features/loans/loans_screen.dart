@@ -9,6 +9,7 @@ import 'package:pocketledger/features/loans/add_loan_screen.dart';
 import 'package:pocketledger/features/loans/loan_detail_screen.dart';
 import 'package:pocketledger/core/widgets/scale_on_tap.dart';
 import 'package:pocketledger/core/widgets/glass_card.dart';
+import 'package:pocketledger/core/localization/app_localizations.dart';
 
 class LoansScreen extends StatefulWidget {
   const LoansScreen({super.key});
@@ -298,7 +299,7 @@ class _LoansScreenState extends State<LoansScreen> {
           focusNode: _searchFocusNode,
           onChanged: (value) => setState(() => _searchQuery = value.toLowerCase()),
           decoration: InputDecoration(
-            hintText: 'Search by person name or note...',
+            hintText: AppLocalizations.get('search_by_person_name'),
             hintStyle: GoogleFonts.outfit(color: AppColors.secondaryText, fontSize: 13),
             prefixIcon: Icon(Icons.search_rounded, color: isFocused ? AppColors.brandPrimary : AppColors.secondaryText, size: 20),
             suffixIcon: _searchQuery.isNotEmpty

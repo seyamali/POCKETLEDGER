@@ -10,6 +10,7 @@ import 'package:pocketledger/services/account_service.dart';
 import 'package:pocketledger/services/recurring_bill_service.dart';
 import 'package:pocketledger/core/widgets/scale_on_tap.dart';
 import 'package:pocketledger/core/widgets/glass_card.dart';
+import 'package:pocketledger/core/localization/app_localizations.dart';
 
 class SubscriptionsScreen extends StatefulWidget {
   const SubscriptionsScreen({super.key});
@@ -712,7 +713,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
               await _billService.deleteRecurringBill(id);
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.error, foregroundColor: Colors.white),
-            child: const Text('Delete'),
+            child: Text(AppLocalizations.get('delete')),
           ),
         ],
       ),

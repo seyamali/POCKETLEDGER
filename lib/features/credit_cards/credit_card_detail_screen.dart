@@ -6,6 +6,7 @@ import 'package:pocketledger/services/credit_card_service.dart';
 import 'package:pocketledger/features/credit_cards/add_credit_card_screen.dart';
 import 'package:pocketledger/app/routes.dart';
 import 'package:pocketledger/models/transaction_model.dart';
+import 'package:pocketledger/core/localization/app_localizations.dart';
 
 class CreditCardDetailScreen extends StatefulWidget {
   final String cardId;
@@ -261,12 +262,12 @@ class _CreditCardDetailScreenState extends State<CreditCardDetailScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Card'),
-        content: const Text('Are you sure you want to delete this credit card? This action cannot be undone.'),
+        title: Text(AppLocalizations.get('delete_card')),
+        content: Text(AppLocalizations.get('are_you_sure_you')),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(AppLocalizations.get('cancel')),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),

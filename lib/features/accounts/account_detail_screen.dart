@@ -12,6 +12,7 @@ import 'package:pocketledger/core/widgets/scale_on_tap.dart';
 import 'package:pocketledger/core/widgets/glass_card.dart';
 import 'package:pocketledger/core/constants/app_constants.dart';
 import 'package:pocketledger/features/auth/widgets/custom_text_field.dart';
+import 'package:pocketledger/core/localization/app_localizations.dart';
 
 class AccountDetailScreen extends StatefulWidget {
   final AccountModel account;
@@ -193,7 +194,7 @@ class _AccountDetailScreenState extends State<AccountDetailScreen> {
               const SizedBox(height: 12),
               CustomTextField(
                 controller: nameCtrl,
-                hintText: 'Account Name',
+                hintText: AppLocalizations.get('account_name_1'),
                 icon: Icons.edit_note_outlined,
               ),
               if (widget.account.type.toLowerCase().contains('bank')) ...[
@@ -227,27 +228,27 @@ class _AccountDetailScreenState extends State<AccountDetailScreen> {
                 const SizedBox(height: 12),
                 CustomTextField(
                   controller: accNumCtrl,
-                  hintText: 'Account Number',
+                  hintText: AppLocalizations.get('account_number'),
                   icon: Icons.badge_outlined,
                   keyboardType: TextInputType.number,
                 ),
                 const SizedBox(height: 14),
                 CustomTextField(
                   controller: cardNumCtrl,
-                  hintText: 'Card Number (last 4 digits or full)',
+                  hintText: AppLocalizations.get('card_number_last_4'),
                   icon: Icons.credit_card_rounded,
                   keyboardType: TextInputType.number,
                 ),
                 const SizedBox(height: 14),
                 CustomTextField(
                   controller: branchCtrl,
-                  hintText: 'Branch Name',
+                  hintText: AppLocalizations.get('branch_name'),
                   icon: Icons.location_on_outlined,
                 ),
                 const SizedBox(height: 14),
                 CustomTextField(
                   controller: routingCtrl,
-                  hintText: 'Routing Number',
+                  hintText: AppLocalizations.get('routing_number'),
                   icon: Icons.tag_rounded,
                   keyboardType: TextInputType.number,
                 ),
@@ -265,7 +266,7 @@ class _AccountDetailScreenState extends State<AccountDetailScreen> {
                 const SizedBox(height: 12),
                 CustomTextField(
                   controller: mobileCtrl,
-                  hintText: 'Wallet Mobile Number',
+                  hintText: AppLocalizations.get('wallet_mobile_number'),
                   icon: Icons.phone_android_rounded,
                   keyboardType: TextInputType.phone,
                 ),
@@ -278,7 +279,7 @@ class _AccountDetailScreenState extends State<AccountDetailScreen> {
                   onTap: () async {
                     if (nameCtrl.text.isEmpty) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Please enter account name')),
+                        SnackBar(content: Text(AppLocalizations.get('please_enter_account_name'))),
                       );
                       return;
                     }

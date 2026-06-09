@@ -10,6 +10,7 @@ import 'package:pocketledger/services/account_service.dart';
 import 'package:pocketledger/core/constants/app_constants.dart';
 import 'package:pocketledger/core/widgets/scale_on_tap.dart';
 import 'package:pocketledger/core/widgets/glass_card.dart';
+import 'package:pocketledger/core/localization/app_localizations.dart';
 
 class AddLoanScreen extends StatefulWidget {
   const AddLoanScreen({super.key});
@@ -60,7 +61,7 @@ class _AddLoanScreenState extends State<AddLoanScreen> {
   void _handleSave() async {
     final personName = _autoCompleteController?.text ?? _personNameController.text;
     if (personName.isEmpty || _amountController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter name and amount')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppLocalizations.get('please_enter_name_and'))));
       return;
     }
 
@@ -323,7 +324,7 @@ class _AddLoanScreenState extends State<AddLoanScreen> {
                 return CustomTextField(
                   controller: fieldTextEditingController,
                   focusNode: fieldFocusNode,
-                  hintText: 'Person Name (e.g. Rahim)',
+                  hintText: AppLocalizations.get('person_name_eg_rahim'),
                   icon: Icons.person_outline_rounded,
                 );
               },
@@ -359,7 +360,7 @@ class _AddLoanScreenState extends State<AddLoanScreen> {
             const SizedBox(height: 16),
             CustomTextField(
               controller: _noteController,
-              hintText: 'Note (optional)',
+              hintText: AppLocalizations.get('note_optional_1'),
               icon: Icons.notes_rounded,
             ),
           ],

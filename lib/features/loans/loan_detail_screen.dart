@@ -12,6 +12,7 @@ import 'package:intl/intl.dart';
 import 'package:flutter/services.dart';
 import 'package:pocketledger/core/widgets/scale_on_tap.dart';
 import 'package:pocketledger/core/widgets/glass_card.dart';
+import 'package:pocketledger/core/localization/app_localizations.dart';
 
 class LoanDetailScreen extends StatefulWidget {
   final LoanModel loan;
@@ -81,7 +82,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
 
   void _handleAddPayment() async {
     if (_amountController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter an amount')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppLocalizations.get('please_enter_an_amount'))));
       return;
     }
 
@@ -89,7 +90,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
     if (paymentAmount <= 0) return;
 
     if (paymentAmount > widget.loan.remainingAmount) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Payment cannot exceed remaining balance')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppLocalizations.get('payment_cannot_exceed_remaining'))));
       return;
     }
 
@@ -242,7 +243,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                     const SizedBox(height: 24),
                     CustomTextField(
                       controller: _noteController,
-                      hintText: 'Note (Optional)',
+                      hintText: AppLocalizations.get('note_optional'),
                       icon: Icons.notes_rounded,
                     ),
                     const SizedBox(height: 32),
@@ -840,7 +841,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
               }
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.brandPrimary, foregroundColor: Colors.white),
-            child: const Text('Save'),
+            child: Text(AppLocalizations.get('save')),
           ),
         ],
       ),
@@ -907,7 +908,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
               onConfirm();
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.error, foregroundColor: Colors.white),
-            child: const Text('Confirm'),
+            child: Text(AppLocalizations.get('confirm')),
           ),
         ],
       ),

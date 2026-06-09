@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:pocketledger/app/theme.dart';
+import 'package:pocketledger/core/localization/app_localizations.dart';
 import 'package:pocketledger/services/account_service.dart';
 import 'package:pocketledger/services/auth_service.dart';
 import 'package:pocketledger/models/account_model.dart';
@@ -67,9 +68,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   static String getGreeting() {
     final hour = DateTime.now().hour;
-    if (hour < 12) return 'Good Morning';
-    if (hour < 17) return 'Good Afternoon';
-    return 'Good Evening';
+    if (hour < 12) return AppLocalizations.get('good_morning');
+    if (hour < 17) return AppLocalizations.get('good_afternoon');
+    return AppLocalizations.get('good_evening');
   }
 
   void _go(Widget screen) =>
@@ -96,7 +97,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               Map<String, List<Map<String, dynamic>>> ownerAccounts = {};
 
               for (var acc in accounts) {
-                if (acc.type == 'Savings') {
+                if (acc.type == AppLocalizations.get('savings')) {
                   savingsTotal += acc.totalBalance;
                 } else {
                   grandTotal += acc.totalBalance;
@@ -229,7 +230,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   SliverToBoxAdapter(
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(20, 28, 20, 0),
-                      child: _buildSectionRow('Recent Transactions', onTap: () => _go(const TransactionsScreen())),
+                      child: _buildSectionRow(AppLocalizations.get('recent_transactions'), onTap: () => _go(const TransactionsScreen())),
                     ),
                   ),
                   SliverToBoxAdapter(
@@ -274,7 +275,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           borderRadius: BorderRadius.circular(32),
           child: Stack(
             children: [
-              // Abstract Geometric Shapes for "Smart" look
+              // Abstract Geometric Shapes for AppLocalizations.get('smart') look
               Positioned(
                 top: -50, right: -30,
                 child: Transform.rotate(
@@ -314,7 +315,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('TOTAL ASSETS', 
+                            Text(AppLocalizations.get('total_assets'), 
                               style: GoogleFonts.outfit(color: Colors.white.withValues(alpha: 0.6), fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.5)),
                             const SizedBox(height: 8),
                             Row(
@@ -357,7 +358,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             children: [
                               Icon(Icons.analytics_outlined, color: AppColors.accentGold, size: 16),
                               const SizedBox(width: 8),
-                              Text('MEMBER BREAKDOWN', 
+                              Text(AppLocalizations.get('member_breakdown'), 
                                 style: GoogleFonts.outfit(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1)),
                             ],
                           ),
@@ -367,7 +368,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             physics: const BouncingScrollPhysics(),
                             child: Row(
                               children: ownerTotals.entries.map((e) {
-                                final label = e.key == AppConstants.ownerSelf ? 'Me' : e.key;
+                                final label = e.key == AppConstants.ownerSelf ? AppLocalizations.get('me') : e.key;
                                 final accs = ownerAccounts[e.key] ?? [];
                                 return GestureDetector(
                                   onTap: () => _showOwnerBreakdown(label, e.value, accs),
@@ -407,19 +408,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
   // ─────────────────── QUICK ACTIONS ───────────────────
   Widget _buildQuickActions() {
     final actions = [
-      {'label': 'Accounts',   'icon': Icons.account_balance_wallet_outlined, 'screen': const AccountsScreen()},
-      {'label': 'Records',    'icon': Icons.receipt_long_outlined,            'screen': const TransactionsScreen()},
-      {'label': 'Loans',      'icon': Icons.handshake_outlined,               'screen': const LoansScreen()},
-      {'label': 'Savings',    'icon': Icons.savings_outlined,                 'screen': const SavingsScreen()},
-      {'label': 'Credit',     'icon': Icons.credit_card_outlined,             'screen': const CreditCardsScreen()},
-      {'label': 'Goals',      'icon': Icons.track_changes_rounded,            'screen': const MonthlyGoalScreen()},
-      {'label': 'Bills',      'icon': Icons.event_repeat_rounded,             'screen': const SubscriptionsScreen()},
+      {'label': AppLocalizations.get('accounts'),   'icon': Icons.account_balance_wallet_outlined, 'screen': const AccountsScreen()},
+      {'label': AppLocalizations.get('records'),    'icon': Icons.receipt_long_outlined,            'screen': const TransactionsScreen()},
+      {'label': AppLocalizations.get('loans'),      'icon': Icons.handshake_outlined,               'screen': const LoansScreen()},
+      {'label': AppLocalizations.get('savings'),    'icon': Icons.savings_outlined,                 'screen': const SavingsScreen()},
+      {'label': AppLocalizations.get('credit'),     'icon': Icons.credit_card_outlined,             'screen': const CreditCardsScreen()},
+      {'label': AppLocalizations.get('goals'),      'icon': Icons.track_changes_rounded,            'screen': const MonthlyGoalScreen()},
+      {'label': AppLocalizations.get('bills'),      'icon': Icons.event_repeat_rounded,             'screen': const SubscriptionsScreen()},
     ];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _sectionTitle('Quick Actions'),
+        _sectionTitle(AppLocalizations.get('quick_actions')),
         const SizedBox(height: 16),
         Wrap(
           spacing: (MediaQuery.of(context).size.width - 40 - (58 * 4)) / 3 > 0 
@@ -460,7 +461,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _sectionTitle('Savings & Loans'),
+        _sectionTitle(AppLocalizations.get('savings_and_loans')),
         const SizedBox(height: 14),
         // Savings — gold card
         ScaleOnTap(
@@ -488,7 +489,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('My Savings', style: GoogleFonts.outfit(color: Colors.white.withValues(alpha: 0.85), fontSize: 12, fontWeight: FontWeight.w600)),
+                      Text(AppLocalizations.get('my_savings'), style: GoogleFonts.outfit(color: Colors.white.withValues(alpha: 0.85), fontSize: 12, fontWeight: FontWeight.w600)),
                       Text('৳ ${_fmt(savings)}', style: GoogleFonts.outfit(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
                     ],
                   ),
@@ -504,12 +505,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
           children: [
             Expanded(child: ScaleOnTap(
               onTap: () => _go(const LoansScreen()),
-              child: _loanCard('Loan Given', given, AppColors.primaryGreen, Icons.arrow_upward_rounded),
+              child: _loanCard(AppLocalizations.get('loan_given'), given, AppColors.primaryGreen, Icons.arrow_upward_rounded),
             )),
             const SizedBox(width: 12),
             Expanded(child: ScaleOnTap(
               onTap: () => _go(const LoansScreen()),
-              child: _loanCard('Loan Taken', taken, const Color(0xFFE67E22), Icons.arrow_downward_rounded),
+              child: _loanCard(AppLocalizations.get('loan_taken'), taken, const Color(0xFFE67E22), Icons.arrow_downward_rounded),
             )),
           ],
         ),
@@ -559,7 +560,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildSectionRow('Credit Cards', onTap: () => _go(const CreditCardsScreen())),
+            _buildSectionRow(AppLocalizations.get('credit_cards'), onTap: () => _go(const CreditCardsScreen())),
             const SizedBox(height: 14),
             ScaleOnTap(
               onTap: () => _go(const CreditCardsScreen()),
@@ -578,14 +579,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Total Balance', style: GoogleFonts.outfit(color: AppColors.textGrey, fontSize: 13)),
+                            Text(AppLocalizations.get('total_balance'), style: GoogleFonts.outfit(color: AppColors.textGrey, fontSize: 13)),
                             Text('৳ ${_fmt(summary['totalBalance'] ?? 0)}', style: GoogleFonts.outfit(color: AppColors.error, fontSize: 20, fontWeight: FontWeight.bold)),
                           ],
                         ),
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
-                            Text('Available Limit', style: GoogleFonts.outfit(color: AppColors.textGrey, fontSize: 13)),
+                            Text(AppLocalizations.get('available_limit'), style: GoogleFonts.outfit(color: AppColors.textGrey, fontSize: 13)),
                             Text('৳ ${_fmt((summary['totalLimit'] ?? 0) - (summary['totalBalance'] ?? 0))}', style: GoogleFonts.outfit(color: AppColors.primaryGreen, fontSize: 18, fontWeight: FontWeight.bold)),
                           ],
                         ),
@@ -615,11 +616,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   // ─────────────────── ACCOUNTS ───────────────────
   Widget _buildAccountsSection(List<AccountModel> accounts) {
-    final regular = accounts.where((a) => a.type != 'Savings').take(3).toList();
+    final regular = accounts.where((a) => a.type != AppLocalizations.get('savings')).take(3).toList();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionRow('Accounts', onTap: () => _go(const AccountsScreen())),
+        _buildSectionRow(AppLocalizations.get('accounts'), onTap: () => _go(const AccountsScreen())),
         const SizedBox(height: 14),
         ...regular.map((acc) => ScaleOnTap(
           onTap: () => _go(const AccountsScreen()),
@@ -675,8 +676,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Monthly Goals', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-                  Text('Track your income & expense targets', style: GoogleFonts.outfit(color: Colors.white70, fontSize: 12)),
+                  Text(AppLocalizations.get('monthly_goals'), style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                  Text(AppLocalizations.get('track_your_income_and_expense_targets'), style: GoogleFonts.outfit(color: Colors.white70, fontSize: 12)),
                 ],
               ),
             ),
@@ -763,7 +764,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           onTap: onTap,
           child: Row(
             children: [
-              Text('See all', style: GoogleFonts.outfit(fontSize: 13, color: AppColors.primaryGreen, fontWeight: FontWeight.w600)),
+              Text(AppLocalizations.get('see_all'), style: GoogleFonts.outfit(fontSize: 13, color: AppColors.primaryGreen, fontWeight: FontWeight.w600)),
               const SizedBox(width: 4),
               Icon(Icons.arrow_forward_ios_rounded, size: 12, color: AppColors.primaryGreen),
             ],
@@ -785,7 +786,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         if (!snapshot.hasData || snapshot.data!.isEmpty) {
           return Center(child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 24),
-            child: Text('No recent transactions', style: GoogleFonts.outfit(color: AppColors.textGrey)),
+            child: Text(AppLocalizations.get('no_recent_transactions'), style: GoogleFonts.outfit(color: AppColors.textGrey)),
           ));
         }
 
@@ -811,7 +812,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             if (isIncome) {
               prefix = '+';
             } else if (isOthers) {
-              if (tx.category.contains('Taken') || tx.category.contains('Received')) {
+              if (tx.category.contains(AppLocalizations.get('taken')) || tx.category.contains(AppLocalizations.get('received'))) {
                 prefix = '+';
               } else {
                 prefix = '-';
@@ -884,8 +885,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              _navItem(Icons.home_filled, 'Home', true),
-              _navItem(Icons.account_balance_wallet_rounded, 'Wallet', false, onTap: () => _go(const AccountsScreen())),
+              _navItem(Icons.home_filled, AppLocalizations.get('home'), true),
+              _navItem(Icons.account_balance_wallet_rounded, AppLocalizations.get('wallet'), false, onTap: () => _go(const AccountsScreen())),
               
               // Central Add Button (Inline inside the pill)
               ScaleOnTap(
@@ -910,8 +911,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               ),
               
-              _navItem(Icons.analytics_rounded, 'Stats', false, onTap: () => _go(const TransactionsScreen())),
-              _navItem(Icons.person_rounded, 'Profile', false, onTap: () => _go(const ProfileScreen())),
+              _navItem(Icons.analytics_rounded, AppLocalizations.get('stats'), false, onTap: () => _go(const TransactionsScreen())),
+              _navItem(Icons.person_rounded, AppLocalizations.get('profile'), false, onTap: () => _go(const ProfileScreen())),
             ],
           ),
         ),
@@ -1152,7 +1153,7 @@ class BudgetAlertBanner extends StatelessWidget {
             final Color borderColor = isOverLimit ? Colors.redAccent.withValues(alpha: 0.2) : Colors.orangeAccent.withValues(alpha: 0.2);
             final Color textColor = isOverLimit ? Colors.red.shade900 : Colors.orange.shade900;
             final IconData icon = isOverLimit ? Icons.error_outline_rounded : Icons.warning_amber_rounded;
-            final String title = isOverLimit ? 'Budget Exceeded!' : 'Budget Warning!';
+            final String title = isOverLimit ? AppLocalizations.get('budget_exceeded') : AppLocalizations.get('budget_warning');
             final String message = isOverLimit 
                 ? 'You have spent ৳${actualExpense.toInt()} which is $utilizationPercent% of your monthly limit (৳${limit.toInt()}).'
                 : 'You have utilized $utilizationPercent% of your monthly budget limit (৳${actualExpense.toInt()} spent of ৳${limit.toInt()}).';
@@ -1248,18 +1249,18 @@ class RecurringBillsAlert extends StatelessWidget {
         final firstDue = DateTime(firstBill.nextDueDate.year, firstBill.nextDueDate.month, firstBill.nextDueDate.day);
         final daysLeft = firstDue.difference(today).inDays;
 
-        String title = 'Upcoming Bill Due';
+        String title = AppLocalizations.get('upcoming_bill_due');
         String subtitle = '';
         Color bannerColor = AppColors.accentGold;
         Color textColor = AppColors.textBlack;
 
         if (daysLeft < 0) {
-          title = 'Overdue Bills Alert';
+          title = AppLocalizations.get('overdue_bills_alert');
           subtitle = '${firstBill.title} is overdue by ${-daysLeft} days.';
           bannerColor = Colors.red.shade50;
           textColor = Colors.red.shade900;
         } else if (daysLeft == 0) {
-          title = 'Bill Due Today';
+          title = AppLocalizations.get('bill_due_today');
           subtitle = '${firstBill.title} (৳${firstBill.amount.toInt()}) is due today.';
           bannerColor = Colors.orange.shade50;
           textColor = Colors.orange.shade900;
@@ -1618,7 +1619,7 @@ class SmartAdvisorCard extends StatelessWidget {
                                   ),
                                   const SizedBox(width: 6),
                                   Text(
-                                    "AI WEALTH COPILOT",
+                                    AppLocalizations.get('ai_wealth_copilot'),
                                     style: GoogleFonts.outfit(
                                       fontWeight: FontWeight.w800,
                                       fontSize: 10,
@@ -1736,10 +1737,10 @@ class SmartAdvisorCard extends StatelessWidget {
               return _buildCard(
                 context,
                 _AdvisorTip(
-                  title: "Set Your Goals",
+                  title: AppLocalizations.get('set_your_goals'),
                   content: "Set your targets! Setting monthly budgets helps users save up to 20% more. Set a goal.",
                   icon: Icons.lightbulb_outline_rounded,
-                  buttonText: "Set Goal",
+                  buttonText: AppLocalizations.get('set_goal'),
                   targetScreen: const MonthlyGoalScreen(),
                   type: AdvisorTipType.info,
                 ),
@@ -1790,10 +1791,10 @@ class SmartAdvisorCard extends StatelessWidget {
               return _buildCard(
                 context,
                 _AdvisorTip(
-                  title: "Budget Exceeded!",
+                  title: AppLocalizations.get('budget_exceeded'),
                   content: "Budget Exceeded! You spent ৳${overSpent.toInt()} over your monthly limit. Hold non-essential purchases.",
                   icon: Icons.error_outline_rounded,
-                  buttonText: "Adjust Goals",
+                  buttonText: AppLocalizations.get('adjust_goals'),
                   targetScreen: const MonthlyGoalScreen(),
                   type: AdvisorTipType.danger,
                 ),
@@ -1806,10 +1807,10 @@ class SmartAdvisorCard extends StatelessWidget {
               return _buildCard(
                 context,
                 _AdvisorTip(
-                  title: "Budget Warning!",
+                  title: AppLocalizations.get('budget_warning'),
                   content: "Nearing Limit! You have used $utilization% of your budget. Cut down discretionary spending.",
                   icon: Icons.warning_amber_rounded,
-                  buttonText: "Adjust Goals",
+                  buttonText: AppLocalizations.get('adjust_goals'),
                   targetScreen: const MonthlyGoalScreen(),
                   type: AdvisorTipType.warning,
                 ),
@@ -1822,10 +1823,10 @@ class SmartAdvisorCard extends StatelessWidget {
               return _buildCard(
                 context,
                 _AdvisorTip(
-                  title: "Savings Alert",
+                  title: AppLocalizations.get('savings_alert'),
                   content: "Savings Alert: You met only $savingsPercent% of your savings target. Log savings early to stay safe.",
                   icon: Icons.savings_rounded,
-                  buttonText: "Log Savings",
+                  buttonText: AppLocalizations.get('log_savings'),
                   targetScreen: const SavingsScreen(),
                   type: AdvisorTipType.warningAlt,
                 ),
@@ -1847,10 +1848,10 @@ class SmartAdvisorCard extends StatelessWidget {
               return _buildCard(
                 context,
                 _AdvisorTip(
-                  title: "Category Spike!",
+                  title: AppLocalizations.get('category_spike'),
                   content: "Category Check: Spending on '$highestCategory' is $categoryPercent% of your total. Try cooking at home or deferring.",
                   icon: Icons.pie_chart_outline_rounded,
-                  buttonText: "View Trends",
+                  buttonText: AppLocalizations.get('view_trends'),
                   targetScreen: const MonthlyGoalScreen(),
                   type: AdvisorTipType.purple,
                 ),
@@ -1862,10 +1863,10 @@ class SmartAdvisorCard extends StatelessWidget {
               return _buildCard(
                 context,
                 _AdvisorTip(
-                  title: "Excellent Cashflow!",
+                  title: AppLocalizations.get('excellent_cashflow'),
                   content: "Excellent Cashflow! You met your savings target. Put surplus cash into Savings Vaults.",
                   icon: Icons.stars_rounded,
-                  buttonText: "Log Savings",
+                  buttonText: AppLocalizations.get('log_savings'),
                   targetScreen: const SavingsScreen(),
                   type: AdvisorTipType.success,
                 ),
@@ -1876,10 +1877,10 @@ class SmartAdvisorCard extends StatelessWidget {
             return _buildCard(
               context,
               _AdvisorTip(
-                title: "Advisor Update",
+                title: AppLocalizations.get('advisor_update'),
                 content: "On Track! Your expenses and savings are healthy. Keep tracking and maintain the streak!",
                 icon: Icons.insights_rounded,
-                buttonText: "View Analytics",
+                buttonText: AppLocalizations.get('view_analytics'),
                 targetScreen: const MonthlyGoalScreen(),
                 type: AdvisorTipType.info,
               ),
