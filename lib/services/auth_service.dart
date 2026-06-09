@@ -109,8 +109,60 @@ class AuthService {
     return _db.collection('users').doc(uid).snapshots();
   }
 
+  // Change password
+  Future<void> changePassword(String currentPassword, String newPassword) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null || user.email == null) throw Exception("User not logged in.");
+
+      // Verify current password (using the same hashing logic)
+      final hashedCurrent = HashHelper.hashPassword(currentPassword);
+      AuthCredential credential = EmailAuthProvider.credential(
+        email: user.email!,
+        password: hashedCurrent,
+      );
+
+      // Re-authenticate user
+      await user.reauthenticateWithCredential(credential);
+
+      // Update to new password
+      final hashedNew = HashHelper.hashPassword(newPassword);
+      await user.updatePassword(hashedNew);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   // Sign out
   Future<void> signOut() async {
     await _auth.signOut();
+  }
+
+  // Delete account
+  Future<void> deleteAccount(String currentPassword) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null || user.email == null) throw Exception("User not logged in.");
+
+      // Verify current password
+      final hashedCurrent = HashHelper.hashPassword(currentPassword);
+      AuthCredential credential = EmailAuthProvider.credential(
+        email: user.email!,
+        password: hashedCurrent,
+      );
+
+      // Re-authenticate user
+      await user.reauthenticateWithCredential(credential);
+
+      // Delete user's profile from Firestore
+      await _db.collection('users').doc(user.uid).delete();
+      // NOTE: For a full app, you might also want to delete the user's transactions 
+      // from the 'transactions' collection, or trigger a Cloud Function to clean up data.
+      
+      // Delete user account
+      await user.delete();
+    } catch (e) {
+      rethrow;
+    }
   }
 }

@@ -13,6 +13,10 @@ import 'package:pocketledger/services/security_service.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
+import 'package:csv/csv.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
 import 'package:pocketledger/models/transaction_model.dart';
 import 'package:pocketledger/services/goal_service.dart';
 import 'package:pocketledger/core/constants/app_constants.dart';
@@ -83,6 +87,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         title: 'Privacy & Security',
                         subtitle: 'App lock & security PIN',
                         onTap: _showPrivacySecurityModal,
+                      ),
+                      _buildSettingItem(
+                        icon: Icons.password_rounded,
+                        title: 'Change Password',
+                        subtitle: 'Update your login password',
+                        onTap: _showChangePasswordModal,
+                      ),
+                      _buildSettingItem(
+                        icon: Icons.delete_forever_rounded,
+                        title: 'Delete Account',
+                        subtitle: 'Permanently remove your data',
+                        onTap: _showDeleteAccountModal,
+                        iconColor: AppColors.error,
+                        textColor: AppColors.error,
                       ),
                       
                       const SizedBox(height: 32),
@@ -251,7 +269,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildSettingItem({required IconData icon, required String title, required String subtitle, required VoidCallback onTap}) {
+  Widget _buildSettingItem({required IconData icon, required String title, required String subtitle, required VoidCallback onTap, Color? iconColor, Color? textColor}) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -266,15 +284,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
           children: [
             Container(
               padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(color: AppColors.primaryGreen.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(14)),
-              child: Icon(icon, color: AppColors.primaryGreen, size: 22),
+              decoration: BoxDecoration(color: (iconColor ?? AppColors.primaryGreen).withValues(alpha: 0.08), borderRadius: BorderRadius.circular(14)),
+              child: Icon(icon, color: iconColor ?? AppColors.primaryGreen, size: 22),
             ),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textBlack)),
+                  Text(title, style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: textColor ?? AppColors.textBlack)),
                   Text(subtitle, style: GoogleFonts.outfit(fontSize: 13, color: AppColors.textGrey)),
                 ],
               ),
@@ -1265,6 +1283,291 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  void _showDeleteAccountModal() {
+    final passwordController = TextEditingController();
+    String errorMessage = '';
+    bool isLoading = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) {
+          return Container(
+            padding: EdgeInsets.fromLTRB(24, 12, 24, MediaQuery.of(context).viewInsets.bottom + 32),
+            decoration: BoxDecoration(
+              color: AppColors.cardWhite,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(40)),
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 50, height: 5,
+                      margin: const EdgeInsets.only(bottom: 24),
+                      decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
+                  Text('Delete Account', style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.error)),
+                  const SizedBox(height: 8),
+                  Text('Warning: This will permanently delete your account, including all your transactions, goals, and categories. This action cannot be undone.', 
+                    style: GoogleFonts.outfit(fontSize: 13, color: AppColors.textGrey)),
+                  const SizedBox(height: 24),
+                  
+                  // Current Password
+                  Text('Confirm Password', style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textBlack)),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceLight,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.grey.shade200),
+                    ),
+                    child: TextField(
+                      controller: passwordController,
+                      obscureText: true,
+                      style: GoogleFonts.outfit(fontSize: 16, color: AppColors.textBlack),
+                      decoration: InputDecoration(
+                        border: InputBorder.none,
+                        hintText: 'Enter your password to confirm',
+                        hintStyle: GoogleFonts.outfit(color: Colors.grey.shade400),
+                      ),
+                    ),
+                  ),
+                  
+                  if (errorMessage.isNotEmpty) ...[
+                    const SizedBox(height: 16),
+                    Text(errorMessage, style: GoogleFonts.outfit(color: AppColors.error, fontSize: 13, fontWeight: FontWeight.bold)),
+                  ],
+                  
+                  const SizedBox(height: 32),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 56,
+                    child: ElevatedButton(
+                      onPressed: isLoading ? null : () async {
+                        final pass = passwordController.text;
+                        if (pass.isEmpty) {
+                          setModalState(() => errorMessage = 'Please enter your password');
+                          return;
+                        }
+
+                        setModalState(() {
+                          isLoading = true;
+                          errorMessage = '';
+                        });
+
+                        try {
+                          await _authService.deleteAccount(pass);
+                          if (context.mounted) {
+                            Navigator.pop(context); // Close modal
+                            Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+                          }
+                        } catch (e) {
+                          setModalState(() {
+                            isLoading = false;
+                            errorMessage = 'Incorrect password or failed to delete account.';
+                          });
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.error,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      ),
+                      child: isLoading
+                          ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                          : Text('Permanently Delete', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+      ),
+    );
+  }
+
+  void _showChangePasswordModal() {
+    final currentController = TextEditingController();
+    final newController = TextEditingController();
+    final confirmController = TextEditingController();
+    String errorMessage = '';
+    bool isLoading = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) {
+          return Container(
+            padding: EdgeInsets.fromLTRB(24, 12, 24, MediaQuery.of(context).viewInsets.bottom + 32),
+            decoration: BoxDecoration(
+              color: AppColors.cardWhite,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(40)),
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 50, height: 5,
+                      margin: const EdgeInsets.only(bottom: 24),
+                      decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
+                  Text('Change Password', style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textBlack)),
+                  const SizedBox(height: 8),
+                  Text('Ensure your new password is at least 6 characters.', style: GoogleFonts.outfit(fontSize: 13, color: AppColors.textGrey)),
+                  const SizedBox(height: 24),
+                  
+                  // Current Password
+                  Text('Current Password', style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textBlack)),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceLight,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.grey.shade200),
+                    ),
+                    child: TextField(
+                      controller: currentController,
+                      obscureText: true,
+                      style: GoogleFonts.outfit(fontSize: 16, color: AppColors.textBlack),
+                      decoration: InputDecoration(
+                        border: InputBorder.none,
+                        hintText: 'Enter current password',
+                        hintStyle: GoogleFonts.outfit(color: Colors.grey.shade400),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // New Password
+                  Text('New Password', style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textBlack)),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceLight,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.grey.shade200),
+                    ),
+                    child: TextField(
+                      controller: newController,
+                      obscureText: true,
+                      style: GoogleFonts.outfit(fontSize: 16, color: AppColors.textBlack),
+                      decoration: InputDecoration(
+                        border: InputBorder.none,
+                        hintText: 'Enter new password',
+                        hintStyle: GoogleFonts.outfit(color: Colors.grey.shade400),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // Confirm Password
+                  Text('Confirm New Password', style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textBlack)),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceLight,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.grey.shade200),
+                    ),
+                    child: TextField(
+                      controller: confirmController,
+                      obscureText: true,
+                      style: GoogleFonts.outfit(fontSize: 16, color: AppColors.textBlack),
+                      decoration: InputDecoration(
+                        border: InputBorder.none,
+                        hintText: 'Re-enter new password',
+                        hintStyle: GoogleFonts.outfit(color: Colors.grey.shade400),
+                      ),
+                    ),
+                  ),
+                  
+                  if (errorMessage.isNotEmpty) ...[
+                    const SizedBox(height: 16),
+                    Text(errorMessage, style: GoogleFonts.outfit(color: AppColors.error, fontSize: 13, fontWeight: FontWeight.bold)),
+                  ],
+                  
+                  const SizedBox(height: 32),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 56,
+                    child: ElevatedButton(
+                      onPressed: isLoading ? null : () async {
+                        final current = currentController.text;
+                        final newPass = newController.text;
+                        final confirm = confirmController.text;
+
+                        if (current.isEmpty || newPass.isEmpty || confirm.isEmpty) {
+                          setModalState(() => errorMessage = 'All fields are required');
+                          return;
+                        }
+                        if (newPass.length < 6) {
+                          setModalState(() => errorMessage = 'New password must be at least 6 characters');
+                          return;
+                        }
+                        if (newPass != confirm) {
+                          setModalState(() => errorMessage = 'New passwords do not match');
+                          return;
+                        }
+
+                        setModalState(() {
+                          isLoading = true;
+                          errorMessage = '';
+                        });
+
+                        try {
+                          await _authService.changePassword(current, newPass);
+                          if (context.mounted) {
+                            Navigator.pop(context); // Close modal
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                backgroundColor: AppColors.success,
+                                content: Text('Password changed successfully!', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+                              ),
+                            );
+                          }
+                        } catch (e) {
+                          setModalState(() {
+                            isLoading = false;
+                            errorMessage = 'Failed to change password. Make sure current password is correct.';
+                          });
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primaryGreen,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      ),
+                      child: isLoading
+                          ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                          : Text('Change Password', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+      ),
+    );
+  }
+
   void _showPDFStatementDialog(String name, String email) {
     showModalBottomSheet(
       context: context,
@@ -1375,6 +1678,101 @@ class _GeneratePDFSheetState extends State<_GeneratePDFSheet> {
             ),
           ),
         );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isGenerating = false;
+        });
+      }
+    }
+  }
+
+  void _generateCSV() async {
+    setState(() {
+      _isGenerating = true;
+    });
+
+    try {
+      final goalService = GoalService();
+      final transactions = await goalService.getAllTransactions().first;
+
+      final now = DateTime.now();
+      List<TransactionModel> filtered = [];
+      String rangeLabel = '';
+
+      if (_selectedRange == 'Current Month') {
+        filtered = transactions.where((tx) =>
+          tx.date.month == now.month && tx.date.year == now.year
+        ).toList();
+        rangeLabel = "${now.month.toString().padLeft(2, '0')}-${now.year}";
+      } else if (_selectedRange == 'Last 3 Months') {
+        final cutOff = DateTime(now.year, now.month - 2, 1);
+        filtered = transactions.where((tx) =>
+          tx.date.isAfter(cutOff.subtract(const Duration(days: 1)))
+        ).toList();
+        rangeLabel = "Last 3 Months";
+      } else {
+        filtered = transactions;
+        rangeLabel = "All Time";
+      }
+
+      final selfTxs = filtered.where((tx) => tx.owner == AppConstants.ownerSelf).toList();
+      selfTxs.sort((a, b) => b.date.compareTo(a.date));
+
+      if (selfTxs.isEmpty) {
+        throw Exception("No transactions found for the selected range.");
+      }
+
+      List<List<dynamic>> rows = [];
+      rows.add(["Date", "Category", "Note", "Type", "Amount (BDT)"]);
+
+      for (var tx in selfTxs) {
+        final dateStr = "${tx.date.year}-${tx.date.month.toString().padLeft(2, '0')}-${tx.date.day.toString().padLeft(2, '0')}";
+        final typeStr = tx.type == TransactionType.income ? "Income" : tx.type == TransactionType.expense ? "Expense" : "Transfer";
+        rows.add([dateStr, tx.category, tx.note, typeStr, tx.amount]);
+      }
+
+      String csv = const ListToCsvConverter().convert(rows);
+
+      final dir = await getTemporaryDirectory();
+      final file = File('${dir.path}/PocketLedger_Statement_${rangeLabel.replaceAll(' ', '_')}.csv');
+      await file.writeAsString(csv);
+
+      await Share.shareXFiles([XFile(file.path)], text: 'PocketLedger CSV Statement');
+
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: AppColors.primaryGreen,
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle_rounded, color: Colors.white),
+                const SizedBox(width: 8),
+                Text('CSV Exported successfully!', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+              ],
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: Colors.redAccent,
+            content: Text(
+              e.toString().replaceAll("Exception: ", ""),
+              style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isGenerating = false;
+        });
       }
     }
   }
@@ -1678,33 +2076,65 @@ class _GeneratePDFSheetState extends State<_GeneratePDFSheet> {
             _buildRangeSelector('Last 3 Months'),
             _buildRangeSelector('All Time'),
             const SizedBox(height: 28),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _isGenerating ? null : _generatePDF,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryGreen,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  elevation: 0,
-                ),
-                child: _isGenerating
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
-                      )
-                    : Text(
-                        "Generate PDF",
-                        style: GoogleFonts.outfit(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: _isGenerating ? null : _generateCSV,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: AppColors.primaryGreen,
+                      side: BorderSide(color: AppColors.primaryGreen, width: 2),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
                       ),
-              ),
+                      elevation: 0,
+                    ),
+                    child: _isGenerating
+                        ? SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(color: AppColors.primaryGreen, strokeWidth: 2.5),
+                          )
+                        : Text(
+                            "Export CSV",
+                            style: GoogleFonts.outfit(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: _isGenerating ? null : _generatePDF,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primaryGreen,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      elevation: 0,
+                    ),
+                    child: _isGenerating
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+                          )
+                        : Text(
+                            "Export PDF",
+                            style: GoogleFonts.outfit(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),

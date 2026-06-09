@@ -77,14 +77,15 @@ class _SecurityLifecycleWrapperState extends State<SecurityLifecycleWrapper> wit
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.paused) {
+    // Lock on inactive so the OS screenshot for the app switcher doesn't capture sensitive data
+    if (state == AppLifecycleState.inactive || state == AppLifecycleState.paused) {
       _lockIfEnabled();
     }
   }
 
   Future<void> _lockIfEnabled() async {
     final enabled = await _securityService.isPinEnabled();
-    if (enabled) {
+    if (enabled && !_isLocked) {
       setState(() {
         _isLocked = true;
       });
@@ -94,18 +95,13 @@ class _SecurityLifecycleWrapperState extends State<SecurityLifecycleWrapper> wit
   @override
   Widget build(BuildContext context) {
     if (_isLocked) {
-      return Stack(
-        textDirection: TextDirection.ltr,
-        children: [
-          widget.child,
-          LockScreen(
-            onSuccess: () {
-              setState(() {
-                _isLocked = false;
-              });
-            },
-          ),
-        ],
+      // Instead of layering, we completely hide widget.child to prevent UI leaks
+      return LockScreen(
+        onSuccess: () {
+          setState(() {
+            _isLocked = false;
+          });
+        },
       );
     }
     return widget.child;

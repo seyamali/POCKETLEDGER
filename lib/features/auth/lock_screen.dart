@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -30,6 +31,10 @@ class _LockScreenState extends State<LockScreen> with SingleTickerProviderStateM
   late AnimationController _shakeController;
   late Animation<double> _shakeAnimation;
 
+  DateTime? _lockoutTime;
+  Timer? _lockoutTimer;
+  String _lockoutMessage = '';
+
   @override
   void initState() {
     super.initState();
@@ -48,6 +53,39 @@ class _LockScreenState extends State<LockScreen> with SingleTickerProviderStateM
     ]).animate(_shakeController);
 
     _checkBiometrics();
+    _checkLockout();
+  }
+
+  Future<void> _checkLockout() async {
+    final lockout = await _securityService.getLockoutTime();
+    if (lockout != null) {
+      setState(() {
+        _lockoutTime = lockout;
+        _enteredPin = '';
+      });
+      _startLockoutTimer();
+    }
+  }
+
+  void _startLockoutTimer() {
+    _lockoutTimer?.cancel();
+    _lockoutTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_lockoutTime == null) {
+        timer.cancel();
+        return;
+      }
+      final remaining = _lockoutTime!.difference(DateTime.now());
+      if (remaining.isNegative) {
+        timer.cancel();
+        setState(() {
+          _lockoutTime = null;
+        });
+      } else {
+        setState(() {
+          _lockoutMessage = 'Try again in ${remaining.inMinutes}:${(remaining.inSeconds % 60).toString().padLeft(2, '0')}';
+        });
+      }
+    });
   }
 
   Future<void> _checkBiometrics() async {
@@ -66,6 +104,7 @@ class _LockScreenState extends State<LockScreen> with SingleTickerProviderStateM
   Future<void> _authenticateWithBiometrics() async {
     final success = await _securityService.authenticateWithBiometrics();
     if (success) {
+      await _securityService.resetLockout();
       widget.onSuccess();
     }
   }
@@ -73,10 +112,12 @@ class _LockScreenState extends State<LockScreen> with SingleTickerProviderStateM
   @override
   void dispose() {
     _shakeController.dispose();
+    _lockoutTimer?.cancel();
     super.dispose();
   }
 
   void _onKeyTap(String value) {
+    if (_lockoutTime != null) return;
     if (_enteredPin.length >= 4) return;
     HapticFeedback.lightImpact();
     setState(() {
@@ -89,6 +130,7 @@ class _LockScreenState extends State<LockScreen> with SingleTickerProviderStateM
   }
 
   void _onBackspace() {
+    if (_lockoutTime != null) return;
     if (_enteredPin.isEmpty) return;
     HapticFeedback.lightImpact();
     setState(() {
@@ -108,6 +150,7 @@ class _LockScreenState extends State<LockScreen> with SingleTickerProviderStateM
       setState(() {
         _enteredPin = '';
       });
+      await _checkLockout();
     }
   }
 
@@ -288,7 +331,28 @@ class _LockScreenState extends State<LockScreen> with SingleTickerProviderStateM
                   children: [
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 40.0),
-                      child: Column(
+                      child: _lockoutTime != null
+                          ? Container(
+                              height: 330,
+                              alignment: Alignment.center,
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.lock_clock_rounded, size: 64, color: AppColors.error),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    'Too many failed attempts.',
+                                    style: GoogleFonts.outfit(color: Colors.white, fontSize: 18),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    _lockoutMessage,
+                                    style: GoogleFonts.outfit(color: AppColors.error, fontSize: 24, fontWeight: FontWeight.bold),
+                                  ),
+                                ],
+                              ),
+                            )
+                          : Column(
                         children: [
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceEvenly,

@@ -29,6 +29,9 @@ import 'package:pocketledger/services/credit_card_service.dart';
 import 'package:pocketledger/features/dashboard/widgets/notifications_sheet.dart';
 import 'package:pocketledger/core/widgets/scale_on_tap.dart';
 import 'package:pocketledger/core/widgets/glass_card.dart';
+import 'package:pocketledger/features/guide/guide_screen.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'dart:async';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -43,6 +46,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   final CreditCardService _creditCardService = CreditCardService();
 
   int _dueCount = 0;
+  bool _isOffline = false;
+  late StreamSubscription<List<ConnectivityResult>> _connectivitySubscription;
+
   late final _cardSub = CreditCardService().getCards().listen((cards) {
     if (mounted) {
       setState(() {
@@ -55,11 +61,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void initState() {
     super.initState();
     _cardSub; // initialise the late field
+    _initConnectivity();
+  }
+
+  void _initConnectivity() async {
+    final connectivity = Connectivity();
+    final result = await connectivity.checkConnectivity();
+    _updateConnectionStatus(result);
+    _connectivitySubscription = connectivity.onConnectivityChanged.listen(_updateConnectionStatus);
+  }
+
+  void _updateConnectionStatus(List<ConnectivityResult> result) {
+    if (mounted) {
+      setState(() {
+        _isOffline = result.contains(ConnectivityResult.none) || result.isEmpty;
+      });
+    }
   }
 
   @override
   void dispose() {
     _cardSub.cancel();
+    _connectivitySubscription.cancel();
     super.dispose();
   }
 
@@ -165,6 +188,32 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   SliverPersistentHeader(
                     pinned: true,
                     delegate: _StickyHeaderDelegate(dueCount: _dueCount),
+                  ),
+
+                  // ── Offline Banner ──
+                  SliverToBoxAdapter(
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 300),
+                      height: _isOffline ? 40 : 0,
+                      color: AppColors.error,
+                      child: SingleChildScrollView(
+                        child: Container(
+                          height: 40,
+                          alignment: Alignment.center,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.wifi_off_rounded, color: Colors.white, size: 16),
+                              const SizedBox(width: 8),
+                              Text(
+                                "No internet connection. You're offline.",
+                                style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
 
                   // ── Premium Balance & Owners ──
@@ -897,6 +946,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 onTap: () => Navigator.pushNamed(context, '/add-transaction'),
                 child: Container(
                   width: 50, height: 50,
+                  margin: const EdgeInsets.symmetric(horizontal: 4),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [AppColors.primaryGreen, isDark ? const Color(0xFF1A3A2A) : const Color(0xFF003829)],
@@ -916,7 +966,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
               
               _navItem(Icons.analytics_rounded, AppLocalizations.get('stats'), false, onTap: () => _go(const TransactionsScreen())),
-              _navItem(Icons.person_rounded, AppLocalizations.get('profile'), false, onTap: () => _go(const ProfileScreen())),
+              _navItem(Icons.info_outline_rounded, 'Guide', false, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GuideScreen()))),
             ],
           ),
         ),
@@ -987,18 +1037,21 @@ class _StickyHeaderDelegate extends SliverPersistentHeaderDelegate {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      ScaleOnTap(
-                        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen())),
-                        child: StreamBuilder<DocumentSnapshot>(
-                          stream: AuthService().getUserProfile(),
-                          builder: (context, snapshot) {
-                            String? profilePic;
-                            if (snapshot.hasData && snapshot.data!.exists) {
-                              profilePic = (snapshot.data!.data() as Map<String, dynamic>)['profilePic'];
-                            }
-                            return Container(
+                  StreamBuilder<DocumentSnapshot>(
+                    stream: AuthService().getUserProfile(),
+                    builder: (context, snapshot) {
+                      String? profilePic;
+                      String userName = 'User';
+                      if (snapshot.hasData && snapshot.data!.exists) {
+                        final data = snapshot.data!.data() as Map<String, dynamic>;
+                        profilePic = data['profilePic'];
+                        userName = data['name'] ?? 'User';
+                      }
+                      return Row(
+                        children: [
+                          ScaleOnTap(
+                            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen())),
+                            child: Container(
                               padding: const EdgeInsets.all(2),
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
@@ -1014,31 +1067,31 @@ class _StickyHeaderDelegate extends SliverPersistentHeaderDelegate {
                                     ? Icon(Icons.person_rounded, color: AppColors.primaryGreen, size: 20)
                                     : null,
                               ),
-                            );
-                          }
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(_DashboardScreenState.getGreeting(), 
-                            style: GoogleFonts.outfit(
-                              color: isScrolled ? Colors.white70 : AppColors.textGrey, 
-                              fontSize: 11, 
-                              fontWeight: FontWeight.w500,
-                              letterSpacing: 0.5,
-                            )),
-                          Text('Seyam Ali', 
-                            style: GoogleFonts.outfit(
-                              color: isScrolled ? Colors.white : AppColors.textBlack, 
-                              fontSize: 16, 
-                              fontWeight: FontWeight.bold,
-                            )),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(_DashboardScreenState.getGreeting(), 
+                                style: GoogleFonts.outfit(
+                                  color: isScrolled ? Colors.white70 : AppColors.textGrey, 
+                                  fontSize: 11, 
+                                  fontWeight: FontWeight.w500,
+                                  letterSpacing: 0.5,
+                                )),
+                              Text(userName, 
+                                style: GoogleFonts.outfit(
+                                  color: isScrolled ? Colors.white : AppColors.textBlack, 
+                                  fontSize: 16, 
+                                  fontWeight: FontWeight.bold,
+                                )),
+                            ],
+                          ),
                         ],
-                      ),
-                    ],
+                      );
+                    }
                   ),
                   ScaleOnTap(
                     onTap: () => NotificationsSheet.show(context),
