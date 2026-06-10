@@ -18,6 +18,7 @@ import 'package:pocketledger/services/transaction_service.dart';
 import 'package:pocketledger/services/loan_service.dart';
 import 'package:pocketledger/models/loan_model.dart';
 import 'package:pocketledger/features/profile/profile_screen.dart';
+import 'package:pocketledger/features/categories/category_manager_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:pocketledger/services/goal_service.dart';
 import 'package:pocketledger/models/goal_model.dart';
@@ -926,53 +927,81 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _buildBottomNavBar() {
     final isDark = AppColors.isDark;
     return Container(
-      padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+      padding: const EdgeInsets.fromLTRB(18, 0, 18, 18),
       color: Colors.transparent,
       child: GlassCard(
-        blur: 20,
-        opacity: isDark ? 0.85 : 0.8,
-        color: isDark ? const Color(0xFF16201D) : Colors.white,
-        borderRadius: 35,
+        blur: 24,
+        opacity: isDark ? 0.9 : 0.88,
+        color: isDark ? const Color(0xFF13201A) : Colors.white,
+        borderRadius: 30,
         border: Border.all(
           color: isDark
-              ? AppColors.primaryGreen.withValues(alpha: 0.18)
-              : Colors.white.withValues(alpha: 0.15),
-          width: 1.5,
+              ? AppColors.primaryGreen.withValues(alpha: 0.16)
+              : Colors.black.withValues(alpha: 0.05),
+          width: 1.2,
         ),
         child: SizedBox(
-          height: 70,
+          height: 82,
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              _navItem(Icons.home_filled, AppLocalizations.get('home'), true),
-              _navItem(Icons.account_balance_wallet_rounded, AppLocalizations.get('wallet'), false, onTap: () => _go(const AccountsScreen())),
-              
-              // Central Add Button (Inline inside the pill)
-              ScaleOnTap(
-                onTap: () => Navigator.pushNamed(context, '/add-transaction'),
-                child: Container(
-                  width: 50, height: 50,
-                  margin: const EdgeInsets.symmetric(horizontal: 4),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [AppColors.primaryGreen, isDark ? const Color(0xFF1A3A2A) : const Color(0xFF003829)],
-                      begin: Alignment.topLeft, end: Alignment.bottomRight,
-                    ),
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.primaryGreen.withValues(alpha: isDark ? 0.25 : 0.35),
-                        blurRadius: 15,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
-                  ),
-                  child: const Icon(Icons.add_rounded, color: Colors.white, size: 28),
+              Expanded(
+                child: _navItem(
+                  icon: Icons.home_rounded,
+                  label: AppLocalizations.get('home'),
+                  isActive: true,
                 ),
               ),
-              
-              _navItem(Icons.analytics_rounded, AppLocalizations.get('stats'), false, onTap: () => _go(const AnalyticsScreen())),
-              _navItem(Icons.info_outline_rounded, 'Guide', false, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GuideScreen()))),
+              Expanded(
+                child: _navItem(
+                  icon: Icons.account_balance_wallet_rounded,
+                  label: AppLocalizations.get('wallet'),
+                  isActive: false,
+                  onTap: () => _go(const AccountsScreen()),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+                child: ScaleOnTap(
+                  onTap: () => Navigator.pushNamed(context, '/add-transaction'),
+                  child: Container(
+                    width: 54,
+                    height: 54,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [AppColors.primaryGreen, isDark ? const Color(0xFF1A3A2A) : const Color(0xFF003829)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.primaryGreen.withValues(alpha: isDark ? 0.25 : 0.35),
+                          blurRadius: 18,
+                          offset: const Offset(0, 10),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(Icons.add_rounded, color: Colors.white, size: 30),
+                  ),
+                ),
+              ),
+              Expanded(
+                child: _navItem(
+                  icon: Icons.analytics_rounded,
+                  label: AppLocalizations.get('stats'),
+                  isActive: false,
+                  onTap: () => _go(const AnalyticsScreen()),
+                ),
+              ),
+              Expanded(
+                child: _navItem(
+                  icon: Icons.grid_view_rounded,
+                  label: 'More',
+                  isActive: false,
+                  onTap: _showQuickActionsSheet,
+                ),
+              ),
             ],
           ),
         ),
@@ -980,22 +1009,220 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _navItem(IconData icon, String label, bool isActive, {VoidCallback? onTap}) {
+  Widget _navItem({
+    required IconData icon,
+    required String label,
+    required bool isActive,
+    VoidCallback? onTap,
+  }) {
     return ScaleOnTap(
       onTap: onTap ?? () {},
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, 
-            color: isActive ? AppColors.primaryGreen : AppColors.secondaryText, 
-            size: 26),
-          const SizedBox(height: 4),
-          if (isActive)
-            Container(
-              width: 4, height: 4,
-              decoration: BoxDecoration(color: AppColors.primaryGreen, shape: BoxShape.circle),
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: isActive ? AppColors.primaryGreen.withValues(alpha: 0.12) : Colors.transparent,
+              shape: BoxShape.circle,
             ),
+            child: Icon(
+              icon,
+              color: isActive ? AppColors.primaryGreen : AppColors.secondaryText,
+              size: 24,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.outfit(
+              fontSize: 10.5,
+              fontWeight: isActive ? FontWeight.w700 : FontWeight.w600,
+              color: isActive ? AppColors.primaryGreen : AppColors.secondaryText,
+            ),
+          ),
         ],
+      ),
+    );
+  }
+
+  void _showQuickActionsSheet() {
+    final isDark = AppColors.isDark;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => Container(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF16201D) : Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+        ),
+        child: SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 42,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade400,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Quick Access',
+                style: GoogleFonts.outfit(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.white : AppColors.textBlack,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Open the most useful sections in one tap.',
+                style: GoogleFonts.outfit(
+                  fontSize: 13,
+                  color: AppColors.textGrey,
+                ),
+              ),
+              const SizedBox(height: 18),
+              _quickActionTile(
+                icon: Icons.security_rounded,
+                title: 'Profile & Security',
+                subtitle: 'PIN, biometrics, themes, language',
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _go(const ProfileScreen());
+                },
+              ),
+              _quickActionTile(
+                icon: Icons.credit_card_rounded,
+                title: 'Credit Cards',
+                subtitle: 'Limits, billing cycles, payments',
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _go(const CreditCardsScreen());
+                },
+              ),
+              _quickActionTile(
+                icon: Icons.event_repeat_rounded,
+                title: 'Recurring Bills',
+                subtitle: 'Rent, internet, subscriptions',
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _go(const SubscriptionsScreen());
+                },
+              ),
+              _quickActionTile(
+                icon: Icons.savings_rounded,
+                title: 'Savings',
+                subtitle: 'Goals and savings progress',
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _go(const SavingsScreen());
+                },
+              ),
+              _quickActionTile(
+                icon: Icons.handshake_rounded,
+                title: 'Loans & Debts',
+                subtitle: 'Track money you gave or borrowed',
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _go(const LoansScreen());
+                },
+              ),
+              _quickActionTile(
+                icon: Icons.category_rounded,
+                title: 'Categories',
+                subtitle: 'Customize your income and expense tags',
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _go(const CategoryManagerScreen());
+                },
+              ),
+              _quickActionTile(
+                icon: Icons.menu_book_rounded,
+                title: 'App Guide',
+                subtitle: 'Learn how to use PocketLedger',
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const GuideScreen()));
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _quickActionTile({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: ScaleOnTap(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: AppColors.primaryGreen.withValues(alpha: 0.06),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: AppColors.primaryGreen.withValues(alpha: 0.08),
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: AppColors.primaryGreen.withValues(alpha: 0.14),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: AppColors.primaryGreen, size: 22),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: GoogleFonts.outfit(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textBlack,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: GoogleFonts.outfit(
+                        fontSize: 12,
+                        color: AppColors.textGrey,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right_rounded, color: AppColors.textGrey.withValues(alpha: 0.6)),
+            ],
+          ),
+        ),
       ),
     );
   }

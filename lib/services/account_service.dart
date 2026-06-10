@@ -1,13 +1,41 @@
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:pocketledger/models/account_model.dart';
 import 'package:pocketledger/models/transaction_model.dart';
+import 'package:pocketledger/core/constants/app_constants.dart';
 
 class AccountService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  bool _isEnsuringDefaultCashWallet = false;
 
   String? get _uid => _auth.currentUser?.uid;
+
+  Future<void> ensureDefaultCashWallet() async {
+    final uid = _uid;
+    if (uid == null || _isEnsuringDefaultCashWallet) return;
+
+    _isEnsuringDefaultCashWallet = true;
+    try {
+      final snapshot = await _db
+          .collection('accounts')
+          .where('userId', isEqualTo: uid)
+          .where('type', isEqualTo: 'Cash')
+          .limit(1)
+          .get();
+
+      if (snapshot.docs.isNotEmpty) return;
+
+      await createAccount(
+        name: 'Cash Wallet',
+        type: 'Cash',
+        breakdown: const {AppConstants.ownerSelf: 0.0},
+      );
+    } finally {
+      _isEnsuringDefaultCashWallet = false;
+    }
+  }
 
   // Create a new account and initial transactions
   Future<String?> createAccount({
@@ -95,6 +123,10 @@ class AccountService {
         .where('userId', isEqualTo: uid)
         .snapshots()
         .map((snapshot) {
+          if (snapshot.docs.isEmpty) {
+            unawaited(ensureDefaultCashWallet());
+          }
+
           return snapshot.docs
             .map((doc) => AccountModel.fromFirestore(doc))
             .toList();

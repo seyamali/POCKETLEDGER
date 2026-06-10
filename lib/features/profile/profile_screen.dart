@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:pocketledger/app/theme.dart';
+import 'package:flutter/services.dart';
 import 'package:pocketledger/services/auth_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
@@ -24,6 +26,7 @@ import 'package:pocketledger/services/theme_service.dart';
 import 'package:pocketledger/core/localization/app_localizations.dart';
 import 'package:pocketledger/services/language_service.dart';
 import 'package:pocketledger/features/business_card/business_card_screen.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -36,9 +39,375 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final AuthService _authService = AuthService();
   final SecurityService _securityService = SecurityService();
   final ThemeService _themeService = ThemeService();
+  int _developerTapCount = 0;
+  Timer? _developerTapResetTimer;
 
   String _fmt(double v) => v.toInt().toString().replaceAllMapped(
     RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},');
+
+  @override
+  void dispose() {
+    _developerTapResetTimer?.cancel();
+    super.dispose();
+  }
+
+  void _handleDeveloperTap() {
+    _developerTapResetTimer?.cancel();
+    _developerTapResetTimer = Timer(const Duration(seconds: 2), () {
+      if (mounted) {
+        setState(() => _developerTapCount = 0);
+      }
+    });
+
+    setState(() {
+      _developerTapCount += 1;
+    });
+
+    if (_developerTapCount == 5 || _developerTapCount == 7) {
+      HapticFeedback.lightImpact();
+    }
+
+    if (_developerTapCount >= 7) {
+      _developerTapResetTimer?.cancel();
+      _developerTapCount = 0;
+      _showDeveloperDetails();
+    }
+  }
+
+  Future<void> _launchExternal(String url) async {
+    final uri = Uri.parse(url);
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not open $url')),
+        );
+      }
+    }
+  }
+
+  Future<void> _copyToClipboard(String value, String label) async {
+    await Clipboard.setData(ClipboardData(text: value));
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('$label copied to clipboard')),
+      );
+    }
+  }
+
+  void _showDeveloperDetails() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        return Container(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF16201D) : Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+          ),
+          child: SafeArea(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 42,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade400,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryGreen.withValues(alpha: 0.12),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(Icons.code_rounded, color: AppColors.primaryGreen, size: 28),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Developer Details',
+                              style: GoogleFonts.outfit(
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                                color: isDark ? Colors.white : AppColors.textBlack,
+                              ),
+                            ),
+                            Text(
+                              'Hidden profile unlocked',
+                              style: GoogleFonts.outfit(
+                                fontSize: 13,
+                                color: AppColors.textGrey,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  _developerInfoCard(
+                    title: 'Seyam Ali Biswas',
+                    subtitle: 'Software Engineer | Full Stack | Research',
+                    icon: Icons.person_rounded,
+                  ),
+                  _developerInfoCard(
+                    title: 'Location',
+                    subtitle: 'Gazipur, Dhaka, Bangladesh',
+                    icon: Icons.location_on_rounded,
+                  ),
+                  _developerInfoCard(
+                    title: 'Core Stack',
+                    subtitle: 'Flutter, Angular, .NET Core, Spring Boot, Java, Python, C#, SQL',
+                    icon: Icons.memory_rounded,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Featured Work',
+                    style: GoogleFonts.outfit(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? Colors.white : AppColors.textBlack,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _projectChip('Raw Nation'),
+                      _projectChip('Aurelia Editor'),
+                      _projectChip('Bahari Financial Engine'),
+                      _projectChip('Beyond Decimal'),
+                      _projectChip('Orion Hotel Oracle'),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+                  Text(
+                    'Direct Actions',
+                    style: GoogleFonts.outfit(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? Colors.white : AppColors.textBlack,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  _developerActionTile(
+                    icon: Icons.email_rounded,
+                    label: 'Email',
+                    value: 'seyamhossain482@gmail.com',
+                    onTap: () => _launchExternal('mailto:seyamhossain482@gmail.com'),
+                    onLongPress: () => _copyToClipboard('seyamhossain482@gmail.com', 'Email'),
+                  ),
+                  _developerActionTile(
+                    icon: Icons.call_rounded,
+                    label: 'Phone',
+                    value: '+8801989424982',
+                    onTap: () => _launchExternal('tel:+8801989424982'),
+                    onLongPress: () => _copyToClipboard('+8801989424982', 'Phone number'),
+                  ),
+                  _developerActionTile(
+                    icon: Icons.public_rounded,
+                    label: 'GitHub',
+                    value: 'github.com/seyamali',
+                    onTap: () => _launchExternal('https://github.com/seyamali'),
+                    onLongPress: () => _copyToClipboard('https://github.com/seyamali', 'GitHub link'),
+                  ),
+                  _developerActionTile(
+                    icon: Icons.link_rounded,
+                    label: 'LinkedIn',
+                    value: 'linkedin.com/in/seyamali',
+                    onTap: () => _launchExternal('https://linkedin.com/in/seyamali'),
+                    onLongPress: () => _copyToClipboard('https://linkedin.com/in/seyamali', 'LinkedIn link'),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Tip: tap the avatar 7 times again to reopen this panel.',
+                    style: GoogleFonts.outfit(
+                      fontSize: 12,
+                      color: AppColors.textGrey,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _developerInfoCard({required String title, required String subtitle, required IconData icon}) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.primaryGreen.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.primaryGreen.withValues(alpha: 0.08)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: AppColors.primaryGreen.withValues(alpha: 0.12),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: AppColors.primaryGreen, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: GoogleFonts.outfit(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textBlack,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: GoogleFonts.outfit(
+                    fontSize: 13,
+                    color: AppColors.textGrey,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _developerActionTile({
+    required IconData icon,
+    required String label,
+    required String value,
+    required VoidCallback onTap,
+    required VoidCallback onLongPress,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      onLongPress: onLongPress,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppColors.cardWhite,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: Colors.black.withValues(alpha: 0.04)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppColors.primaryGreen.withValues(alpha: 0.08),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: AppColors.primaryGreen, size: 20),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: GoogleFonts.outfit(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textBlack,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    value,
+                    style: GoogleFonts.outfit(
+                      fontSize: 12.5,
+                      color: AppColors.textGrey,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.open_in_new_rounded, color: AppColors.textGrey.withValues(alpha: 0.6), size: 18),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _projectChip(String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.primaryGreen.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: AppColors.primaryGreen.withValues(alpha: 0.12)),
+      ),
+      child: Text(
+        label,
+        style: GoogleFonts.outfit(
+          fontSize: 12.5,
+          fontWeight: FontWeight.w600,
+          color: AppColors.primaryGreen,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildVersionFooter() {
+    return GestureDetector(
+      onTap: _handleDeveloperTap,
+      child: Padding(
+        padding: const EdgeInsets.only(top: 18),
+        child: Center(
+          child: Column(
+            children: [
+              Text(
+                'Version 1.0.0',
+                style: GoogleFonts.outfit(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textGrey.withValues(alpha: 0.75),
+                  letterSpacing: 0.3,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Tap 7 times to view developer details',
+                style: GoogleFonts.outfit(
+                  fontSize: 10.5,
+                  color: AppColors.textGrey.withValues(alpha: 0.55),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -170,6 +539,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                         ),
                       ),
+                      _buildVersionFooter(),
                     ],
                   ),
                 ),

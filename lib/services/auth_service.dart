@@ -3,10 +3,12 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:convert';
 import 'package:pocketledger/utils/hash_helper.dart';
 import 'dart:typed_data';
+import 'package:pocketledger/services/account_service.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _db = FirebaseFirestore.instance;
+  final AccountService _accountService = AccountService();
   // Firebase Storage removed for Spark Plan compatibility
 
   // Get current user UID
@@ -53,6 +55,8 @@ class AuthService {
           'createdAt': FieldValue.serverTimestamp(),
           'profilePic': '', // Placeholder for profile picture URL
         });
+
+        await _accountService.ensureDefaultCashWallet();
       }
 
       return userCredential;

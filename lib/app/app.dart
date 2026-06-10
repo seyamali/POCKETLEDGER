@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:pocketledger/app/routes.dart';
 import 'package:pocketledger/app/theme.dart';
+import 'dart:async';
 import 'package:pocketledger/features/auth/lock_screen.dart';
 import 'package:pocketledger/services/security_service.dart';
 
@@ -52,6 +53,7 @@ class SecurityLifecycleWrapper extends StatefulWidget {
 class _SecurityLifecycleWrapperState extends State<SecurityLifecycleWrapper> with WidgetsBindingObserver {
   final SecurityService _securityService = SecurityService();
   bool _isLocked = false;
+  Timer? _lockTimer;
 
   @override
   void initState() {
@@ -62,6 +64,7 @@ class _SecurityLifecycleWrapperState extends State<SecurityLifecycleWrapper> wit
 
   @override
   void dispose() {
+    _lockTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -77,10 +80,23 @@ class _SecurityLifecycleWrapperState extends State<SecurityLifecycleWrapper> wit
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    // Lock on inactive so the OS screenshot for the app switcher doesn't capture sensitive data
-    if (state == AppLifecycleState.inactive || state == AppLifecycleState.paused) {
-      _lockIfEnabled();
+    if (state == AppLifecycleState.resumed) {
+      _lockTimer?.cancel();
+      return;
     }
+
+    // Lock only after the app has remained paused briefly.
+    // This avoids false locks caused by transient overlays or system UI.
+    if (state == AppLifecycleState.paused) {
+      _scheduleLockIfEnabled();
+    }
+  }
+
+  void _scheduleLockIfEnabled() {
+    _lockTimer?.cancel();
+    _lockTimer = Timer(const Duration(milliseconds: 1200), () {
+      _lockIfEnabled();
+    });
   }
 
   Future<void> _lockIfEnabled() async {
