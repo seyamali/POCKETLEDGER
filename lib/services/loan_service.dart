@@ -1,5 +1,7 @@
+import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:pocketledger/models/loan_model.dart';
 import 'package:pocketledger/models/transaction_model.dart';
 
@@ -9,8 +11,8 @@ class LoanService {
   CollectionReference get _col => _db.collection('loans');
 
   // Add a new loan
-  Future<void> addLoan(LoanModel loan) async {
-    if (_uid == null) return;
+  Future<String?> addLoan(LoanModel loan) async {
+    if (_uid == null) return null;
 
     final loanRef = _col.doc();
     await _db.runTransaction((transaction) async {
@@ -71,6 +73,7 @@ class LoanService {
         ).toFirestore());
       }
     });
+    return loanRef.id;
   }
 
   // Add a repayment (Two-way transfer)
@@ -442,9 +445,26 @@ class LoanService {
     });
   }
 
-  // Update a loan's person name to fix typos/merge
+  // Update loan person name
   Future<void> updateLoanPersonName(String loanId, String newName) async {
     await _col.doc(loanId).update({'personName': newName});
+  }
+
+  // Upload attachment for a loan
+  Future<void> uploadAttachment(String loanId, File file) async {
+    if (_uid == null) return;
+    try {
+      final fileName = DateTime.now().millisecondsSinceEpoch.toString() + '_' + file.path.split('/').last;
+      final ref = FirebaseStorage.instance.ref().child('loans/$_uid/$loanId/$fileName');
+      await ref.putFile(file);
+      final downloadUrl = await ref.getDownloadURL();
+      
+      await _col.doc(loanId).update({
+        'attachmentUrls': FieldValue.arrayUnion([downloadUrl])
+      });
+    } catch (e) {
+      throw Exception('Failed to upload attachment: $e');
+    }
   }
 }
 

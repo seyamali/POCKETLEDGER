@@ -43,6 +43,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   bool _isLoading = false;
   final List<String> _owners = AppConstants.allowedOwners;
   bool _initializedArgs = false;
+  DateTime _selectedDate = DateTime.now();
 
   @override
   void initState() {
@@ -123,6 +124,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           amount: amount,
           note: _noteController.text,
           category: _selectedCategory ?? 'Transfer',
+          date: _selectedDate,
         );
       } else {
         final transaction = TransactionModel(
@@ -134,7 +136,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           type: _selectedType,
           category: _selectedCategory ?? (_selectedType == TransactionType.income ? 'Income' : 'Expense'),
           note: _noteController.text,
-          date: DateTime.now(),
+          date: _selectedDate,
           userId: '', // Service handles this
           creditCardId: _selectedType == TransactionType.expense ? _selectedCreditCardId : null,
           isCreditCardPayment: _isCreditCardPayment,
@@ -214,6 +216,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              _buildDatePickerRow(accentColor),
+                              const SizedBox(height: 32),
                               _buildStepTitle(AppLocalizations.get('source'), AppLocalizations.get('source_subtitle')),
                               const SizedBox(height: 16),
                               _buildHorizontalPaymentSourceSelector(accounts: accounts, cards: cards),
@@ -303,6 +307,53 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         },
       ),
     )); // closes Scaffold + ThemeBuilder
+  }
+
+  Widget _buildDatePickerRow(Color color) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        _buildStepTitle(AppLocalizations.get('date'), AppLocalizations.get('transaction_date')),
+        GestureDetector(
+          onTap: () async {
+            final date = await showDatePicker(
+              context: context,
+              initialDate: _selectedDate,
+              firstDate: DateTime(2000),
+              lastDate: DateTime(2100),
+              builder: (context, child) {
+                return Theme(
+                  data: Theme.of(context).copyWith(
+                    colorScheme: ColorScheme.light(primary: color),
+                  ),
+                  child: child!,
+                );
+              },
+            );
+            if (date != null && mounted) {
+              setState(() => _selectedDate = date);
+            }
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(15),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.calendar_today_rounded, color: color, size: 18),
+                const SizedBox(width: 8),
+                Text(
+                  "${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}",
+                  style: GoogleFonts.outfit(color: color, fontWeight: FontWeight.bold, fontSize: 14),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
   }
 
   Widget _buildStepTitle(String title, String subtitle) {

@@ -37,6 +37,124 @@ class GuideScreen extends StatelessWidget {
             '৫. অ্যাকাউন্ট মুছে ফেলা: কোনো অ্যাকাউন্ট আর ব্যবহার না করলে আপনি সেটি এডিট স্ক্রিন থেকে মুছে ফেলতে পারেন।\n\n'
             'এই সেকশনটি সঠিকভাবে ব্যবহার করলে আপনার ডিজিটাল হিসাব আর বাস্তবের মানিব্যাগের মধ্যে কোনো পার্থক্য থাকবে না!',
       ),
+      GuideFeature(
+        title: 'Add Transactions',
+        icon: Icons.add_circle_outline_rounded,
+        engDesc: 'In this section, you record your daily financial activities.\n\n'
+            '• Add Income/Expense: Tap the central \'+\' button on the dashboard. Choose Income (money you receive) or Expense (money you spend). Enter the amount, select an appropriate category, add a note (optional), pick the date, and select which account to use.\n'
+            '• Add Transfer: Use the Transfer tab to record money moved from one of your accounts to another (e.g., from Cash to Bank) without affecting your total wealth.\n'
+            '• Edit/Delete: You can tap on any recent transaction from the Dashboard or Stats screen to edit its details or delete it.',
+        banDesc: 'এই সেকশনে আপনি আপনার দৈনন্দিন আর্থিক লেনদেন যুক্ত করতে পারবেন।\n\n'
+            '• আয়/ব্যয় যুক্ত করা: ড্যাশবোর্ডের মাঝখানের \'+\' বাটনে চাপ দিন। আয় (Income) বা ব্যয় (Expense) বেছে নিন। টাকার পরিমাণ লিখুন, সঠিক ক্যাটাগরি সিলেক্ট করুন, নোট দিন (ঐচ্ছিক), তারিখ ঠিক করুন এবং কোন অ্যাকাউন্ট থেকে লেনদেন হচ্ছে তা বেছে নিন।\n'
+            '• ট্রান্সফার: এক অ্যাকাউন্ট থেকে অন্য অ্যাকাউন্টে (যেমন- ক্যাশ থেকে ব্যাংকে) টাকা সরানোর হিসাব রাখতে ট্রান্সফার (Transfer) ট্যাবটি ব্যবহার করুন। এতে আপনার মোট টাকার কোনো পরিবর্তন হয় না।\n'
+            '• এডিট/ডিলিট: ড্যাশবোর্ড বা স্ট্যাটস স্ক্রিন থেকে যেকোনো লেনদেনের উপর চাপ দিয়ে আপনি চাইলে তা পরিবর্তন বা মুছে ফেলতে পারবেন।',
+      ),
+      GuideFeature(
+        title: 'Monthly Goals',
+        icon: Icons.track_changes_rounded,
+        engDesc: 'Set spending limits to help you stay within your budget.\n\n'
+            '• Set a Budget: Go to the Goals section and set an overall monthly limit. You can also assign specific limits to different categories (like Food, Transport).\n'
+            '• Automatic Tracking: As you add expenses, the app calculates how much of your budget is used.\n'
+            '• Smart Alerts: If your spending reaches 80% or exceeds your set budget, a warning will appear on the Dashboard so you can adjust your spending.',
+        banDesc: 'বাজেট অনুযায়ী খরচ করতে মাসিক লক্ষ্য নির্ধারণ করুন।\n\n'
+            '• বাজেট সেট করা: গোলস (Goals) সেকশনে গিয়ে মাসের জন্য একটি নির্দিষ্ট লিমিট ঠিক করুন। আপনি চাইলে ক্যাটাগরি অনুযায়ী (যেমন- খাবার, যাতায়াত) আলাদা লিমিটও দিতে পারবেন।\n'
+            '• অটোমেটিক ট্র্যাকিং: আপনি যখনই কোনো ব্যয়ের হিসাব যুক্ত করবেন, অ্যাপ নিজে থেকেই হিসাব করবে আপনার বাজেটের কত অংশ খরচ হয়েছে।\n'
+            '• স্মার্ট অ্যালার্ট: আপনার খরচ বাজেটের ৮০% এ পৌঁছালে বা বাজেট অতিক্রম করলে ড্যাশবোর্ডে একটি সতর্কবার্তা দেখাবে, যাতে আপনি খরচ নিয়ন্ত্রণে আনতে পারেন।',
+      ),
+      GuideFeature(
+        title: 'Recurring Bills',
+        icon: Icons.event_repeat_rounded,
+        engDesc: 'Track fixed bills that you need to pay regularly so you never miss a payment.\n\n'
+            '• Add a Subscription: Go to the Subscriptions screen and add bills like Rent, Netflix, or Internet. Set the amount, cycle (monthly, yearly), and next due date.\n'
+            '• Due Date Alerts: The app tracks the days left and warns you on the Dashboard when a bill is due in 5 days or is overdue.\n'
+            '• Manual Marking: Once you pay the bill, you can mark it as paid, and it will automatically schedule the next due date based on your cycle.',
+        banDesc: 'যেসব বিল আপনাকে নিয়মিত দিতে হয় তার হিসাব রাখুন, যাতে কোনো বিল মিস না হয়।\n\n'
+            '• সাবস্ক্রিপশন যুক্ত করা: সাবস্ক্রিপশন স্ক্রিনে গিয়ে বাড়ি ভাড়া, ইন্টারনেট বা নেটফ্লিক্সের মতো বিলগুলো যুক্ত করুন। টাকার পরিমাণ, কতদিন পর পর দিতে হবে (যেমন- মাসিক, বার্ষিক) এবং পরবর্তী তারিখ সেট করুন।\n'
+            '• অ্যালার্ট: কোনো বিল দেওয়ার তারিখের ৫ দিন আগে বা তারিখ পার হয়ে গেলে অ্যাপ আপনাকে ড্যাশবোর্ডে মনে করিয়ে দেবে।\n'
+            '• বিল পরিশোধ: বিল দেওয়ার পর আপনি সেটিকে \'Paid\' হিসেবে মার্ক করতে পারবেন, তখন অ্যাপ স্বয়ংক্রিয়ভাবে পরের মাসের তারিখ সেট করে নেবে।',
+      ),
+      GuideFeature(
+        title: 'Stats & Analytics',
+        icon: Icons.analytics_rounded,
+        engDesc: 'Visualize your spending and income trends over time.\n\n'
+            '• View Charts: Go to the Stats screen to see graphical representations of your finances.\n'
+            '• Category Breakdown: See exactly what percentage of your money goes into which category (e.g., 40% on Food, 20% on Transport).\n'
+            '• Filter by Date: You can filter transactions by current month, past months, or custom date ranges to compare your financial health over time.',
+        banDesc: 'আপনার আয় ও ব্যয়ের ধরন চার্টের মাধ্যমে ভিজ্যুয়ালি দেখুন।\n\n'
+            '• চার্ট দেখা: স্ট্যাটস স্ক্রিনে গিয়ে আপনার লেনদেনের গ্রাফিকাল চার্ট দেখতে পাবেন।\n'
+            '• ক্যাটাগরি ব্রেকডাউন: আপনার টাকার কত শতাংশ কোন খাতে খরচ হচ্ছে (যেমন- খাবারে ৪০%, যাতায়াতে ২০%) তা সহজেই বুঝতে পারবেন।\n'
+            '• ফিল্টার: নির্দিষ্ট মাস বা তারিখ অনুযায়ী ফিল্টার করে আপনি আপনার আগের ও বর্তমান সময়ের খরচের তুলনা করতে পারবেন।',
+      ),
+      GuideFeature(
+        title: 'Savings',
+        icon: Icons.savings_rounded,
+        engDesc: 'Set apart money for your future goals and track your savings progress.\n\n'
+            '• Create a Savings Goal: Navigate to the Savings screen and define what you are saving for (e.g., New Laptop, Emergency Fund), the target amount, and the deadline.\n'
+            '• Deposit/Withdraw: You can transfer money from your main accounts to your Savings Vault to increase your progress.\n'
+            '• Visual Progress: See a progress bar filling up as you get closer to your target amount.',
+        banDesc: 'ভবিষ্যতের লক্ষ্যের জন্য টাকা জমানো এবং জমানো টাকার হিসাব রাখা।\n\n'
+            '• সেভিংস গোল তৈরি করা: সেভিংস স্ক্রিনে গিয়ে আপনি কিসের জন্য টাকা জমাচ্ছেন (যেমন- ল্যাপটপ, ইমার্জেন্সি ফান্ড), তার লক্ষ্যমাত্রা এবং সময়সীমা সেট করুন।\n'
+            '• জমা/উত্তোলন: আপনার মূল অ্যাকাউন্ট থেকে টাকা সেভিংস ভল্টে স্থানান্তর করতে পারবেন, যা আপনার সঞ্চয়ের অগ্রগতি বাড়াবে।\n'
+            '• প্রোগ্রেস দেখা: লক্ষ্যমাত্রার কাছাকাছি পৌঁছানোর সাথে সাথে প্রোগ্রেস বার পূর্ণ হতে দেখবেন।',
+      ),
+      GuideFeature(
+        title: 'Loans & Debts',
+        icon: Icons.handshake_rounded,
+        engDesc: 'Keep track of money you have borrowed or lent to others.\n\n'
+            '• Borrowed / Lent: Add a record when you borrow money from someone or lend money to a friend. Specify the person\'s name, amount, and due date.\n'
+            '• Repayments: When you pay back a portion or receive money back, add a repayment transaction. The app updates the remaining due amount automatically.\n'
+            '• Settle Up: Once the full amount is returned, the loan is marked as settled.',
+        banDesc: 'ধার নেওয়া বা ধার দেওয়া টাকার হিসাব রাখুন।\n\n'
+            '• ধার নেওয়া / ধার দেওয়া: কারো কাছ থেকে টাকা ধার নিলে বা কাউকে ধার দিলে তার রেকর্ড যুক্ত করুন। ব্যক্তির নাম, টাকার পরিমাণ এবং পরিশোধের তারিখ উল্লেখ করুন।\n'
+            '• কিস্তি পরিশোধ: আপনি যখন কিছু টাকা ফেরত দেবেন বা পাবেন, তখন রিপেমেন্ট যুক্ত করুন। অ্যাপ স্বয়ংক্রিয়ভাবে বাকি টাকার হিসাব আপডেট করবে।\n'
+            '• সেটেল আপ: সম্পূর্ণ টাকা পরিশোধ হয়ে গেলে লোনটি সেটেলড (Settled) হিসেবে মার্ক হয়ে যাবে।',
+      ),
+      GuideFeature(
+        title: 'Credit Cards',
+        icon: Icons.credit_card_rounded,
+        engDesc: 'Manage your credit card usages, statements, and outstanding balances.\n\n'
+            '• Add a Credit Card: Go to the Credit Cards section and enter your card details including the limit, billing cycle, and current outstanding amount.\n'
+            '• Record Spends: Log your credit card expenses directly. The app will increase your outstanding balance and decrease your available limit.\n'
+            '• Bill Payments: Record when you pay your credit card bill to reduce the outstanding balance.',
+        banDesc: 'ক্রেডিট কার্ডের ব্যবহার, স্টেটমেন্ট এবং বকেয়া ব্যালেন্স পরিচালনা করুন।\n\n'
+            '• ক্রেডিট কার্ড যুক্ত করা: ক্রেডিট কার্ড সেকশনে গিয়ে কার্ডের লিমিট, বিলিং সাইকেল এবং বর্তমান বকেয়ার পরিমাণ উল্লেখ করে কার্ড যুক্ত করুন।\n'
+            '• খরচ লিপিবদ্ধ করা: ক্রেডিট কার্ডের খরচগুলো সরাসরি যুক্ত করুন। এতে আপনার বকেয়া ব্যালেন্স বাড়বে এবং লিমিট কমে যাবে।\n'
+            '• বিল পেমেন্ট: ক্রেডিট কার্ডের বিল পরিশোধ করার পর তা রেকর্ড করলে আপনার বকেয়া ব্যালেন্স স্বয়ংক্রিয়ভাবে কমে যাবে।',
+      ),
+      GuideFeature(
+        title: 'Custom Categories',
+        icon: Icons.category_rounded,
+        engDesc: 'Personalize the way you classify your income and expenses.\n\n'
+            '• Add New Categories: If the default categories don\'t fit your needs, you can create new custom ones (e.g., Pet Care, Gym) and assign icons to them.\n'
+            '• Edit/Delete: You can rename existing categories or remove ones you never use.',
+        banDesc: 'আপনার আয় ও ব্যয় শ্রেণীবদ্ধ করার পদ্ধতি কাস্টমাইজ করুন।\n\n'
+            '• নতুন ক্যাটাগরি তৈরি: যদি ডিফল্ট ক্যাটাগরিগুলো আপনার জন্য যথেষ্ট না হয়, তবে আপনি নিজের মতো নতুন ক্যাটাগরি (যেমন- জিম, পোষা প্রাণী) তৈরি করে আইকন দিতে পারবেন।\n'
+            '• এডিট/ডিলিট: চাইলে বর্তমান ক্যাটাগরিগুলোর নাম পরিবর্তন বা অপ্রয়োজনীয় ক্যাটাগরি মুছে ফেলতে পারবেন।',
+      ),
+      GuideFeature(
+        title: 'Digital Business Card',
+        icon: Icons.contact_mail_rounded,
+        engDesc: 'Create and share your digital identity seamlessly.\n\n'
+            '• Setup Your Card: Add your professional details like name, job title, company, phone, email, and website. You can also customize the card design by choosing different color themes.\n'
+            '• Easy Sharing: Share your card instantly via QR Code, write it to an NFC tag, or share it as a standard vCard/Image to others.\n'
+            '• Save to Gallery: Export your customized business card directly to your phone\'s gallery.',
+        banDesc: 'খুব সহজেই আপনার ডিজিটাল পরিচয় তৈরি এবং শেয়ার করুন।\n\n'
+            '• কার্ড সেটআপ: আপনার পেশাদার তথ্য যেমন- নাম, পদবি, কোম্পানি, ফোন, ইমেইল এবং ওয়েবসাইট যুক্ত করুন। এছাড়া আপনি বিভিন্ন কালার থিম বেছে নিয়ে কার্ডের ডিজাইন কাস্টমাইজ করতে পারবেন।\n'
+            '• সহজে শেয়ার: কিউআর কোড, এনএফসি ট্যাগ অথবা ভিকার্ড/ছবি হিসেবে আপনার কার্ড অন্যদের সাথে শেয়ার করতে পারবেন।\n'
+            '• গ্যালারিতে সেভ করুন: আপনার কাস্টমাইজ করা বিজনেস কার্ডটি সরাসরি আপনার ফোনের গ্যালারিতে সংরক্ষণ করুন।',
+      ),
+      GuideFeature(
+        title: 'Profile & Security',
+        icon: Icons.security_rounded,
+        engDesc: 'Keep your financial data secure and generate reports.\n\n'
+            '• App Lock: Enable a 4-digit PIN lock or use Biometrics (Fingerprint/Face ID) to secure your app from unauthorized access.\n'
+            '• PDF Statements: Generate and export a complete summary of your transactions as a printable PDF report directly from the Profile section.\n'
+            '• Customization: Switch between Light and Dark mode, change language (English/Bangla), and manage notifications.',
+        banDesc: 'আপনার আর্থিক তথ্য সুরক্ষিত রাখুন এবং রিপোর্ট তৈরি করুন।\n\n'
+            '• অ্যাপ লক: আপনার অ্যাপকে সুরক্ষিত রাখতে ৪-ডিজিটের পিন লক চালু করুন বা বায়োমেট্রিক (ফিঙ্গারপ্রিন্ট/ফেস আইডি) ব্যবহার করুন।\n'
+            '• পিডিএফ স্টেটমেন্ট: প্রোফাইল সেকশন থেকে আপনার লেনদেনের সম্পূর্ণ হিসাব প্রিন্ট করার উপযোগী পিডিএফ (PDF) রিপোর্ট হিসেবে তৈরি করুন।\n'
+            '• কাস্টমাইজেশন: লাইট এবং ডার্ক মোডের মধ্যে পরিবর্তন করুন, ভাষা (ইংরেজি/বাংলা) পরিবর্তন করুন এবং নোটিফিকেশন নিয়ন্ত্রণ করুন।',
+      ),
     ];
   }
 

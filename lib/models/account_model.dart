@@ -18,6 +18,14 @@ class AccountModel {
   // MFS fields
   final String? mobileNumber;
 
+  // Savings Installment (DPS) fields
+  final bool isInstallmentEnabled;
+  final double installmentAmount;
+  final String? installmentFrequency; // 'Monthly' or 'Weekly'
+  final int installmentDuration; // Total number of installments
+  final int installmentsPaid;
+  final DateTime? nextDueDate;
+
   AccountModel({
     required this.id,
     required this.name,
@@ -30,6 +38,12 @@ class AccountModel {
     this.branchName,
     this.routingNumber,
     this.mobileNumber,
+    this.isInstallmentEnabled = false,
+    this.installmentAmount = 0.0,
+    this.installmentFrequency,
+    this.installmentDuration = 0,
+    this.installmentsPaid = 0,
+    this.nextDueDate,
   });
 
   factory AccountModel.fromFirestore(DocumentSnapshot doc) {
@@ -48,6 +62,12 @@ class AccountModel {
       branchName: data['branchName'],
       routingNumber: data['routingNumber'],
       mobileNumber: data['mobileNumber'],
+      isInstallmentEnabled: data['isInstallmentEnabled'] ?? false,
+      installmentAmount: (data['installmentAmount'] ?? 0).toDouble(),
+      installmentFrequency: data['installmentFrequency'],
+      installmentDuration: data['installmentDuration'] ?? 0,
+      installmentsPaid: data['installmentsPaid'] ?? 0,
+      nextDueDate: data['nextDueDate'] != null ? (data['nextDueDate'] as Timestamp).toDate() : null,
     );
   }
 
@@ -63,6 +83,12 @@ class AccountModel {
       'branchName': branchName,
       'routingNumber': routingNumber,
       'mobileNumber': mobileNumber,
+      'isInstallmentEnabled': isInstallmentEnabled,
+      'installmentAmount': installmentAmount,
+      'installmentFrequency': installmentFrequency,
+      'installmentDuration': installmentDuration,
+      'installmentsPaid': installmentsPaid,
+      if (nextDueDate != null) 'nextDueDate': Timestamp.fromDate(nextDueDate!),
     };
   }
 }

@@ -92,6 +92,23 @@ class GoalService {
     });
   }
 
+  // Fetch transactions within a date range (inclusive)
+  Stream<List<TransactionModel>> getTransactionsForDateRange(DateTime start, DateTime end) {
+    if (_uid == null) return Stream.value([]);
+    return _db
+        .collection('transactions')
+        .where('userId', isEqualTo: _uid)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs
+          .map((doc) => TransactionModel.fromFirestore(doc))
+          .where((tx) =>
+              !tx.date.isBefore(DateTime(start.year, start.month, start.day)) &&
+              !tx.date.isAfter(DateTime(end.year, end.month, end.day, 23, 59, 59)))
+          .toList();
+    });
+  }
+
   // Fetch all transactions for multi-month charting
   Stream<List<TransactionModel>> getAllTransactions() {
     if (_uid == null) return Stream.value([]);

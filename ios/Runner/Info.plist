@@ -51,5 +51,14 @@
 	<string>This app requires access to the camera to take your profile picture.</string>
 	<key>NSFaceIDUsageDescription</key>
 	<string>This app requires Face ID access to unlock your financial ledger securely.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>This app requires permission to save the business card image to your photo library.</string>
+	<key>NSContactsUsageDescription</key>
+	<string>This app requires access to your contacts to quickly pick a person for loans.</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>https</string>
+		<string>whatsapp</string>
+	</array>
 </dict>
 </plist>

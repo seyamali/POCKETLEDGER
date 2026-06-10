@@ -110,6 +110,13 @@ class LoanModel {
   final String userId;
   final List<RepaymentModel> repayments;
   final List<InstallmentModel> installments;
+  final double interestAmount;
+  final double interestRate;
+  final DateTime? dueDate;
+  final String? personPhone;
+  final List<String> attachmentUrls;
+  final double penaltyRate;
+  final bool isPenaltyActive;
 
   LoanModel({
     required this.id,
@@ -126,7 +133,25 @@ class LoanModel {
     required this.userId,
     this.repayments = const [],
     this.installments = const [],
+    this.interestAmount = 0.0,
+    this.interestRate = 0.0,
+    this.dueDate,
+    this.personPhone,
+    this.attachmentUrls = const [],
+    this.penaltyRate = 0.0,
+    this.isPenaltyActive = false,
   });
+
+  double get currentPenalty {
+    if (!isPenaltyActive || dueDate == null || remainingAmount <= 0) return 0.0;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final due = DateTime(dueDate!.year, dueDate!.month, dueDate!.day);
+    if (today.isAfter(due)) {
+      return penaltyRate; // Flat fee penalty
+    }
+    return 0.0;
+  }
 
   factory LoanModel.fromFirestore(DocumentSnapshot doc) {
     Map data = doc.data() as Map<String, dynamic>;
@@ -139,6 +164,11 @@ class LoanModel {
     List<InstallmentModel> insts = [];
     if (data['installments'] != null) {
       insts = (data['installments'] as List).map((i) => InstallmentModel.fromMap(i)).toList();
+    }
+
+    List<String> attachments = [];
+    if (data['attachmentUrls'] != null) {
+      attachments = List<String>.from(data['attachmentUrls']);
     }
 
     return LoanModel(
@@ -156,6 +186,13 @@ class LoanModel {
       userId: data['userId'] ?? '',
       repayments: reps,
       installments: insts,
+      interestAmount: (data['interestAmount'] ?? 0).toDouble(),
+      interestRate: (data['interestRate'] ?? 0).toDouble(),
+      dueDate: data['dueDate'] != null ? (data['dueDate'] as Timestamp).toDate() : null,
+      personPhone: data['personPhone'],
+      attachmentUrls: attachments,
+      penaltyRate: (data['penaltyRate'] ?? 0).toDouble(),
+      isPenaltyActive: data['isPenaltyActive'] ?? false,
     );
   }
 
@@ -174,6 +211,13 @@ class LoanModel {
       'userId': userId,
       'repayments': repayments.map((r) => r.toMap()).toList(),
       'installments': installments.map((i) => i.toMap()).toList(),
+      'interestAmount': interestAmount,
+      'interestRate': interestRate,
+      if (dueDate != null) 'dueDate': Timestamp.fromDate(dueDate!),
+      'personPhone': personPhone,
+      'attachmentUrls': attachmentUrls,
+      'penaltyRate': penaltyRate,
+      'isPenaltyActive': isPenaltyActive,
     };
   }
 }

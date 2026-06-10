@@ -31,6 +31,8 @@ import 'package:pocketledger/core/widgets/scale_on_tap.dart';
 import 'package:pocketledger/core/widgets/glass_card.dart';
 import 'package:pocketledger/features/guide/guide_screen.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:pocketledger/features/business_card/business_card_screen.dart';
+import 'package:pocketledger/features/analytics/analytics_screen.dart';
 import 'dart:async';
 
 class DashboardScreen extends StatefulWidget {
@@ -187,7 +189,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   // ── Sticky Header ──
                   SliverPersistentHeader(
                     pinned: true,
-                    delegate: _StickyHeaderDelegate(dueCount: _dueCount),
+                    delegate: _StickyHeaderDelegate(
+                      dueCount: _dueCount,
+                      statusBarHeight: MediaQuery.of(context).padding.top,
+                    ),
                   ),
 
                   // ── Offline Banner ──
@@ -468,6 +473,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       {'label': AppLocalizations.get('credit'),     'icon': Icons.credit_card_outlined,             'screen': const CreditCardsScreen()},
       {'label': AppLocalizations.get('goals'),      'icon': Icons.track_changes_rounded,            'screen': const MonthlyGoalScreen()},
       {'label': AppLocalizations.get('bills'),      'icon': Icons.event_repeat_rounded,             'screen': const SubscriptionsScreen()},
+      {'label': 'Biz Card',                         'icon': Icons.contact_mail_outlined,            'screen': const BusinessCardScreen()},
     ];
 
     return Column(
@@ -965,7 +971,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               ),
               
-              _navItem(Icons.analytics_rounded, AppLocalizations.get('stats'), false, onTap: () => _go(const TransactionsScreen())),
+              _navItem(Icons.analytics_rounded, AppLocalizations.get('stats'), false, onTap: () => _go(const AnalyticsScreen())),
               _navItem(Icons.info_outline_rounded, 'Guide', false, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GuideScreen()))),
             ],
           ),
@@ -997,11 +1003,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
 class _StickyHeaderDelegate extends SliverPersistentHeaderDelegate {
   final int dueCount;
-  const _StickyHeaderDelegate({required this.dueCount});
+  final double statusBarHeight;
+  const _StickyHeaderDelegate({required this.dueCount, required this.statusBarHeight});
   @override
-  double get minExtent => 65.0 + 32.0; // Icon height + Status bar approx
+  double get minExtent => 65.0 + statusBarHeight;
   @override
-  double get maxExtent => 65.0 + 32.0;
+  double get maxExtent => 65.0 + statusBarHeight;
 
   @override
   Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {

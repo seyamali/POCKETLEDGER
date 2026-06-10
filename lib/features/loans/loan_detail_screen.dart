@@ -1,8 +1,10 @@
 import 'dart:ui';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:pocketledger/app/theme.dart';
 import 'package:pocketledger/models/loan_model.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:pocketledger/services/loan_service.dart';
 import 'package:pocketledger/models/account_model.dart';
 import 'package:pocketledger/services/account_service.dart';
@@ -13,6 +15,11 @@ import 'package:flutter/services.dart';
 import 'package:pocketledger/core/widgets/scale_on_tap.dart';
 import 'package:pocketledger/core/widgets/glass_card.dart';
 import 'package:pocketledger/core/localization/app_localizations.dart';
+import 'package:pocketledger/services/notification_service.dart';
+import 'package:screenshot/screenshot.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:image_picker/image_picker.dart';
 
 class LoanDetailScreen extends StatefulWidget {
   final LoanModel loan;
@@ -25,6 +32,7 @@ class LoanDetailScreen extends StatefulWidget {
 class _LoanDetailScreenState extends State<LoanDetailScreen> {
   final LoanService _loanService = LoanService();
   final AccountService _accountService = AccountService();
+  final ScreenshotController _screenshotController = ScreenshotController();
 
   final _amountController = TextEditingController();
   final _noteController = TextEditingController();
@@ -446,6 +454,8 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                 ],
                 const SizedBox(height: 24),
                 _buildRepaymentsList(isDark),
+                const SizedBox(height: 24),
+                _buildAttachmentsList(isDark),
               ],
             ),
           ),
@@ -544,6 +554,78 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                   ),
                 ),
               ),
+              if (widget.loan.personPhone != null && widget.loan.personPhone!.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                ScaleOnTap(
+                  onTap: () async {
+                    final phone = widget.loan.personPhone!.replaceAll(RegExp(r'\D'), '');
+                    final url = Uri.parse('https://wa.me/$phone?text=${Uri.encodeComponent(reminderText)}');
+                    if (await canLaunchUrl(url)) {
+                      await launchUrl(url, mode: LaunchMode.externalApplication);
+                    } else {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Could not launch WhatsApp')),
+                        );
+                      }
+                    }
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF25D366).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFF25D366).withValues(alpha: 0.3)),
+                    ),
+                    alignment: Alignment.center,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.wechat_rounded, color: Color(0xFF25D366), size: 16),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Remind via WhatsApp',
+                          style: GoogleFonts.outfit(
+                            color: const Color(0xFF25D366),
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+              if (widget.loan.status == LoanStatus.paid || widget.loan.remainingAmount == 0) ...[
+                const SizedBox(height: 12),
+                ScaleOnTap(
+                  onTap: _generateAndShareReceipt,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    decoration: BoxDecoration(
+                      color: AppColors.brandPrimary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.brandPrimary.withValues(alpha: 0.3)),
+                    ),
+                    alignment: Alignment.center,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.receipt_long_rounded, color: AppColors.brandPrimary, size: 16),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Share Receipt',
+                          style: GoogleFonts.outfit(
+                            color: AppColors.brandPrimary,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -631,6 +713,14 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
   void _handleDeleteLoan() async {
     setState(() => _isLoading = true);
     try {
+      if (widget.loan.installments.isNotEmpty) {
+        for (var inst in widget.loan.installments) {
+          await NotificationService().cancelLoanReminders('${widget.loan.id}_${inst.id}');
+        }
+      } else {
+        await NotificationService().cancelLoanReminders(widget.loan.id);
+      }
+      
       await _loanService.deleteLoan(widget.loan);
       if (mounted) Navigator.pop(context);
     } catch (e) {
@@ -705,15 +795,71 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                 style: GoogleFonts.outfit(color: AppColors.textGrey, fontSize: 13),
               ),
             ),
+            if (widget.loan.dueDate != null && widget.loan.installments.isEmpty) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.redAccent.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.redAccent.withValues(alpha: 0.2)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.calendar_today_rounded, color: Colors.redAccent, size: 14),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Due on: ${widget.loan.dueDate!.day}/${widget.loan.dueDate!.month}/${widget.loan.dueDate!.year}',
+                      style: GoogleFonts.outfit(color: Colors.redAccent, fontSize: 12, fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             const SizedBox(height: 28),
+            if (widget.loan.interestAmount > 0) ...[
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _statColumn(AppLocalizations.get('principal_amount') ?? 'Principal', widget.loan.amount, AppColors.textBlack),
+                  _statColumn(AppLocalizations.get('interest_amount') ?? 'Interest (${widget.loan.interestRate}%)', widget.loan.interestAmount, Colors.orangeAccent),
+                  _statColumn(AppLocalizations.get('total_owed') ?? 'Total Owed', widget.loan.amount + widget.loan.interestAmount, AppColors.brandPrimary),
+                ],
+              ),
+              const SizedBox(height: 16),
+            ],
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _statColumn(AppLocalizations.get('total_amount'), widget.loan.amount, AppColors.textBlack),
-                _statColumn(AppLocalizations.get('paid_back'), widget.loan.amount - widget.loan.remainingAmount, AppColors.brandPrimary),
-                _statColumn(AppLocalizations.get('remaining'), widget.loan.remainingAmount, widget.loan.remainingAmount > 0 ? Colors.redAccent : AppColors.brandPrimary),
+                _statColumn(AppLocalizations.get('total_amount'), widget.loan.amount + widget.loan.interestAmount, AppColors.textBlack),
+                _statColumn(AppLocalizations.get('paid_back'), (widget.loan.amount + widget.loan.interestAmount) - widget.loan.remainingAmount, AppColors.brandPrimary),
+                _statColumn(AppLocalizations.get('remaining'), widget.loan.remainingAmount + widget.loan.currentPenalty, widget.loan.remainingAmount > 0 ? Colors.redAccent : AppColors.brandPrimary),
               ],
             ),
+            if (widget.loan.currentPenalty > 0) ...[
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.redAccent.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.redAccent.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.warning_amber_rounded, color: Colors.redAccent, size: 16),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Late Penalty Added: ৳${widget.loan.currentPenalty.toStringAsFixed(2)}',
+                        style: GoogleFonts.outfit(color: Colors.redAccent, fontSize: 12, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -917,5 +1063,139 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
         ],
       ),
     );
+  }
+
+  Widget _buildAttachmentsList(bool isDark) {
+    return GlassCard(
+      blur: 20,
+      opacity: isDark ? 0.04 : 0.45,
+      color: isDark ? const Color(0xFF16201D) : Colors.white,
+      borderRadius: 24,
+      border: Border.all(color: AppColors.brandPrimary.withValues(alpha: 0.1)),
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.attachment_rounded, color: AppColors.brandPrimary, size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Evidence & Documents',
+                      style: GoogleFonts.outfit(color: AppColors.textBlack, fontSize: 14, fontWeight: FontWeight.bold, letterSpacing: 1.0),
+                    ),
+                  ],
+                ),
+                ScaleOnTap(
+                  onTap: _pickAndUploadAttachment,
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.brandPrimary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(Icons.add_photo_alternate_rounded, color: AppColors.brandPrimary, size: 20),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            if (widget.loan.attachmentUrls.isEmpty)
+              Text('No attachments uploaded yet.', style: GoogleFonts.outfit(color: AppColors.textGrey, fontSize: 12))
+            else
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: widget.loan.attachmentUrls.map((url) => _buildAttachmentThumbnail(url)).toList(),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAttachmentThumbnail(String url) {
+    return ScaleOnTap(
+      onTap: () async {
+        if (await canLaunchUrl(Uri.parse(url))) {
+          await launchUrl(Uri.parse(url));
+        }
+      },
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          width: 80,
+          height: 80,
+          color: Colors.grey.withValues(alpha: 0.2),
+          child: Image.network(url, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Icon(Icons.description_rounded, color: Colors.grey)),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickAndUploadAttachment() async {
+    try {
+      final ImagePicker picker = ImagePicker();
+      final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+      
+      if (image != null) {
+        setState(() => _isLoading = true);
+        await _loanService.uploadAttachment(widget.loan.id, File(image.path));
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Attachment uploaded successfully!')));
+        // Note: For real-time updates, ideally listen to a stream, but since we update firestore, let user refresh or we update local model
+        setState(() {
+          // Just refreshing the screen since we don't have stream builder here directly
+        });
+      }
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _generateAndShareReceipt() async {
+    setState(() => _isLoading = true);
+    try {
+      final image = await _screenshotController.captureFromWidget(
+        Material(
+          color: Colors.white,
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border.all(color: AppColors.brandPrimary, width: 4),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.check_circle_rounded, color: Colors.green, size: 64),
+                const SizedBox(height: 16),
+                Text('LOAN SETTLED', style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.green)),
+                const SizedBox(height: 24),
+                Text('Name: ${widget.loan.personName}', style: GoogleFonts.outfit(fontSize: 18, color: Colors.black87)),
+                Text('Total Paid: ৳${(widget.loan.amount + widget.loan.interestAmount).toStringAsFixed(2)}', style: GoogleFonts.outfit(fontSize: 18, color: Colors.black87)),
+                const SizedBox(height: 24),
+                Text('Generated by Pocket Ledger', style: GoogleFonts.outfit(fontSize: 12, color: Colors.grey)),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      final directory = await getApplicationDocumentsDirectory();
+      final imagePath = await File('${directory.path}/receipt_${widget.loan.id}.png').create();
+      await imagePath.writeAsBytes(image);
+
+      await Share.shareXFiles([XFile(imagePath.path)], text: 'Receipt for ${widget.loan.personName}');
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error generating receipt: $e')));
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 }

@@ -358,7 +358,26 @@ class AppLocalizations {
       'loan_given': 'Loan Given',
       'credit': 'Credit',
       'savings': 'Savings',
-},
+      'date': 'Date',
+      'transaction_date': 'When did this happen?',
+      'add_interest': 'Add Interest',
+      'add_interest_subtitle': 'Include an interest rate (percentage) to this loan',
+      'interest_rate_hint': 'Interest Rate (%)',
+      'total_payable': 'Total Payable',
+      'principal_amount': 'Principal',
+      'interest_amount': 'Interest',
+      'total_owed': 'Total Owed',
+      'when_was_it': 'When did this happen?',
+      'who_is_it_with': 'Who is this loan with?',
+      'how_to_return': 'How will it be returned?',
+      'where_money_goes': 'Where is the money going?',
+      'whose_money': 'Whose money is this?',
+      'link_app_account': 'Link with App Account (Optional)',
+      'loan_details': 'Loan Details',
+      'hint_person_name': 'Name of the person (e.g. Rahim)',
+      'hint_note_optional': 'Any notes? (Optional)',
+      'hint_due_date': 'When will it be due? (Optional)',
+    },
     'bn': {
       // Login Screen
       'welcome_back': 'পুনরায় স্বাগতম!',
@@ -711,7 +730,16 @@ class AppLocalizations {
       'loan_given': 'দেওয়া ঋণ',
       'credit': 'ক্রেডিট',
       'savings': 'সঞ্চয়',
-}
+      'date': 'তারিখ',
+      'transaction_date': 'এটি কখন ঘটেছিল?',
+      'add_interest': 'সুদ যোগ করুন',
+      'add_interest_subtitle': 'এই ঋণে সুদের হার (শতাংশ) যোগ করুন',
+      'interest_rate_hint': 'সুদের হার (%)',
+      'total_payable': 'মোট প্রদেয়',
+      'principal_amount': 'মূলধন',
+      'interest_amount': 'সুদ',
+      'total_owed': 'মোট পাওনা',
+    }
   };
 
   static String get(String key) {

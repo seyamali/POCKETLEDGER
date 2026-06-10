@@ -23,6 +23,7 @@ import 'package:pocketledger/core/constants/app_constants.dart';
 import 'package:pocketledger/services/theme_service.dart';
 import 'package:pocketledger/core/localization/app_localizations.dart';
 import 'package:pocketledger/services/language_service.dart';
+import 'package:pocketledger/features/business_card/business_card_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -87,6 +88,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         title: 'Privacy & Security',
                         subtitle: 'App lock & security PIN',
                         onTap: _showPrivacySecurityModal,
+                      ),
+                      _buildSettingItem(
+                        icon: Icons.contact_mail_rounded,
+                        title: 'Digital Business Card',
+                        subtitle: 'Create & share your card via QR/NFC',
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const BusinessCardScreen(),
+                            ),
+                          );
+                        },
                       ),
                       _buildSettingItem(
                         icon: Icons.password_rounded,

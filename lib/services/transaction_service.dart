@@ -99,6 +99,7 @@ class TransactionService {
     required double amount,
     required String note,
     required String category,
+    DateTime? date,
   }) async {
     if (_uid == null) return;
 
@@ -153,7 +154,7 @@ class TransactionService {
         type: TransactionType.transfer,
         category: category,
         note: note,
-        date: DateTime.now(),
+        date: date ?? DateTime.now(),
         userId: _uid!,
         toAccountId: toAccountId,
         toAccountName: toAccountName,

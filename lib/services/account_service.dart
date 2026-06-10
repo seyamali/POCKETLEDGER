@@ -10,7 +10,7 @@ class AccountService {
   String? get _uid => _auth.currentUser?.uid;
 
   // Create a new account and initial transactions
-  Future<void> createAccount({
+  Future<String?> createAccount({
     required String name,
     required String type,
     required Map<String, double> breakdown,
@@ -19,8 +19,14 @@ class AccountService {
     String? branchName,
     String? routingNumber,
     String? mobileNumber,
+    bool isInstallmentEnabled = false,
+    double installmentAmount = 0.0,
+    String? installmentFrequency,
+    int installmentDuration = 0,
+    int installmentsPaid = 0,
+    DateTime? nextDueDate,
   }) async {
-    if (_uid == null) return;
+    if (_uid == null) return null;
 
     // Rule #7: Total balance is the sum of all owner balances
     double totalBalance = breakdown.values.fold(0, (sum, val) => sum + val);
@@ -41,6 +47,12 @@ class AccountService {
       branchName: branchName,
       routingNumber: routingNumber,
       mobileNumber: mobileNumber,
+      isInstallmentEnabled: isInstallmentEnabled,
+      installmentAmount: installmentAmount,
+      installmentFrequency: installmentFrequency,
+      installmentDuration: installmentDuration,
+      installmentsPaid: installmentsPaid,
+      nextDueDate: nextDueDate,
     );
     batch.set(docRef, account.toFirestore());
 
@@ -67,6 +79,7 @@ class AccountService {
 
     // Commit both the account and the initial transactions atomically
     await batch.commit();
+    return docRef.id;
   }
 
   // Get stream of accounts for the current user
@@ -218,5 +231,17 @@ class AccountService {
     }
 
     await batch.commit();
+  }
+
+  // Update Savings Installment Progress
+  Future<void> updateSavingsInstallmentProgress(String accountId, int installmentsPaid, DateTime? nextDueDate) async {
+    if (_uid == null) return;
+    final data = <String, dynamic>{
+      'installmentsPaid': installmentsPaid,
+    };
+    if (nextDueDate != null) {
+      data['nextDueDate'] = Timestamp.fromDate(nextDueDate);
+    }
+    await _db.collection('accounts').doc(accountId).update(data);
   }
 }
