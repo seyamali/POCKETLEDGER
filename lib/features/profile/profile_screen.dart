@@ -42,6 +42,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
   int _developerTapCount = 0;
   Timer? _developerTapResetTimer;
 
+  late Stream<DocumentSnapshot> _userProfileStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _userProfileStream = _authService.getUserProfile();
+  }
+
   String _fmt(double v) => v.toInt().toString().replaceAllMapped(
     RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},');
 
@@ -101,193 +109,398 @@ class _ProfileScreenState extends State<ProfileScreen> {
       backgroundColor: Colors.transparent,
       builder: (context) {
         final isDark = Theme.of(context).brightness == Brightness.dark;
-        return Container(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-          decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF16201D) : Colors.white,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-          ),
-          child: SafeArea(
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
+        final themeBgColor = isDark ? const Color(0xFF0F172A) : Colors.white;
+        final themeTextColor = isDark ? Colors.white : AppColors.textBlack;
+
+        return DraggableScrollableSheet(
+          initialChildSize: 0.85,
+          minChildSize: 0.5,
+          maxChildSize: 0.95,
+          builder: (_, controller) {
+            return Container(
+              decoration: BoxDecoration(
+                color: themeBgColor,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.15),
+                    blurRadius: 20,
+                    spreadRadius: 5,
+                  ),
+                ],
+              ),
+              child: Stack(
                 children: [
-                  Center(
+                  // Decorative top gradient glow
+                  Positioned(
+                    top: -100,
+                    left: -100,
                     child: Container(
-                      width: 42,
-                      height: 4,
+                      width: 250,
+                      height: 250,
                       decoration: BoxDecoration(
-                        color: Colors.grey.shade400,
-                        borderRadius: BorderRadius.circular(999),
+                        shape: BoxShape.circle,
+                        gradient: RadialGradient(
+                          colors: [
+                            AppColors.primaryGreen.withValues(alpha: 0.15),
+                            AppColors.primaryGreen.withValues(alpha: 0),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 18),
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: AppColors.primaryGreen.withValues(alpha: 0.12),
-                          shape: BoxShape.circle,
+                  Positioned(
+                    top: -50,
+                    right: -50,
+                    child: Container(
+                      width: 200,
+                      height: 200,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: RadialGradient(
+                          colors: [
+                            AppColors.accentGold.withValues(alpha: 0.1),
+                            AppColors.accentGold.withValues(alpha: 0),
+                          ],
                         ),
-                        child: Icon(Icons.code_rounded, color: AppColors.primaryGreen, size: 28),
                       ),
-                      const SizedBox(width: 14),
-                      Expanded(
+                    ),
+                  ),
+                  ListView(
+                    controller: controller,
+                    padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+                    children: [
+                      // Handle bar
+                      Center(
+                        child: Container(
+                          width: 46,
+                          height: 5,
+                          decoration: BoxDecoration(
+                            color: isDark ? Colors.grey[800] : Colors.grey.shade300,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      
+                      // Header Section (Avatar & Basic info)
+                      Center(
+                        child: Column(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                gradient: LinearGradient(
+                                  colors: [AppColors.primaryGreen, AppColors.accentGold],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: AppColors.primaryGreen.withValues(alpha: 0.3),
+                                    blurRadius: 16,
+                                    offset: const Offset(0, 8),
+                                  )
+                                ],
+                              ),
+                              child: CircleAvatar(
+                                radius: 48,
+                                backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.grey.shade100,
+                                child: Text(
+                                  'SAB',
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 32,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.primaryGreen,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'Md. Seyam Ali Biswas',
+                              style: GoogleFonts.outfit(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: themeTextColor,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: AppColors.primaryGreen.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                'Software Engineer & AI Researcher',
+                                style: GoogleFonts.outfit(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.primaryGreen,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.location_on_rounded, color: AppColors.textGrey, size: 14),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Gazipur, Dhaka, Bangladesh',
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 13,
+                                    color: AppColors.textGrey,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 28),
+                      
+                      // Stack / Tech Section
+                      _buildHeaderLabel('Core Stack', isDark),
+                      const SizedBox(height: 12),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          _buildModernStackTag('Flutter', Icons.star),
+                          _buildModernStackTag('Angular', Icons.web),
+                          _buildModernStackTag('.NET Core', Icons.developer_mode),
+                          _buildModernStackTag('Spring Boot', Icons.settings),
+                          _buildModernStackTag('Java', Icons.coffee),
+                          _buildModernStackTag('Python', Icons.analytics),
+                          _buildModernStackTag('SQL', Icons.storage),
+                          _buildModernStackTag('AI/ML', Icons.psychology),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Research Section
+                      _buildHeaderLabel('Publications & Research', isDark),
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF1E293B) : Colors.grey.shade50,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: isDark ? const Color(0xFF334155) : Colors.grey.shade200),
+                        ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              'Developer Details',
-                              style: GoogleFonts.outfit(
-                                fontSize: 22,
-                                fontWeight: FontWeight.bold,
-                                color: isDark ? Colors.white : AppColors.textBlack,
-                              ),
+                            Row(
+                              children: [
+                                Icon(Icons.menu_book_rounded, color: AppColors.accentGold, size: 18),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'Money plant disease atlas (2025)',
+                                    style: GoogleFonts.outfit(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14.5,
+                                      color: themeTextColor,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
+                            const SizedBox(height: 6),
                             Text(
-                              'Hidden profile unlocked',
+                              'A comprehensive dataset for disease classification in ornamental horticulture, published in Data in Brief.',
                               style: GoogleFonts.outfit(
-                                fontSize: 13,
+                                fontSize: 12.5,
                                 color: AppColors.textGrey,
                               ),
                             ),
                           ],
                         ),
                       ),
+                      const SizedBox(height: 24),
+                      
+                      // Featured Work Section
+                      _buildHeaderLabel('Featured Work', isDark),
+                      const SizedBox(height: 12),
+                      Column(
+                        children: [
+                          _buildModernProjectCard('Raw Nation', 'E-commerce platform backend & frontend architecture.', 'Angular & .NET', isDark),
+                          _buildModernProjectCard('Aurelia Editor', 'Next-gen collaborative text & code editing engine.', 'Flutter & JS', isDark),
+                          _buildModernProjectCard('Bahari Financial Engine', 'Scalable accounting & wallet management ledger.', 'Spring Boot', isDark),
+                          _buildModernProjectCard('Beyond Decimal', 'Advanced decimal processing logic & math solver.', 'Python & C#', isDark),
+                          _buildModernProjectCard('Orion Hotel Oracle', 'Integrated property & booking intelligence app.', 'Flutter & SQL', isDark),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Contact Actions
+                      _buildHeaderLabel('Direct Connections', isDark),
+                      const SizedBox(height: 12),
+                      GridView.count(
+                        crossAxisCount: 2,
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        crossAxisSpacing: 12,
+                        mainAxisSpacing: 12,
+                        childAspectRatio: 2.2,
+                        children: [
+                          _buildModernContactCard(
+                            icon: Icons.email_rounded,
+                            title: 'Email',
+                            subtitle: 'Send message',
+                            onTap: () => _launchExternal('mailto:seyamhossain482@gmail.com'),
+                            onLongPress: () => _copyToClipboard('seyamhossain482@gmail.com', 'Email'),
+                            isDark: isDark,
+                          ),
+                          _buildModernContactCard(
+                            icon: Icons.call_rounded,
+                            title: 'Phone',
+                            subtitle: 'Call direct',
+                            onTap: () => _launchExternal('tel:+8801989424982'),
+                            onLongPress: () => _copyToClipboard('+8801989424982', 'Phone number'),
+                            isDark: isDark,
+                          ),
+                          _buildModernContactCard(
+                            icon: Icons.public_rounded,
+                            title: 'GitHub',
+                            subtitle: 'seyamali',
+                            onTap: () => _launchExternal('https://github.com/seyamali'),
+                            onLongPress: () => _copyToClipboard('https://github.com/seyamali', 'GitHub link'),
+                            isDark: isDark,
+                          ),
+                          _buildModernContactCard(
+                            icon: Icons.link_rounded,
+                            title: 'LinkedIn',
+                            subtitle: 'seyamali',
+                            onTap: () => _launchExternal('https://linkedin.com/in/seyamali'),
+                            onLongPress: () => _copyToClipboard('https://linkedin.com/in/seyamali', 'LinkedIn link'),
+                            isDark: isDark,
+                          ),
+                        ],
+                      ),
                     ],
-                  ),
-                  const SizedBox(height: 20),
-                  _developerInfoCard(
-                    title: 'Seyam Ali Biswas',
-                    subtitle: 'Software Engineer | Full Stack | Research',
-                    icon: Icons.person_rounded,
-                  ),
-                  _developerInfoCard(
-                    title: 'Location',
-                    subtitle: 'Gazipur, Dhaka, Bangladesh',
-                    icon: Icons.location_on_rounded,
-                  ),
-                  _developerInfoCard(
-                    title: 'Core Stack',
-                    subtitle: 'Flutter, Angular, .NET Core, Spring Boot, Java, Python, C#, SQL',
-                    icon: Icons.memory_rounded,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Featured Work',
-                    style: GoogleFonts.outfit(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      color: isDark ? Colors.white : AppColors.textBlack,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      _projectChip('Raw Nation'),
-                      _projectChip('Aurelia Editor'),
-                      _projectChip('Bahari Financial Engine'),
-                      _projectChip('Beyond Decimal'),
-                      _projectChip('Orion Hotel Oracle'),
-                    ],
-                  ),
-                  const SizedBox(height: 18),
-                  Text(
-                    'Direct Actions',
-                    style: GoogleFonts.outfit(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      color: isDark ? Colors.white : AppColors.textBlack,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  _developerActionTile(
-                    icon: Icons.email_rounded,
-                    label: 'Email',
-                    value: 'seyamhossain482@gmail.com',
-                    onTap: () => _launchExternal('mailto:seyamhossain482@gmail.com'),
-                    onLongPress: () => _copyToClipboard('seyamhossain482@gmail.com', 'Email'),
-                  ),
-                  _developerActionTile(
-                    icon: Icons.call_rounded,
-                    label: 'Phone',
-                    value: '+8801989424982',
-                    onTap: () => _launchExternal('tel:+8801989424982'),
-                    onLongPress: () => _copyToClipboard('+8801989424982', 'Phone number'),
-                  ),
-                  _developerActionTile(
-                    icon: Icons.public_rounded,
-                    label: 'GitHub',
-                    value: 'github.com/seyamali',
-                    onTap: () => _launchExternal('https://github.com/seyamali'),
-                    onLongPress: () => _copyToClipboard('https://github.com/seyamali', 'GitHub link'),
-                  ),
-                  _developerActionTile(
-                    icon: Icons.link_rounded,
-                    label: 'LinkedIn',
-                    value: 'linkedin.com/in/seyamali',
-                    onTap: () => _launchExternal('https://linkedin.com/in/seyamali'),
-                    onLongPress: () => _copyToClipboard('https://linkedin.com/in/seyamali', 'LinkedIn link'),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Tip: tap the avatar 7 times again to reopen this panel.',
-                    style: GoogleFonts.outfit(
-                      fontSize: 12,
-                      color: AppColors.textGrey,
-                    ),
                   ),
                 ],
               ),
-            ),
-          ),
+            );
+          },
         );
       },
     );
   }
 
-  Widget _developerInfoCard({required String title, required String subtitle, required IconData icon}) {
+  Widget _buildHeaderLabel(String title, bool isDark) {
+    return Text(
+      title,
+      style: GoogleFonts.outfit(
+        fontSize: 16,
+        fontWeight: FontWeight.bold,
+        color: isDark ? Colors.white : AppColors.textBlack,
+        letterSpacing: 0.5,
+      ),
+    );
+  }
+
+  Widget _buildModernStackTag(String name, IconData icon) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: AppColors.primaryGreen.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.primaryGreen.withValues(alpha: 0.08)),
+        color: AppColors.primaryGreen.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(30),
+        border: Border.all(color: AppColors.primaryGreen.withValues(alpha: 0.15)),
       ),
       child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: AppColors.primaryGreen),
+          const SizedBox(width: 6),
+          Text(
+            name,
+            style: GoogleFonts.outfit(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: AppColors.primaryGreen,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildModernProjectCard(String title, String desc, String tech, bool isDark) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: isDark ? const Color(0xFF334155) : Colors.grey.shade100),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.01),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          )
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: AppColors.primaryGreen.withValues(alpha: 0.12),
-              shape: BoxShape.circle,
+              color: AppColors.primaryGreen.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(icon, color: AppColors.primaryGreen, size: 20),
+            child: Icon(Icons.rocket_launch_rounded, color: AppColors.primaryGreen, size: 20),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  title,
-                  style: GoogleFonts.outfit(
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textBlack,
-                  ),
+                 Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: GoogleFonts.outfit(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                          color: isDark ? Colors.white : AppColors.textBlack,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: AppColors.accentGold.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        tech,
+                        style: GoogleFonts.outfit(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.accentGold,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 6),
                 Text(
-                  subtitle,
+                  desc,
                   style: GoogleFonts.outfit(
-                    fontSize: 13,
+                    fontSize: 12.5,
                     color: AppColors.textGrey,
                   ),
                 ),
@@ -299,79 +512,68 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _developerActionTile({
+  Widget _buildModernContactCard({
     required IconData icon,
-    required String label,
-    required String value,
+    required String title,
+    required String subtitle,
     required VoidCallback onTap,
     required VoidCallback onLongPress,
+    required bool isDark,
   }) {
     return GestureDetector(
       onTap: onTap,
       onLongPress: onLongPress,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: AppColors.cardWhite,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: Colors.black.withValues(alpha: 0.04)),
+          color: isDark ? const Color(0xFF1E293B) : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: isDark ? const Color(0xFF334155) : Colors.grey.shade100),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.01),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            )
+          ],
         ),
         child: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(10),
+              padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
                 color: AppColors.primaryGreen.withValues(alpha: 0.08),
                 shape: BoxShape.circle,
               ),
-              child: Icon(icon, color: AppColors.primaryGreen, size: 20),
+              child: Icon(icon, color: AppColors.primaryGreen, size: 18),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    label,
+                    title,
                     style: GoogleFonts.outfit(
-                      fontSize: 15,
                       fontWeight: FontWeight.bold,
-                      color: AppColors.textBlack,
+                      fontSize: 13.5,
+                      color: isDark ? Colors.white : AppColors.textBlack,
                     ),
                   ),
-                  const SizedBox(height: 2),
                   Text(
-                    value,
+                    subtitle,
                     style: GoogleFonts.outfit(
-                      fontSize: 12.5,
+                      fontSize: 11,
                       color: AppColors.textGrey,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
             ),
-            Icon(Icons.open_in_new_rounded, color: AppColors.textGrey.withValues(alpha: 0.6), size: 18),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _projectChip(String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: AppColors.primaryGreen.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: AppColors.primaryGreen.withValues(alpha: 0.12)),
-      ),
-      child: Text(
-        label,
-        style: GoogleFonts.outfit(
-          fontSize: 12.5,
-          fontWeight: FontWeight.w600,
-          color: AppColors.primaryGreen,
         ),
       ),
     );
@@ -417,7 +619,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         return ThemeBuilder(builder: (context) => Scaffold(
           backgroundColor: AppColors.pageBackground,
           body: StreamBuilder<DocumentSnapshot>(
-            stream: _authService.getUserProfile(),
+            stream: _userProfileStream,
             builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return Center(child: CircularProgressIndicator(color: AppColors.primaryGreen));

@@ -117,8 +117,8 @@ class _AddLoanScreenState extends State<AddLoanScreen> {
 
       if (_isInterestEnabled) {
         if (_isBkashLoan) {
-          // bKash Effective Monthly Rate (approximates the 9% daily + 0.575% fee exactly)
-          interestRate = 1.619;
+          // bKash Effective Monthly Rate depends on installment count (1.611 for 6 months, 1.098 for 3 months)
+          interestRate = _isInstallmentEnabled && _installmentCount == 6 ? 1.611 : 1.098;
         } else {
           interestRate = double.tryParse(_interestRateController.text) ?? 0;
         }
@@ -163,7 +163,7 @@ class _AddLoanScreenState extends State<AddLoanScreen> {
 
       final loan = LoanModel(
         id: '',
-        personName: _personNameController.text.trim(),
+        personName: personName.trim(),
         personPhone: _personPhone,
         amount: amount,
         remainingAmount: totalOwed,
@@ -184,24 +184,29 @@ class _AddLoanScreenState extends State<AddLoanScreen> {
       final loanId = await _loanService.addLoan(loan);
 
       if (loanId != null) {
-        if (_isInstallmentEnabled) {
-          for (var inst in installments) {
+        try {
+          if (_isInstallmentEnabled) {
+            for (var inst in installments) {
+              await NotificationService().scheduleLoanReminders(
+                loanId: '${loanId}_${inst.id}',
+                personName: personName,
+                dueDate: inst.dueDate,
+                amount: inst.amount,
+                isGiven: _selectedType == LoanType.given,
+              );
+            }
+          } else if (_dueDate != null) {
             await NotificationService().scheduleLoanReminders(
-              loanId: '${loanId}_${inst.id}',
+              loanId: loanId,
               personName: personName,
-              dueDate: inst.dueDate,
-              amount: inst.amount,
+              dueDate: _dueDate!,
+              amount: totalOwed,
               isGiven: _selectedType == LoanType.given,
             );
           }
-        } else if (_dueDate != null) {
-          await NotificationService().scheduleLoanReminders(
-            loanId: loanId,
-            personName: personName,
-            dueDate: _dueDate!,
-            amount: totalOwed,
-            isGiven: _selectedType == LoanType.given,
-          );
+        } catch (notificationError) {
+          // Gracefully log or handle notification scheduling failure
+          debugPrint('Failed to schedule loan reminders: $notificationError');
         }
       }
 
@@ -895,7 +900,7 @@ class _AddLoanScreenState extends State<AddLoanScreen> {
                 
                 if (_isInterestEnabled) {
                   if (_isBkashLoan) {
-                    rate = 1.619;
+                    rate = _installmentCount == 6 ? 1.611 : 1.098;
                   } else {
                     rate = double.tryParse(_interestRateController.text) ?? 0;
                   }
@@ -1022,7 +1027,7 @@ class _AddLoanScreenState extends State<AddLoanScreen> {
               Builder(
                 builder: (context) {
                   final amt = double.tryParse(_amountController.text) ?? 0;
-                  double rate = _isBkashLoan ? 1.619 : (double.tryParse(_interestRateController.text) ?? 0);
+                  double rate = _isBkashLoan ? (_isInstallmentEnabled && _installmentCount == 6 ? 1.611 : 1.098) : (double.tryParse(_interestRateController.text) ?? 0);
                   double r = rate / 100;
                   double totalOwed = amt;
 

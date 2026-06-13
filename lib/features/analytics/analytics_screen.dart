@@ -6,6 +6,7 @@ import 'package:pocketledger/services/goal_service.dart';
 import 'package:pocketledger/models/goal_model.dart';
 import 'package:pocketledger/models/transaction_model.dart';
 import 'package:pocketledger/core/widgets/glass_card.dart';
+import 'package:pocketledger/core/constants/app_constants.dart';
 import 'package:intl/intl.dart';
 
 class AnalyticsScreen extends StatefulWidget {
@@ -19,6 +20,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   final GoalService _goalService = GoalService();
   int _touchedPieIndex = -1;
   String _selectedPeriod = 'This Month';
+  String _selectedOwner = 'All';
 
   // Returns the DateTime for the currently selected period (used for preset filters)
   (int month, int year) _getPeriodMonthYear() {
@@ -36,77 +38,160 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   DateTime? _rangeStart;
   DateTime? _rangeEnd;
 
-  // Opens a date range picker and updates state
-  Future<void> _pickDateRange() async {
-    final now = DateTime.now();
-    final picked = await showDateRangePicker(
-      context: context,
-      firstDate: DateTime(2000),
-      lastDate: now,
-      initialDateRange: _rangeStart != null && _rangeEnd != null ? DateTimeRange(start: _rangeStart!, end: _rangeEnd!) : null,
-    );
-    if (picked != null) {
-      setState(() {
-        _rangeStart = picked.start;
-        _rangeEnd = picked.end;
-        // Reset preset selection to avoid confusion
-        _selectedPeriod = 'Custom';
-      });
-    }
-  }
-
-  // Show modal bottom sheet with filter options
+  // Show modal bottom sheet with filter options (period and member selection)
   void _showFilterOptions() {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (_) => Container(
-        decoration: BoxDecoration(
-          color: AppColors.cardWhite,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Select Period', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textBlack)),
-            const SizedBox(height: 12),
-            ListTile(
-              leading: const Icon(Icons.calendar_today, color: Colors.blue),
-              title: const Text('This Month'),
-              onTap: () {
-                setState(() {
-                  _selectedPeriod = 'This Month';
-                  _rangeStart = null;
-                  _rangeEnd = null;
-                });
-                Navigator.pop(context);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.arrow_back, color: Colors.orange),
-              title: const Text('Last Month'),
-              onTap: () {
-                setState(() {
-                  _selectedPeriod = 'Last Month';
-                  _rangeStart = null;
-                  _rangeEnd = null;
-                });
-                Navigator.pop(context);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.date_range, color: Colors.green),
-              title: const Text('Custom Range'),
-              onTap: () async {
-                Navigator.pop(context);
-                await _pickDateRange();
-              },
-            ),
-          ],
-        ),
-      ),
+      isScrollControlled: true,
+      builder: (context) {
+        String tempPeriod = _selectedPeriod;
+        String tempOwner = _selectedOwner;
+        DateTime? tempStart = _rangeStart;
+        DateTime? tempEnd = _rangeEnd;
+
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Container(
+              decoration: BoxDecoration(
+                color: AppColors.cardWhite,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              padding: EdgeInsets.fromLTRB(24, 20, 24, MediaQuery.of(context).viewInsets.bottom + 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: AppColors.textGrey.withValues(alpha: 0.3),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  Text(
+                    'Filter Analytics',
+                    style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textBlack),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Period Title
+                  Text(
+                    'Time Period',
+                    style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textGrey),
+                  ),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _buildFilterChip('This Month', tempPeriod == 'This Month', () {
+                        setModalState(() {
+                          tempPeriod = 'This Month';
+                          tempStart = null;
+                          tempEnd = null;
+                        });
+                      }),
+                      _buildFilterChip('Last Month', tempPeriod == 'Last Month', () {
+                        setModalState(() {
+                          tempPeriod = 'Last Month';
+                          tempStart = null;
+                          tempEnd = null;
+                        });
+                      }),
+                      _buildFilterChip(
+                        tempPeriod == 'Custom' && tempStart != null && tempEnd != null
+                            ? '${DateFormat('MMM d').format(tempStart!)} - ${DateFormat('MMM d').format(tempEnd!)}'
+                            : 'Custom Range',
+                        tempPeriod == 'Custom',
+                        () async {
+                          final picked = await showDateRangePicker(
+                            context: context,
+                            firstDate: DateTime(2000),
+                            lastDate: DateTime.now(),
+                            initialDateRange: tempStart != null && tempEnd != null 
+                                ? DateTimeRange(start: tempStart!, end: tempEnd!) 
+                                : null,
+                          );
+                          if (picked != null) {
+                            setModalState(() {
+                              tempPeriod = 'Custom';
+                              tempStart = picked.start;
+                              tempEnd = picked.end;
+                            });
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Member Title
+                  Text(
+                    'Filter by Member',
+                    style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textGrey),
+                  ),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _buildFilterChip('All Members', tempOwner == 'All', () {
+                        setModalState(() => tempOwner = 'All');
+                      }),
+                      ...AppConstants.allowedOwners.map((owner) {
+                        return _buildFilterChip(owner, tempOwner == owner, () {
+                          setModalState(() => tempOwner = owner);
+                        });
+                      }),
+                    ],
+                  ),
+                  const SizedBox(height: 32),
+
+                  // Apply Button
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        setState(() {
+                          _selectedPeriod = tempPeriod;
+                          _selectedOwner = tempOwner;
+                          _rangeStart = tempStart;
+                          _rangeEnd = tempEnd;
+                        });
+                        Navigator.pop(context);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primaryGreen,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: Text(
+                        'Apply Filters',
+                        style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildFilterChip(String label, bool isSelected, VoidCallback onTap) {
+    return ChoiceChip(
+      label: Text(label, style: GoogleFonts.outfit(color: isSelected ? Colors.white : AppColors.textBlack, fontSize: 13, fontWeight: FontWeight.w600)),
+      selected: isSelected,
+      selectedColor: AppColors.primaryGreen,
+      backgroundColor: AppColors.cardWhite,
+      onSelected: (_) => onTap(),
     );
   }
 
@@ -146,20 +231,12 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
               child: GlassCard(
                 borderRadius: 20,
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                   child: Row(
-                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.filter_alt, color: AppColors.textGrey, size: 18),
+                      Icon(Icons.filter_list_rounded, color: AppColors.primaryGreen, size: 18),
                       const SizedBox(width: 6),
-                      Text(
-                        _selectedPeriod == 'Custom' && _rangeStart != null && _rangeEnd != null
-                            ? '${DateFormat('MMM d').format(_rangeStart!)} - ${DateFormat('MMM d').format(_rangeEnd!)}'
-                            : _selectedPeriod,
-                        style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.primaryGreen),
-                      ),
-                      const SizedBox(width: 4),
-                      Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.textGrey, size: 16),
+                      Text('Filter', style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.primaryGreen)),
                     ],
                   ),
                 ),
@@ -173,7 +250,10 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
             ? _goalService.getTransactionsForDateRange(_rangeStart!, _rangeEnd!)
             : _goalService.getTransactionsForMonth(_getPeriodMonthYear().$1, _getPeriodMonthYear().$2),
         builder: (context, txSnapshot) {
-          final txs = txSnapshot.data ?? [];
+          final allTxs = txSnapshot.data ?? [];
+          final txs = _selectedOwner == 'All'
+              ? allTxs
+              : allTxs.where((tx) => tx.owner == _selectedOwner).toList();
 
           return StreamBuilder<GoalModel?>(
             stream: _goalService.getGoal(_getMonthYearKey()),
@@ -196,14 +276,20 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                     padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
                     sliver: SliverList(
                       delegate: SliverChildListDelegate([
-                        // Period label
+                        // Period & Member label row
                         Padding(
                           padding: const EdgeInsets.only(bottom: 16, top: 4),
                           child: Row(
                             children: [
                               Icon(Icons.calendar_month_rounded, size: 16, color: AppColors.textGrey),
                               const SizedBox(width: 6),
-                              Text(_getPeriodLabel(), style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textGrey)),
+                              Expanded(
+                                child: Text(_getPeriodLabel(), style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textGrey)),
+                              ),
+                              const SizedBox(width: 12),
+                              Icon(Icons.person_rounded, size: 16, color: AppColors.textGrey),
+                              const SizedBox(width: 6),
+                              Text('Member: $_selectedOwner', style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textGrey)),
                             ],
                           ),
                         ),

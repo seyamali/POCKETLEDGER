@@ -29,9 +29,17 @@ class _AddCreditCardScreenState extends State<AddCreditCardScreen> {
 
   String _selectedNetwork = 'visa';
   int _selectedColorIndex = 0;
+  String _selectedInterestType = 'apr';
   bool _isLoading = false;
 
   final List<String> _networks = ['visa', 'mastercard', 'amex', 'discover'];
+
+  static const List<List<Color>> cardGradients = [
+    [Color(0xFF2C3E50), Color(0xFF000000)], // Premium Black
+    [Color(0xFF134E5E), Color(0xFF71B280)], // Greenish
+    [Color(0xFF4B1248), Color(0xFFF0C27B)], // Gold Purple
+    [Color(0xFF141E30), Color(0xFF243B55)], // Deep Blue
+  ];
 
   @override
   void initState() {
@@ -48,10 +56,23 @@ class _AddCreditCardScreenState extends State<AddCreditCardScreen> {
     
     _selectedNetwork = c?.cardNetwork ?? 'visa';
     _selectedColorIndex = c?.cardColorIndex ?? 0;
+    _selectedInterestType = c?.interestType ?? 'apr';
+
+    _nicknameController.addListener(_updatePreview);
+    _bankController.addListener(_updatePreview);
+    _lastFourController.addListener(_updatePreview);
+  }
+
+  void _updatePreview() {
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
+    _nicknameController.removeListener(_updatePreview);
+    _bankController.removeListener(_updatePreview);
+    _lastFourController.removeListener(_updatePreview);
+
     _nicknameController.dispose();
     _bankController.dispose();
     _lastFourController.dispose();
@@ -82,6 +103,7 @@ class _AddCreditCardScreenState extends State<AddCreditCardScreen> {
         statementClosingDay: int.tryParse(_closingDayController.text) ?? 25,
         paymentDueDays: int.tryParse(_dueDaysController.text) ?? 15,
         apr: double.tryParse(_aprController.text) ?? 0,
+        interestType: _selectedInterestType,
         cardColorIndex: _selectedColorIndex,
         createdAt: widget.existingCard?.createdAt ?? DateTime.now(),
       );
@@ -139,6 +161,8 @@ class _AddCreditCardScreenState extends State<AddCreditCardScreen> {
                 widget.existingCard == null ? 'Add Credit Card' : 'Edit Credit Card',
                 style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textBlack),
               ),
+              const SizedBox(height: 16),
+              _buildCardPreview(),
               const SizedBox(height: 24),
 
               _buildTextField('Card Nickname', _nicknameController, icon: Icons.label),
@@ -175,8 +199,45 @@ class _AddCreditCardScreenState extends State<AddCreditCardScreen> {
                   Expanded(child: _buildTextField('Due in Days', _dueDaysController, icon: Icons.timer, keyboardType: TextInputType.number)),
                 ],
               ),
+               Text('Interest Rate Type', style: GoogleFonts.outfit(color: AppColors.textGrey, fontSize: 14)),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                children: [
+                  ChoiceChip(
+                    label: Text('APR %', style: TextStyle(color: _selectedInterestType == 'apr' ? Colors.white : AppColors.textBlack)),
+                    selected: _selectedInterestType == 'apr',
+                    selectedColor: AppColors.primaryGreen,
+                    backgroundColor: AppColors.cardWhite,
+                    onSelected: (val) => setState(() => _selectedInterestType = 'apr'),
+                  ),
+                  ChoiceChip(
+                    label: Text('Monthly Flat %', style: TextStyle(color: _selectedInterestType == 'monthly_flat' ? Colors.white : AppColors.textBlack)),
+                    selected: _selectedInterestType == 'monthly_flat',
+                    selectedColor: AppColors.primaryGreen,
+                    backgroundColor: AppColors.cardWhite,
+                    onSelected: (val) => setState(() => _selectedInterestType = 'monthly_flat'),
+                  ),
+                  ChoiceChip(
+                    label: Text('Annual Flat %', style: TextStyle(color: _selectedInterestType == 'annual_flat' ? Colors.white : AppColors.textBlack)),
+                    selected: _selectedInterestType == 'annual_flat',
+                    selectedColor: AppColors.primaryGreen,
+                    backgroundColor: AppColors.cardWhite,
+                    onSelected: (val) => setState(() => _selectedInterestType = 'annual_flat'),
+                  ),
+                ],
+              ),
               const SizedBox(height: 16),
-              _buildTextField('Interest Rate (APR %)', _aprController, icon: Icons.percent, keyboardType: TextInputType.number),
+              _buildTextField(
+                _selectedInterestType == 'apr'
+                    ? 'Interest Rate (APR %)'
+                    : _selectedInterestType == 'monthly_flat'
+                        ? 'Monthly Flat Rate (%)'
+                        : 'Annual Flat Rate (%)',
+                _aprController,
+                icon: Icons.percent,
+                keyboardType: TextInputType.number,
+              ),
               const SizedBox(height: 16),
 
               Text('Card Network', style: GoogleFonts.outfit(color: AppColors.textGrey, fontSize: 14)),
@@ -245,6 +306,57 @@ class _AddCreditCardScreenState extends State<AddCreditCardScreen> {
     );
   }
 
+   Widget _buildCardPreview() {
+    final gradient = cardGradients[_selectedColorIndex % cardGradients.length];
+    final bank = _bankController.text.isEmpty ? 'Bank Name' : _bankController.text;
+    final nickname = _nicknameController.text.isEmpty ? 'Card Nickname' : _nicknameController.text;
+    final lastFour = _lastFourController.text.isEmpty ? '••••' : _lastFourController.text;
+    
+    return Container(
+      height: 170,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        gradient: LinearGradient(colors: gradient, begin: Alignment.topLeft, end: Alignment.bottomRight),
+        boxShadow: [
+          BoxShadow(color: gradient[0].withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(0, 5)),
+        ],
+      ),
+      padding: const EdgeInsets.all(20),
+      child: Stack(
+        children: [
+          Positioned(
+            right: -20,
+            bottom: -20,
+            child: Icon(Icons.credit_card, size: 130, color: Colors.white.withValues(alpha: 0.05)),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(bank, style: GoogleFonts.outfit(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                  Icon(
+                    _selectedNetwork.toLowerCase() == 'visa'
+                        ? Icons.payment
+                        : Icons.credit_card,
+                    color: Colors.white,
+                    size: 26,
+                  ),
+                ],
+              ),
+              const Spacer(),
+              Text(nickname, style: GoogleFonts.outfit(color: Colors.white70, fontSize: 13)),
+              const SizedBox(height: 4),
+              Text('•••• •••• •••• $lastFour', style: GoogleFonts.outfit(color: Colors.white, fontSize: 20, letterSpacing: 2, fontWeight: FontWeight.w500)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Color _getColorForIndex(int index) {
     switch (index) {
       case 0: return const Color(0xFF2C3E50);
@@ -260,16 +372,25 @@ class _AddCreditCardScreenState extends State<AddCreditCardScreen> {
       controller: controller,
       keyboardType: keyboardType,
       maxLength: maxLength,
-      style: TextStyle(color: AppColors.textBlack),
+      style: GoogleFonts.outfit(color: AppColors.textBlack, fontSize: 14),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: TextStyle(color: AppColors.textGrey),
-        prefixIcon: icon != null ? Icon(icon, color: AppColors.textGrey) : null,
+        labelStyle: GoogleFonts.outfit(color: AppColors.textGrey, fontSize: 13),
+        prefixIcon: icon != null ? Icon(icon, color: AppColors.primaryGreen, size: 20) : null,
         filled: true,
         fillColor: AppColors.pageBackground,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: AppColors.textGrey.withValues(alpha: 0.1), width: 1),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: AppColors.primaryGreen, width: 1.5),
         ),
         counterText: '',
       ),

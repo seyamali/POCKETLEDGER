@@ -68,6 +68,8 @@ class _CreditCardDetailScreenState extends State<CreditCardDetailScreen> {
                 const SizedBox(height: 24),
                 _buildDueCycleInfo(card),
                 const SizedBox(height: 24),
+                _buildInterestDetails(card),
+                const SizedBox(height: 24),
                 _buildActionButtons(card),
                 const SizedBox(height: 24),
                 // (Future: Transaction History StreamBuilder matching `creditCardId`)
@@ -77,6 +79,45 @@ class _CreditCardDetailScreenState extends State<CreditCardDetailScreen> {
         },
       ),
     )); // closes Scaffold + ThemeBuilder
+  }
+
+  Widget _buildInterestDetails(CreditCardModel card) {
+    String typeLabel = 'APR';
+    if (card.interestType == 'monthly_flat') {
+      typeLabel = 'Monthly Flat';
+    } else if (card.interestType == 'annual_flat') {
+      typeLabel = 'Annual Flat';
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.cardWhite,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Interest Type & Rate', style: GoogleFonts.outfit(color: AppColors.textGrey, fontSize: 14)),
+              Text('${card.apr.toStringAsFixed(2)}% ($typeLabel)', style: GoogleFonts.outfit(color: AppColors.textBlack, fontWeight: FontWeight.bold, fontSize: 14)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Divider(color: AppColors.pageBackground, height: 1),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Est. Monthly Interest', style: GoogleFonts.outfit(color: AppColors.textGrey, fontSize: 14)),
+              Text('৳${card.estimatedMonthlyInterest.toStringAsFixed(2)}', style: GoogleFonts.outfit(color: Colors.orangeAccent, fontWeight: FontWeight.bold, fontSize: 16)),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildCardVisual(CreditCardModel card) {

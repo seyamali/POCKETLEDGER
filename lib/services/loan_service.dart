@@ -87,6 +87,7 @@ class LoanService {
     String? destAccountName,
     String? destOwner,
     String note = '',
+    bool settleFull = false,
   }) async {
     if (_uid == null) return;
 
@@ -169,15 +170,15 @@ class LoanService {
       // --- ALL WRITES ---
       // 1. UPDATE LOAN RECORD & MATCH INSTALLMENTS
       List<RepaymentModel> newRepayments = List.from(loan.repayments)..add(repayment);
-      double newRemaining = loan.remainingAmount - paymentAmount;
+      double newRemaining = settleFull ? 0 : loan.remainingAmount - paymentAmount;
 
       List<InstallmentModel> updatedInstallments = List.from(loan.installments);
       double unpaidAmountCovered = paymentAmount;
 
-      for (int i = 0; i < updatedInstallments.length; i++) {
-        final inst = updatedInstallments[i];
-        if (!inst.isPaid) {
-          if (unpaidAmountCovered >= inst.amount) {
+      if (settleFull) {
+        for (int i = 0; i < updatedInstallments.length; i++) {
+          final inst = updatedInstallments[i];
+          if (!inst.isPaid) {
             updatedInstallments[i] = InstallmentModel(
               id: inst.id,
               amount: inst.amount,
@@ -185,26 +186,52 @@ class LoanService {
               isPaid: true,
               repaymentId: repaymentId,
             );
-            unpaidAmountCovered -= inst.amount;
-          } else if (unpaidAmountCovered > 0) {
-            updatedInstallments[i] = InstallmentModel(
-              id: inst.id,
-              amount: inst.amount,
-              dueDate: inst.dueDate,
-              isPaid: true,
-              repaymentId: repaymentId,
-            );
-            unpaidAmountCovered = 0;
           }
         }
-        if (unpaidAmountCovered <= 0) break;
+      } else {
+        for (int i = 0; i < updatedInstallments.length; i++) {
+          final inst = updatedInstallments[i];
+          if (!inst.isPaid) {
+            if (unpaidAmountCovered >= inst.amount) {
+              updatedInstallments[i] = InstallmentModel(
+                id: inst.id,
+                amount: inst.amount,
+                dueDate: inst.dueDate,
+                isPaid: true,
+                repaymentId: repaymentId,
+              );
+              unpaidAmountCovered -= inst.amount;
+            } else if (unpaidAmountCovered > 0) {
+              updatedInstallments[i] = InstallmentModel(
+                id: inst.id,
+                amount: inst.amount,
+                dueDate: inst.dueDate,
+                isPaid: true,
+                repaymentId: repaymentId,
+              );
+              unpaidAmountCovered = 0;
+            }
+          }
+          if (unpaidAmountCovered <= 0) break;
+        }
+      }
+      
+      double actualInterest = loan.interestAmount;
+      if (settleFull) {
+        double totalPaid = paymentAmount;
+        for (var r in loan.repayments) {
+          totalPaid += r.amount;
+        }
+        actualInterest = totalPaid - loan.amount;
+        if (actualInterest < 0) actualInterest = 0;
       }
       
       tx.update(loanRef, {
         'repayments': newRepayments.map((r) => r.toMap()).toList(),
         'remainingAmount': newRemaining,
-        'status': newRemaining <= 0 ? 'paid' : 'pending',
+        'status': (settleFull || newRemaining <= 0) ? 'paid' : 'pending',
         'installments': updatedInstallments.map((i) => i.toMap()).toList(),
+        'interestAmount': actualInterest,
       });
 
       // 4. APPLY CONSOLIDATED UPDATES

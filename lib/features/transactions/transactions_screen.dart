@@ -9,6 +9,8 @@ import 'package:intl/intl.dart';
 import 'package:pocketledger/core/widgets/scale_on_tap.dart';
 import 'package:pocketledger/core/widgets/glass_card.dart';
 import 'package:pocketledger/core/localization/app_localizations.dart';
+import 'package:pocketledger/core/constants/app_constants.dart';
+import 'package:pocketledger/services/goal_service.dart';
 
 class TransactionsScreen extends StatefulWidget {
   const TransactionsScreen({super.key});
@@ -19,12 +21,14 @@ class TransactionsScreen extends StatefulWidget {
 
 class _TransactionsScreenState extends State<TransactionsScreen> {
   final TransactionService _transactionService = TransactionService();
+  final GoalService _goalService = GoalService();
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
   String _searchQuery = '';
   String _selectedFilter = 'All'; // Type filter: 'All', 'Income', 'Expense', 'Transfer'
   String _selectedCategoryFilter = 'All';
   String _selectedDateFilter = 'This Month'; // Date filter: 'This Month', 'This Week', 'All Time', 'Custom'
+  String _selectedOwner = 'All';
   DateTime? _selectedCustomMonth;
   DateTimeRange? _selectedCustomDateRange;
   int _currentLimit = 20;
@@ -112,7 +116,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
               _buildFilterBar(isDark),
               Expanded(
                 child: StreamBuilder<List<TransactionModel>>(
-                  stream: _transactionService.getRecentTransactions(limit: _currentLimit),
+                  stream: _getTransactionsStream(),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
                       return ListView.builder(
@@ -169,7 +173,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                             itemCount: transactions.length + 1,
                             itemBuilder: (context, index) {
                               if (index == transactions.length) {
-                                if (snapshot.data!.length >= _currentLimit) {
+                                if (_selectedDateFilter == 'All Time' && snapshot.data!.length >= _currentLimit) {
                                   return Padding(
                                     padding: const EdgeInsets.symmetric(vertical: 20),
                                     child: Center(
@@ -249,97 +253,132 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 4, 20, 10),
-      child: GlassCard(
-        blur: 15,
-        opacity: isDark ? 0.05 : 0.45,
-        color: isDark ? const Color(0xFF16201D) : Colors.white,
-        borderRadius: 20,
-        border: Border.all(color: AppColors.brandPrimary.withValues(alpha: 0.1)),
+      child: Container(
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF16201D) : Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: AppColors.brandPrimary.withValues(alpha: 0.12)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.05),
+              blurRadius: 15,
+              offset: const Offset(0, 5),
+            )
+          ],
+        ),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          padding: const EdgeInsets.all(20),
           child: Column(
             children: [
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(Icons.arrow_downward_rounded, color: AppColors.brandPrimary, size: 14),
-                          const SizedBox(width: 4),
-                          Text(
-                            AppLocalizations.get('total_income'),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: AppColors.brandPrimary.withValues(alpha: 0.1),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(Icons.arrow_downward_rounded, color: AppColors.brandPrimary, size: 12),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              AppLocalizations.get('total_income').toUpperCase(),
+                              style: GoogleFonts.outfit(
+                                color: AppColors.textGrey,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            '৳${totalIncome.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => "${m[1]},")}',
                             style: GoogleFonts.outfit(
-                              color: AppColors.textGrey,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 0.5,
+                              color: AppColors.brandPrimary,
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: -0.5,
                             ),
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '৳${totalIncome.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => "${m[1]},")}',
-                        style: GoogleFonts.outfit(
-                          color: AppColors.brandPrimary,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(Icons.arrow_upward_rounded, color: Colors.redAccent, size: 14),
-                          const SizedBox(width: 4),
-                          Text(
-                            AppLocalizations.get('total_expense'),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            Text(
+                              AppLocalizations.get('total_expense').toUpperCase(),
+                              style: GoogleFonts.outfit(
+                                color: AppColors.textGrey,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: Colors.redAccent.withValues(alpha: 0.1),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(Icons.arrow_upward_rounded, color: Colors.redAccent, size: 12),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            '৳${totalExpense.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => "${m[1]},")}',
                             style: GoogleFonts.outfit(
-                              color: AppColors.textGrey,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 0.5,
+                              color: Colors.redAccent,
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: -0.5,
                             ),
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '৳${totalExpense.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => "${m[1]},")}',
-                        style: GoogleFonts.outfit(
-                          color: Colors.redAccent,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
               ClipRRect(
-                borderRadius: BorderRadius.circular(4),
+                borderRadius: BorderRadius.circular(6),
                 child: SizedBox(
-                  height: 6,
+                  height: 8,
                   child: LinearProgressIndicator(
                     value: ratio,
-                    backgroundColor: Colors.redAccent.withValues(alpha: 0.2),
+                    backgroundColor: Colors.redAccent.withValues(alpha: 0.15),
                     valueColor: AlwaysStoppedAnimation<Color>(AppColors.brandPrimary),
                   ),
                 ),
               ),
               if (minDate != null && maxDate != null) ...[
-                const SizedBox(height: 12),
+                const SizedBox(height: 14),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.calendar_today_rounded, color: AppColors.textGrey, size: 11),
+                    Icon(Icons.calendar_today_rounded, color: AppColors.textGrey, size: 12),
                     const SizedBox(width: 6),
                     Text(
                       minDate.day == maxDate.day && minDate.month == maxDate.month && minDate.year == maxDate.year
@@ -347,8 +386,8 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                           : '${DateFormat('dd MMM yyyy').format(minDate)} - ${DateFormat('dd MMM yyyy').format(maxDate)}',
                       style: GoogleFonts.outfit(
                         color: AppColors.textGrey,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ],
@@ -393,7 +432,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                     child: Icon(Icons.clear_rounded, color: AppColors.textGrey, size: 18),
                   )
                 : ScaleOnTap(
-                    onTap: () => _showCalendarPickerOptions(context),
+                    onTap: () => _showFilterOptions(context),
                     child: Icon(Icons.calendar_month_rounded, color: AppColors.brandPrimary, size: 20),
                   ),
             border: InputBorder.none,
@@ -403,6 +442,23 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
         ),
       ),
     );
+  }
+
+  Stream<List<TransactionModel>> _getTransactionsStream() {
+    final now = DateTime.now();
+    if (_selectedDateFilter == 'This Month') {
+      return _goalService.getTransactionsForMonth(now.month, now.year);
+    } else if (_selectedDateFilter == 'This Week') {
+      final weekAgo = now.subtract(const Duration(days: 7));
+      return _goalService.getTransactionsForDateRange(weekAgo, now);
+    } else if (_selectedDateFilter == 'Custom') {
+      if (_selectedCustomDateRange != null) {
+        return _goalService.getTransactionsForDateRange(_selectedCustomDateRange!.start, _selectedCustomDateRange!.end);
+      } else if (_selectedCustomMonth != null) {
+        return _goalService.getTransactionsForMonth(_selectedCustomMonth!.month, _selectedCustomMonth!.year);
+      }
+    }
+    return _transactionService.getRecentTransactions(limit: _currentLimit);
   }
 
   List<TransactionModel> _applyFilter(List<TransactionModel> transactions) {
@@ -452,6 +508,14 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
     if ((_selectedFilter == 'Income' || _selectedFilter == 'Expense') && _selectedCategoryFilter != 'All') {
       filtered = filtered.where((tx) => tx.category == _selectedCategoryFilter).toList();
     }
+
+    // 5. Owner/Member filter
+    if (_selectedOwner != 'All') {
+      filtered = filtered.where((tx) => tx.owner == _selectedOwner).toList();
+    }
+
+    // Sort by date descending
+    filtered.sort((a, b) => b.date.compareTo(a.date));
 
     return filtered;
   }
@@ -616,191 +680,241 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
     );
   }
 
-  void _showCalendarPickerOptions(BuildContext context) {
+  void _showFilterOptions(BuildContext context) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (context) => Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF16201D) : Colors.white,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-          border: Border.all(color: AppColors.brandPrimary.withValues(alpha: 0.15)),
-        ),
-        child: SafeArea(
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: 40, height: 4,
-                    decoration: BoxDecoration(color: AppColors.textGrey.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(2)),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  AppLocalizations.get('filter_transactions'),
-                  style: GoogleFonts.outfit(color: AppColors.textBlack, fontSize: 20, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  AppLocalizations.get('choose_how_you_want'),
-                  style: GoogleFonts.outfit(color: AppColors.textGrey, fontSize: 13),
-                ),
-                const SizedBox(height: 20),
-                _buildPickerOption(
-                  icon: Icons.all_inclusive_rounded,
-                  title: AppLocalizations.get('show_all_time'),
-                  subtitle: AppLocalizations.get('show_all_time_subtitle'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    setState(() {
-                      _selectedDateFilter = 'All Time';
-                      _selectedCustomMonth = null;
-                      _selectedCustomDateRange = null;
-                    });
-                  },
-                ),
-                const SizedBox(height: 10),
-                _buildPickerOption(
-                  icon: Icons.today_rounded,
-                  title: AppLocalizations.get('this_week'),
-                  subtitle: AppLocalizations.get('this_week_subtitle'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    setState(() {
-                      _selectedDateFilter = 'This Week';
-                      _selectedCustomMonth = null;
-                      _selectedCustomDateRange = null;
-                    });
-                  },
-                ),
-                const SizedBox(height: 10),
-                _buildPickerOption(
-                  icon: Icons.calendar_month_rounded,
-                  title: AppLocalizations.get('this_month'),
-                  subtitle: AppLocalizations.get('this_month_subtitle'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    setState(() {
-                      _selectedDateFilter = 'This Month';
-                      _selectedCustomMonth = null;
-                      _selectedCustomDateRange = null;
-                    });
-                  },
-                ),
-                const SizedBox(height: 10),
-                _buildPickerOption(
-                  icon: Icons.calendar_view_month_rounded,
-                  title: AppLocalizations.get('select_specific_month_year'),
-                  subtitle: AppLocalizations.get('select_specific_month_year_subtitle'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _showMonthYearPicker(context);
-                  },
-                ),
-                const SizedBox(height: 10),
-                _buildPickerOption(
-                  icon: Icons.date_range_rounded,
-                  title: AppLocalizations.get('select_custom_date_range'),
-                  subtitle: AppLocalizations.get('select_custom_date_range_subtitle'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _selectDateRange(context);
-                  },
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+      builder: (context) {
+        String tempDateFilter = _selectedDateFilter;
+        String tempOwnerFilter = _selectedOwner;
+        DateTime? tempCustomMonth = _selectedCustomMonth;
+        DateTimeRange? tempCustomDateRange = _selectedCustomDateRange;
 
-  Widget _buildPickerOption({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required VoidCallback onTap,
-    bool isReset = false,
-  }) {
-    final themeColor = isReset ? Colors.redAccent : AppColors.brandPrimary;
-    return ScaleOnTap(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: themeColor.withValues(alpha: 0.06),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: themeColor.withValues(alpha: 0.12)),
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(color: themeColor.withValues(alpha: 0.08), shape: BoxShape.circle),
-              child: Icon(icon, color: themeColor, size: 20),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: GoogleFonts.outfit(color: AppColors.textBlack, fontSize: 15, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 2),
-                  Text(subtitle, style: GoogleFonts.outfit(color: AppColors.textGrey, fontSize: 11.5)),
-                ],
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Container(
+              decoration: BoxDecoration(
+                color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF16201D) : Colors.white,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+                border: Border.all(color: AppColors.brandPrimary.withValues(alpha: 0.15)),
               ),
-            ),
-            Icon(Icons.chevron_right_rounded, color: AppColors.textGrey, size: 20),
-          ],
-        ),
-      ),
-    );
-  }
+              padding: EdgeInsets.fromLTRB(24, 20, 24, MediaQuery.of(context).viewInsets.bottom + 24),
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40, height: 4,
+                        decoration: BoxDecoration(color: AppColors.textGrey.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(2)),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      AppLocalizations.get('filter_transactions'),
+                      style: GoogleFonts.outfit(color: AppColors.textBlack, fontSize: 20, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      AppLocalizations.get('choose_how_you_want'),
+                      style: GoogleFonts.outfit(color: AppColors.textGrey, fontSize: 13),
+                    ),
+                    const SizedBox(height: 20),
+                    
+                    // Time Period Title
+                    Text(
+                      'Time Period',
+                      style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textGrey),
+                    ),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        _buildFilterOptionChip('All Time', tempDateFilter == 'All Time', () {
+                          setModalState(() {
+                            tempDateFilter = 'All Time';
+                            tempCustomMonth = null;
+                            tempCustomDateRange = null;
+                          });
+                        }),
+                        _buildFilterOptionChip('This Week', tempDateFilter == 'This Week', () {
+                          setModalState(() {
+                            tempDateFilter = 'This Week';
+                            tempCustomMonth = null;
+                            tempCustomDateRange = null;
+                          });
+                        }),
+                        _buildFilterOptionChip('This Month', tempDateFilter == 'This Month', () {
+                          setModalState(() {
+                            tempDateFilter = 'This Month';
+                            tempCustomMonth = null;
+                            tempCustomDateRange = null;
+                          });
+                        }),
+                        _buildFilterOptionChip(
+                          tempDateFilter == 'Custom' && tempCustomMonth != null
+                              ? DateFormat('MMM yyyy').format(tempCustomMonth!)
+                              : 'Select Month',
+                          tempDateFilter == 'Custom' && tempCustomMonth != null,
+                          () {
+                            _showMonthYearPickerHelper(context, tempCustomMonth, (picked) {
+                              setModalState(() {
+                                tempDateFilter = 'Custom';
+                                tempCustomMonth = picked;
+                                tempCustomDateRange = null;
+                              });
+                            });
+                          },
+                        ),
+                        _buildFilterOptionChip(
+                          tempDateFilter == 'Custom' && tempCustomDateRange != null
+                              ? '${DateFormat('dd MMM').format(tempCustomDateRange!.start)} - ${DateFormat('dd MMM').format(tempCustomDateRange!.end)}'
+                              : 'Custom Range',
+                          tempDateFilter == 'Custom' && tempCustomDateRange != null,
+                          () async {
+                            final initialRange = tempCustomDateRange ?? DateTimeRange(
+                              start: DateTime.now().subtract(const Duration(days: 7)),
+                              end: DateTime.now(),
+                            );
+                            final pickedRange = await showDateRangePicker(
+                              context: context,
+                              initialDateRange: initialRange,
+                              firstDate: DateTime(2020),
+                              lastDate: DateTime(2030),
+                              builder: (context, child) {
+                                return Theme(
+                                  data: Theme.of(context).copyWith(
+                                    colorScheme: Theme.of(context).colorScheme.copyWith(
+                                      primary: AppColors.brandPrimary,
+                                      onPrimary: Colors.white,
+                                      surface: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF16201D) : Colors.white,
+                                      onSurface: AppColors.textBlack,
+                                    ),
+                                  ),
+                                  child: child!,
+                                );
+                              },
+                            );
+                            if (pickedRange != null) {
+                              setModalState(() {
+                                tempDateFilter = 'Custom';
+                                tempCustomDateRange = pickedRange;
+                                tempCustomMonth = null;
+                              });
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
 
-  Future<void> _selectDateRange(BuildContext context) async {
-    final initialRange = _selectedCustomDateRange ?? DateTimeRange(
-      start: DateTime.now().subtract(const Duration(days: 7)),
-      end: DateTime.now(),
-    );
+                    // Member Title
+                    Text(
+                      'Filter by Member',
+                      style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textGrey),
+                    ),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        _buildFilterOptionChip('All Members', tempOwnerFilter == 'All', () {
+                          setModalState(() => tempOwnerFilter = 'All');
+                        }),
+                        ...AppConstants.allowedOwners.map((owner) {
+                          return _buildFilterOptionChip(owner, tempOwnerFilter == owner, () {
+                            setModalState(() => tempOwnerFilter = owner);
+                          });
+                        }),
+                      ],
+                    ),
+                    const SizedBox(height: 32),
 
-    final pickedRange = await showDateRangePicker(
-      context: context,
-      initialDateRange: initialRange,
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2030),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: Theme.of(context).colorScheme.copyWith(
-              primary: AppColors.brandPrimary,
-              onPrimary: Colors.white,
-              surface: AppColors.cardWhite,
-              onSurface: AppColors.textBlack,
-            ),
-          ),
-          child: child!,
+                    // Apply Button
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              side: BorderSide(color: AppColors.brandPrimary),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            ),
+                            onPressed: () => Navigator.pop(context),
+                            child: Text(
+                              AppLocalizations.get('cancel'),
+                              style: GoogleFonts.outfit(color: AppColors.brandPrimary, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.brandPrimary,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                              elevation: 0,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _selectedDateFilter = tempDateFilter;
+                                _selectedOwner = tempOwnerFilter;
+                                _selectedCustomMonth = tempCustomMonth;
+                                _selectedCustomDateRange = tempCustomDateRange;
+                              });
+                              Navigator.pop(context);
+                            },
+                            child: Text(
+                              AppLocalizations.get('apply'),
+                              style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
         );
       },
     );
-
-    if (pickedRange != null) {
-      setState(() {
-        _selectedCustomDateRange = pickedRange;
-        _selectedCustomMonth = null;
-        _selectedDateFilter = 'Custom';
-      });
-    }
   }
 
-  void _showMonthYearPicker(BuildContext context) {
-    int tempYear = (_selectedCustomMonth ?? DateTime.now()).year;
-    int tempMonth = (_selectedCustomMonth ?? DateTime.now()).month;
+  Widget _buildFilterOptionChip(String label, bool isSelected, VoidCallback onTap) {
+    return ChoiceChip(
+      label: Text(
+        label,
+        style: GoogleFonts.outfit(
+          color: isSelected ? Colors.white : AppColors.textBlack,
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      selected: isSelected,
+      selectedColor: AppColors.brandPrimary,
+      backgroundColor: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF283A35).withValues(alpha: 0.3) : Colors.grey.shade100,
+      checkmarkColor: Colors.white,
+      onSelected: (_) => onTap(),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: isSelected ? AppColors.brandPrimary : AppColors.brandPrimary.withValues(alpha: 0.1),
+        ),
+      ),
+    );
+  }
+
+  void _showMonthYearPickerHelper(BuildContext context, DateTime? current, ValueChanged<DateTime> onPicked) {
+    int tempYear = (current ?? DateTime.now()).year;
+    int tempMonth = (current ?? DateTime.now()).month;
     final List<int> years = List.generate(7, (index) => DateTime.now().year - 4 + index);
 
     showModalBottomSheet(
@@ -922,13 +1036,8 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                           elevation: 0,
                         ),
                         onPressed: () {
-                          final selected = DateTime(tempYear, tempMonth);
+                          onPicked(DateTime(tempYear, tempMonth));
                           Navigator.pop(context);
-                          setState(() {
-                            _selectedCustomMonth = selected;
-                            _selectedCustomDateRange = null;
-                            _selectedDateFilter = 'Custom';
-                          });
                         },
                         child: Text(AppLocalizations.get('apply'), style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
                       ),
@@ -963,42 +1072,68 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   Widget _buildActiveDateBanner(bool isDark) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF16201D).withValues(alpha: 0.5) : Colors.white.withValues(alpha: 0.65),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.brandPrimary.withValues(alpha: 0.08)),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.calendar_month_rounded, color: AppColors.brandPrimary, size: 16),
-                const SizedBox(width: 8),
-                Text(
-                  _getDateRangeLabel(),
-                  style: GoogleFonts.outfit(
-                    color: AppColors.textBlack,
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-            ScaleOnTap(
-              onTap: () => _showCalendarPickerOptions(context),
-              child: Text(
-                AppLocalizations.get('change'),
-                style: GoogleFonts.outfit(
-                  color: AppColors.brandPrimary,
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
+      child: GlassCard(
+        blur: 15,
+        opacity: isDark ? 0.05 : 0.45,
+        color: isDark ? const Color(0xFF16201D) : Colors.white,
+        borderRadius: 16,
+        border: Border.all(color: AppColors.brandPrimary.withValues(alpha: 0.1)),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            children: [
+              Expanded(
+                child: Row(
+                  children: [
+                    Icon(Icons.calendar_month_rounded, color: AppColors.brandPrimary, size: 16),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _getDateRangeLabel(),
+                        style: GoogleFonts.outfit(
+                          color: AppColors.textBlack,
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ),
-          ],
+              const SizedBox(width: 8),
+              Container(
+                height: 16,
+                width: 1.5,
+                color: AppColors.brandPrimary.withValues(alpha: 0.15),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Row(
+                  children: [
+                    Icon(Icons.person_rounded, color: AppColors.brandPrimary, size: 16),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _selectedOwner == 'All' ? 'All Members' : _selectedOwner,
+                        style: GoogleFonts.outfit(
+                          color: AppColors.textBlack,
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 4),
+              ScaleOnTap(
+                onTap: () => _showFilterOptions(context),
+                child: Icon(Icons.edit_rounded, color: AppColors.brandPrimary, size: 16),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -1080,145 +1215,193 @@ class _TransactionCardState extends State<_TransactionCard> {
       amountPrefix = '-';
     }
 
+    Color ownerColor;
+    switch (widget.transaction.owner.toLowerCase()) {
+      case 'self':
+        ownerColor = AppColors.brandPrimary;
+        break;
+      case 'father':
+        ownerColor = Colors.blue;
+        break;
+      case 'mother':
+        ownerColor = Colors.purpleAccent;
+        break;
+      case 'wife':
+        ownerColor = Colors.pinkAccent;
+        break;
+      default:
+        ownerColor = Colors.orangeAccent;
+    }
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: ScaleOnTap(
         onTap: () => setState(() => _isExpanded = !_isExpanded),
-        child: GlassCard(
-          blur: 15,
-          opacity: isDark ? 0.04 : 0.45,
-          color: isDark ? const Color(0xFF16201D) : Colors.white,
-          borderRadius: 20,
-          border: Border.all(color: typeColor.withValues(alpha: 0.12)),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: Container(
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF16201D) : Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: AppColors.borderLight, width: 0.8),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.04),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                )
+              ]
+            ),
+            child: Stack(
               children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: typeColor.withValues(alpha: 0.08),
+                Positioned(
+                  left: 0,
+                  top: 0,
+                  bottom: 0,
+                  width: 5,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: typeColor,
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(20),
+                        bottomLeft: Radius.circular(20),
                       ),
-                      child: Icon(typeIcon, color: typeColor, size: 18),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 16, 16),
+                  child: Column(
+                    children: [
+                      Row(
                         children: [
-                          Row(
-                            children: [
-                              Flexible(
-                                child: Text(
-                                  widget.transaction.category,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: GoogleFonts.outfit(
-                                    color: AppColors.textBlack,
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: AppColors.accentGold.withValues(alpha: 0.12),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  widget.transaction.owner.toUpperCase(),
-                                  style: GoogleFonts.outfit(
-                                    color: AppColors.accentGold,
-                                    fontSize: 8,
-                                    fontWeight: FontWeight.bold,
-                                    letterSpacing: 0.5,
-                                  ),
-                                ),
-                              ),
-                            ],
+                          Container(
+                            width: 42,
+                            height: 42,
+                            decoration: BoxDecoration(
+                              color: typeColor.withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: Icon(typeIcon, color: typeColor, size: 20),
                           ),
-                          const SizedBox(height: 3),
-                          Row(
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Flexible(
+                                      child: Text(
+                                        widget.transaction.category,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: GoogleFonts.outfit(
+                                          color: AppColors.textBlack,
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                      decoration: BoxDecoration(
+                                        color: ownerColor.withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(color: ownerColor.withValues(alpha: 0.2), width: 0.5),
+                                      ),
+                                      child: Text(
+                                        widget.transaction.owner.toUpperCase(),
+                                        style: GoogleFonts.outfit(
+                                          color: ownerColor,
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.bold,
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    Icon(
+                                      isTransfer
+                                          ? Icons.swap_horiz_rounded
+                                          : Icons.account_balance_wallet_rounded,
+                                      size: 13,
+                                      color: AppColors.textGrey,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Expanded(
+                                      child: Text(
+                                        isTransfer
+                                            ? '${widget.transaction.accountName} → ${widget.transaction.toAccountName}'
+                                            : widget.transaction.accountName,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: GoogleFonts.outfit(
+                                          color: AppColors.textGrey,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
-                              Icon(
-                                isTransfer
-                                    ? Icons.swap_horiz_rounded
-                                    : Icons.account_balance_wallet_rounded,
-                                size: 11,
-                                color: AppColors.textGrey,
+                              Text(
+                                '$amountPrefix${widget.transaction.amount.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => "${m[1]},")} ৳',
+                                style: GoogleFonts.outfit(
+                                  color: typeColor,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
-                              const SizedBox(width: 4),
-                              Expanded(
-                                child: Text(
-                                  isTransfer
-                                      ? '${widget.transaction.accountName} → ${widget.transaction.toAccountName}'
-                                      : widget.transaction.accountName,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: GoogleFonts.outfit(
-                                    color: AppColors.textGrey,
-                                    fontSize: 11.5,
-                                    fontWeight: FontWeight.w500,
-                                  ),
+                              const SizedBox(height: 4),
+                              Text(
+                                DateFormat('dd MMM yyyy').format(widget.transaction.date),
+                                style: GoogleFonts.outfit(
+                                  color: AppColors.textGrey,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500,
                                 ),
                               ),
                             ],
                           ),
                         ],
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          '$amountPrefix${widget.transaction.amount.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => "${m[1]},")} ৳',
-                          style: GoogleFonts.outfit(
-                            color: typeColor,
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                          ),
+                      AnimatedCrossFade(
+                        duration: const Duration(milliseconds: 200),
+                        firstCurve: Curves.easeInOut,
+                        secondCurve: Curves.easeInOut,
+                        sizeCurve: Curves.easeInOut,
+                        crossFadeState: _isExpanded
+                            ? CrossFadeState.showSecond
+                            : CrossFadeState.showFirst,
+                        firstChild: const SizedBox.shrink(),
+                        secondChild: Column(
+                          children: [
+                            const SizedBox(height: 12),
+                            Divider(color: AppColors.brandPrimary.withValues(alpha: 0.08)),
+                            const SizedBox(height: 8),
+                            _buildDetailRow(AppLocalizations.get('owner_split'), widget.transaction.owner),
+                            if (isTransfer)
+                              _buildDetailRow(
+                                AppLocalizations.get('to_owner'),
+                                widget.transaction.toOwner ?? AppLocalizations.get('self'),
+                              ),
+                            _buildDetailRow(AppLocalizations.get('tx_type'), _transactionTypeLabel(widget.transaction.type)),
+                            if (widget.transaction.note.isNotEmpty)
+                              _buildDetailRow(AppLocalizations.get('note'), widget.transaction.note),
+                          ],
                         ),
-                        const SizedBox(height: 3),
-                        Text(
-                          DateFormat('dd MMM').format(widget.transaction.date),
-                          style: GoogleFonts.outfit(
-                            color: AppColors.textGrey,
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                AnimatedCrossFade(
-                  duration: const Duration(milliseconds: 200),
-                  firstCurve: Curves.easeInOut,
-                  secondCurve: Curves.easeInOut,
-                  sizeCurve: Curves.easeInOut,
-                  crossFadeState: _isExpanded
-                      ? CrossFadeState.showSecond
-                      : CrossFadeState.showFirst,
-                  firstChild: const SizedBox.shrink(),
-                  secondChild: Column(
-                    children: [
-                      const SizedBox(height: 12),
-                      Divider(color: AppColors.brandPrimary.withValues(alpha: 0.08)),
-                      const SizedBox(height: 8),
-                      _buildDetailRow(AppLocalizations.get('owner_split'), widget.transaction.owner),
-                      if (isTransfer)
-                        _buildDetailRow(
-                          AppLocalizations.get('to_owner'),
-                          widget.transaction.toOwner ?? AppLocalizations.get('self'),
-                        ),
-                      _buildDetailRow(AppLocalizations.get('tx_type'), _transactionTypeLabel(widget.transaction.type)),
-                      if (widget.transaction.note.isNotEmpty)
-                        _buildDetailRow(AppLocalizations.get('note'), widget.transaction.note),
+                      ),
                     ],
                   ),
                 ),

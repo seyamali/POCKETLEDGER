@@ -44,6 +44,54 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
   bool _trackDestination = false;
   bool _isLoading = false;
 
+  Map<String, double> getBkashEarlyPayoffDetails() {
+    final loan = widget.loan;
+    final now = DateTime.now();
+    
+    const double annualRate = 0.0963; // Set to 9.63% to match user's observed 2.09 TK interest for 3960 BDT on day 0
+    double currentPrincipal = loan.amount;
+    double accumulatedInterest = 0.0;
+    
+    final reps = List<RepaymentModel>.from(loan.repayments)
+      ..sort((a, b) => a.date.compareTo(b.date));
+      
+    DateTime currentDate = loan.date;
+    int repIndex = 0;
+    
+    final startDay = DateTime(loan.date.year, loan.date.month, loan.date.day);
+    final today = DateTime(now.year, now.month, now.day);
+    // bKash counts both the start date and the end date (minimum 2 days)
+    final days = today.difference(startDay).inDays + 2;
+    
+    for (int i = 1; i <= days; i++) {
+      final dailyInterest = currentPrincipal * annualRate / 365.0;
+      accumulatedInterest += dailyInterest;
+      
+      final dayDate = startDay.add(Duration(days: i - 1));
+      while (repIndex < reps.length) {
+        final rDate = reps[repIndex].date;
+        if (rDate.year == dayDate.year && rDate.month == dayDate.month && rDate.day == dayDate.day) {
+          final pmt = reps[repIndex].amount;
+          final interestPaid = pmt < accumulatedInterest ? pmt : accumulatedInterest;
+          accumulatedInterest -= interestPaid;
+          final principalPaid = pmt - interestPaid;
+          currentPrincipal -= principalPaid;
+          repIndex++;
+        } else {
+          break;
+        }
+      }
+    }
+    
+    if (currentPrincipal < 0) currentPrincipal = 0;
+    
+    return {
+      'principal': currentPrincipal,
+      'interest': accumulatedInterest,
+      'total': currentPrincipal + accumulatedInterest,
+    };
+  }
+
   @override
   void initState() {
     super.initState();
@@ -97,7 +145,24 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
     final paymentAmount = double.tryParse(_amountController.text) ?? 0;
     if (paymentAmount <= 0) return;
 
-    if (paymentAmount > widget.loan.remainingAmount) {
+    final isBkash = widget.loan.interestRate == 1.098 ||
+                    widget.loan.interestRate == 1.611 ||
+                    widget.loan.interestRate == 1.619 ||
+                    widget.loan.personName.toLowerCase().contains('bkash') ||
+                    widget.loan.note.toLowerCase().contains('bkash');
+    bool settleFull = false;
+    if (isBkash) {
+      final earlyPayoff = getBkashEarlyPayoffDetails()['total'] ?? 0;
+      if ((paymentAmount - earlyPayoff).abs() < 2.0 || paymentAmount >= widget.loan.remainingAmount) {
+        settleFull = true;
+      }
+    } else {
+      if (paymentAmount >= widget.loan.remainingAmount) {
+        settleFull = true;
+      }
+    }
+
+    if (!settleFull && paymentAmount > widget.loan.remainingAmount) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppLocalizations.get('payment_cannot_exceed_remaining'))));
       return;
     }
@@ -115,6 +180,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
         destAccountName: _trackDestination ? _destAccount?.name : null,
         destOwner: _trackDestination ? _destOwner : null,
         note: _noteController.text,
+        settleFull: settleFull,
       );
 
       if (mounted) {
@@ -836,6 +902,102 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                 _statColumn(AppLocalizations.get('paid_back'), (widget.loan.amount + widget.loan.interestAmount) - widget.loan.remainingAmount, AppColors.brandPrimary),
                 _statColumn(AppLocalizations.get('remaining'), widget.loan.remainingAmount + widget.loan.currentPenalty, widget.loan.remainingAmount > 0 ? Colors.redAccent : AppColors.brandPrimary),
               ],
+            ),
+            Builder(
+              builder: (context) {
+                final isBkash = widget.loan.interestRate == 1.098 ||
+                                widget.loan.interestRate == 1.611 ||
+                                widget.loan.interestRate == 1.619 ||
+                                widget.loan.personName.toLowerCase().contains('bkash') ||
+                                widget.loan.note.toLowerCase().contains('bkash');
+                if (!isBkash || widget.loan.status == LoanStatus.paid) {
+                  return const SizedBox.shrink();
+                }
+                
+                final details = getBkashEarlyPayoffDetails();
+                final earlyPayoffTotal = details['total'] ?? 0;
+                final earlyPayoffInterest = details['interest'] ?? 0;
+                final daysElapsed = DateTime.now().difference(widget.loan.date).inDays.clamp(0, 999);
+                
+                return Padding(
+                  padding: const EdgeInsets.only(top: 16),
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE2136E).withValues(alpha: 0.05), // bKash color
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFFE2136E).withValues(alpha: 0.15)),
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.bolt_rounded, color: Color(0xFFE2136E), size: 20),
+                            const SizedBox(width: 8),
+                            Text(
+                              'bKash Early Payoff (Today)',
+                              style: GoogleFonts.outfit(
+                                color: const Color(0xFFE2136E),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Days Elapsed: $daysElapsed days',
+                                  style: GoogleFonts.outfit(color: AppColors.textGrey, fontSize: 11),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Interest accrued: ৳${earlyPayoffInterest.toStringAsFixed(2)}',
+                                  style: GoogleFonts.outfit(color: AppColors.textGrey, fontSize: 11),
+                                ),
+                              ],
+                            ),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text(
+                                  '৳${earlyPayoffTotal.toStringAsFixed(2)}',
+                                  style: GoogleFonts.outfit(
+                                    color: const Color(0xFFE2136E),
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 18,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                GestureDetector(
+                                  onTap: () {
+                                    _amountController.text = earlyPayoffTotal.toStringAsFixed(2);
+                                    _showAddPaymentModal();
+                                  },
+                                  child: Text(
+                                    'Pay in Full',
+                                    style: GoogleFonts.outfit(
+                                      color: Colors.blue,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                      decoration: TextDecoration.underline,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
             ),
             if (widget.loan.currentPenalty > 0) ...[
               const SizedBox(height: 16),

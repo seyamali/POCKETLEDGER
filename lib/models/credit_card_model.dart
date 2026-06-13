@@ -11,7 +11,8 @@ class CreditCardModel {
   final double outstandingBalance;
   final int statementClosingDay; // 1–28
   final int paymentDueDays;      // days after closing
-  final double apr;              // Annual Percentage Rate %
+  final double apr;              // Interest rate value (could be APR %, monthly flat %, or annual flat %)
+  final String interestType;     // 'apr' | 'monthly_flat' | 'annual_flat'
   final int cardColorIndex;      // 0–3 premium gradient themes
   final DateTime createdAt;
 
@@ -27,12 +28,28 @@ class CreditCardModel {
     required this.statementClosingDay,
     required this.paymentDueDays,
     required this.apr,
+    required this.interestType,
     required this.cardColorIndex,
     required this.createdAt,
   });
 
   double get availableCredit => (creditLimit - outstandingBalance).clamp(0, creditLimit);
   double get utilizationPercent => creditLimit > 0 ? (outstandingBalance / creditLimit).clamp(0, 1) : 0;
+  
+  double get estimatedMonthlyInterest {
+    if (outstandingBalance <= 0 || apr <= 0) return 0;
+    switch (interestType) {
+      case 'monthly_flat':
+        return outstandingBalance * (apr / 100);
+      case 'annual_flat':
+        return outstandingBalance * (apr / 100 / 12);
+      case 'apr':
+      default:
+        // APR compounding or standard simple monthly equivalent: APR / 12
+        return outstandingBalance * (apr / 100 / 12);
+    }
+  }
+
   double get minimumPayment {
     if (outstandingBalance <= 0) return 0;
     double minPay = outstandingBalance * 0.02;
@@ -71,6 +88,7 @@ class CreditCardModel {
       statementClosingDay: d['statementClosingDay'] ?? 25,
       paymentDueDays: d['paymentDueDays'] ?? 15,
       apr: (d['apr'] ?? 0).toDouble(),
+      interestType: d['interestType'] ?? 'apr',
       cardColorIndex: d['cardColorIndex'] ?? 0,
       createdAt: (d['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
     );
@@ -87,6 +105,7 @@ class CreditCardModel {
     'statementClosingDay': statementClosingDay,
     'paymentDueDays': paymentDueDays,
     'apr': apr,
+    'interestType': interestType,
     'cardColorIndex': cardColorIndex,
     'createdAt': Timestamp.fromDate(createdAt),
   };
@@ -101,6 +120,7 @@ class CreditCardModel {
     int? statementClosingDay,
     int? paymentDueDays,
     double? apr,
+    String? interestType,
     int? cardColorIndex,
   }) {
     return CreditCardModel(
@@ -115,6 +135,7 @@ class CreditCardModel {
       statementClosingDay: statementClosingDay ?? this.statementClosingDay,
       paymentDueDays: paymentDueDays ?? this.paymentDueDays,
       apr: apr ?? this.apr,
+      interestType: interestType ?? this.interestType,
       cardColorIndex: cardColorIndex ?? this.cardColorIndex,
       createdAt: createdAt,
     );
