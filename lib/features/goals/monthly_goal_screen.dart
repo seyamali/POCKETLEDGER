@@ -54,6 +54,7 @@ class _MonthlyGoalScreenState extends State<MonthlyGoalScreen> {
     final incomeCtrl = TextEditingController(text: currentGoal?.incomeTarget.toInt().toString() ?? '');
     final expenseCtrl = TextEditingController(text: currentGoal?.expenseLimit.toInt().toString() ?? '');
     final savingsCtrl = TextEditingController(text: currentGoal?.savingsTarget.toInt().toString() ?? '');
+    final emiCtrl = TextEditingController(text: currentGoal?.emi.toInt().toString() ?? '');
 
     final categoryCtrls = {
       'Home': TextEditingController(text: currentGoal?.categoryLimits['Home']?.toInt().toString() ?? ''),
@@ -127,6 +128,8 @@ class _MonthlyGoalScreenState extends State<MonthlyGoalScreen> {
                   _buildModalInput('Monthly Savings Target', savingsCtrl, Icons.savings_rounded, Colors.amber.shade600),
                   const SizedBox(height: 16),
                   _buildModalInput('Overall Expense Limit', expenseCtrl, Icons.money_off_rounded, Colors.redAccent),
+                  const SizedBox(height: 16),
+                  _buildModalInput('Monthly EMI Target', emiCtrl, Icons.calendar_month_rounded, Colors.purple),
 
                   const SizedBox(height: 32),
                   ...categoryCtrls.entries.map((entry) => Padding(
@@ -166,6 +169,7 @@ class _MonthlyGoalScreenState extends State<MonthlyGoalScreen> {
                         incomeTarget: double.tryParse(incomeCtrl.text) ?? 0,
                         expenseLimit: double.tryParse(expenseCtrl.text) ?? 0,
                         savingsTarget: double.tryParse(savingsCtrl.text) ?? 0,
+                        emi: double.tryParse(emiCtrl.text) ?? 0,
                         initialProgressIncome: double.tryParse(prevIncomeCtrl.text) ?? 0,
                         initialProgressExpense: double.tryParse(prevExpenseCtrl.text) ?? 0,
                         initialProgressSavings: double.tryParse(prevSavedCtrl.text) ?? 0,
@@ -259,6 +263,7 @@ class _MonthlyGoalScreenState extends State<MonthlyGoalScreen> {
             double actualIncome = goal?.initialProgressIncome ?? 0;
             double actualExpense = goal?.initialProgressExpense ?? 0;
             double actualSaved = goal?.initialProgressSavings ?? 0;
+            double actualEmi = 0;
             Map<String, double> expenseByCategory = {};
 
             for (var tx in filteredTransactions) {
@@ -274,6 +279,9 @@ class _MonthlyGoalScreenState extends State<MonthlyGoalScreen> {
                 if (tx.type == TransactionType.expense) {
                   actualExpense += tx.amount;
                   expenseByCategory[tx.category] = (expenseByCategory[tx.category] ?? 0) + tx.amount;
+                  if (cat.contains('emi') || cat.contains('loan repay') || cat.contains('loan repayment')) {
+                    actualEmi += tx.amount;
+                  }
                 }
               }
             }
@@ -341,7 +349,7 @@ class _MonthlyGoalScreenState extends State<MonthlyGoalScreen> {
                               const SizedBox(height: 32),
                               _buildSectionHeader('Month Summary', 'Key figures at a glance'),
                               const SizedBox(height: 16),
-                              _buildSummaryStats(actualIncome, actualExpense, actualSaved, passiveRemaining, isDark),
+                              _buildSummaryStats(actualIncome, actualExpense, actualSaved, passiveRemaining, actualEmi, goal?.emi ?? 0, isDark),
                               const SizedBox(height: 32),
                               _buildSectionHeader('Multi-Month Trends', 'Income, Expense, and Savings trends'),
                               const SizedBox(height: 16),
@@ -750,12 +758,26 @@ class _MonthlyGoalScreenState extends State<MonthlyGoalScreen> {
     );
   }
 
-  Widget _buildSummaryStats(double income, double expense, double saved, double remaining, bool isDark) {
-    return Row(
+  Widget _buildSummaryStats(double income, double expense, double saved, double remaining, double emiPaid, double emiTarget, bool isDark) {
+    return Column(
       children: [
-        _statTile('Net Saved', saved, Colors.amber.shade600, Icons.savings_rounded, isDark),
-        const SizedBox(width: 12),
-        _statTile('Pass. Rem.', remaining, AppColors.brandPrimary, Icons.account_balance_wallet_rounded, isDark),
+        Row(
+          children: [
+            _statTile('Net Saved', saved, Colors.amber.shade600, Icons.savings_rounded, isDark),
+            const SizedBox(width: 12),
+            _statTile('Pass. Rem.', remaining, AppColors.brandPrimary, Icons.account_balance_wallet_rounded, isDark),
+          ],
+        ),
+        if (emiTarget > 0) ...[
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              _statTile('EMI Paid', emiPaid, Colors.purple, Icons.payment_rounded, isDark),
+              const SizedBox(width: 12),
+              _statTile('EMI Target', emiTarget, Colors.purple.shade300, Icons.track_changes_rounded, isDark),
+            ],
+          ),
+        ],
       ],
     );
   }

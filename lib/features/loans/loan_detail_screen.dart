@@ -43,6 +43,7 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
   String _destOwner = AppConstants.ownerMother;
   bool _trackDestination = false;
   bool _isLoading = false;
+  bool _isEarlySettlement = false;
 
   Map<String, double> getBkashEarlyPayoffDetails() {
     final loan = widget.loan;
@@ -150,15 +151,17 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                     widget.loan.interestRate == 1.619 ||
                     widget.loan.personName.toLowerCase().contains('bkash') ||
                     widget.loan.note.toLowerCase().contains('bkash');
-    bool settleFull = false;
-    if (isBkash) {
-      final earlyPayoff = getBkashEarlyPayoffDetails()['total'] ?? 0;
-      if ((paymentAmount - earlyPayoff).abs() < 2.0 || paymentAmount >= widget.loan.remainingAmount) {
-        settleFull = true;
-      }
-    } else {
-      if (paymentAmount >= widget.loan.remainingAmount) {
-        settleFull = true;
+    bool settleFull = _isEarlySettlement;
+    if (!settleFull) {
+      if (isBkash) {
+        final earlyPayoff = getBkashEarlyPayoffDetails()['total'] ?? 0;
+        if ((paymentAmount - earlyPayoff).abs() < 2.0 || paymentAmount >= widget.loan.remainingAmount) {
+          settleFull = true;
+        }
+      } else {
+        if (paymentAmount >= widget.loan.remainingAmount) {
+          settleFull = true;
+        }
       }
     }
 
@@ -195,6 +198,11 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
   }
 
   void _showAddPaymentModal() {
+    setState(() {
+      _isEarlySettlement = false;
+      _amountController.clear();
+      _noteController.clear();
+    });
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -298,6 +306,41 @@ class _LoanDetailScreenState extends State<LoanDetailScreen> {
                             value: _trackDestination,
                             activeColor: AppColors.brandPrimary,
                             onChanged: (val) => setModalState(() => _trackDestination = val),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: AppColors.cardWhite,
+                        borderRadius: BorderRadius.circular(15),
+                        border: Border.all(color: AppColors.brandPrimary.withValues(alpha: 0.1)),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Early Settlement',
+                                  style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primaryText),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Settle the loan fully with this payment amount',
+                                  style: GoogleFonts.outfit(fontSize: 10, color: AppColors.secondaryText),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Switch(
+                            value: _isEarlySettlement,
+                            activeColor: AppColors.brandPrimary,
+                            onChanged: (val) => setModalState(() => _isEarlySettlement = val),
                           ),
                         ],
                       ),

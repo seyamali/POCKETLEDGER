@@ -2076,37 +2076,7 @@ class SmartAdvisorCard extends StatelessWidget {
 
             double savingsTarget = goal.savingsTarget;
 
-            // Priority 1: Budget Exceeded
-            if (expenseLimit > 0 && actualExpense >= expenseLimit) {
-              final overSpent = actualExpense - expenseLimit;
-              return _buildCard(
-                context,
-                _AdvisorTip(
-                  title: AppLocalizations.get('budget_exceeded'),
-                  content: "Budget Exceeded! You spent ৳${overSpent.toInt()} over your monthly limit. Hold non-essential purchases.",
-                  icon: Icons.error_outline_rounded,
-                  buttonText: AppLocalizations.get('adjust_goals'),
-                  targetScreen: const MonthlyGoalScreen(),
-                  type: AdvisorTipType.danger,
-                ),
-              );
-            }
-
-            // Priority 2: Nearing Limit (>= 80%)
-            if (expenseLimit > 0 && actualExpense >= expenseLimit * 0.8) {
-              final utilization = ((actualExpense / expenseLimit) * 100).toInt();
-              return _buildCard(
-                context,
-                _AdvisorTip(
-                  title: AppLocalizations.get('budget_warning'),
-                  content: "Nearing Limit! You have used $utilization% of your budget. Cut down discretionary spending.",
-                  icon: Icons.warning_amber_rounded,
-                  buttonText: AppLocalizations.get('adjust_goals'),
-                  targetScreen: const MonthlyGoalScreen(),
-                  type: AdvisorTipType.warning,
-                ),
-              );
-            }
+            // Skip Budget Exceeded and Nearing Limit warnings here as they are already handled by the dedicated BudgetAlertBanner above.
 
             // Priority 3: Savings Alert (< 50% of Goal)
             if (savingsTarget > 0 && actualSaved < savingsTarget * 0.5) {

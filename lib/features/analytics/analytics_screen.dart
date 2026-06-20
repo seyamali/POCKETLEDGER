@@ -263,9 +263,23 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
               // Calculate totals from transactions
               double income = 0;
               double expense = 0;
+              double actualEmi = 0;
+              double actualSaved = goal?.initialProgressSavings ?? 0;
               for (var tx in txs) {
-                if (tx.type == TransactionType.income) income += tx.amount;
-                if (tx.type == TransactionType.expense) expense += tx.amount;
+                final cat = tx.category.toLowerCase();
+                bool isSavings = cat.contains('sav') || tx.toAccountName?.toLowerCase().contains('sav') == true;
+
+                if (isSavings) {
+                  actualSaved += tx.amount;
+                } else {
+                  if (tx.type == TransactionType.income) income += tx.amount;
+                  if (tx.type == TransactionType.expense) {
+                    expense += tx.amount;
+                    if (cat.contains('emi') || cat.contains('loan repay') || cat.contains('loan repayment')) {
+                      actualEmi += tx.amount;
+                    }
+                  }
+                }
               }
               double net = income - expense;
 
@@ -300,7 +314,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
 
                         // ── Goals Progress (if set) ──
                         if (goal != null) ...[
-                          _buildGoalsSection(goal, income, expense, net),
+                          _buildGoalsSection(goal, income, expense, net, actualEmi, actualSaved),
                           const SizedBox(height: 20),
                         ],
 
@@ -384,7 +398,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     );
   }
 
-  Widget _buildGoalsSection(GoalModel goal, double income, double expense, double net) {
+  Widget _buildGoalsSection(GoalModel goal, double income, double expense, double net, double actualEmi, double actualSaved) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -415,7 +429,11 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
           ],
           if (goal.savingsTarget > 0) ...[
             const SizedBox(height: 16),
-            _buildGoalProgress('Savings Target', (income - expense).clamp(0, double.infinity), goal.savingsTarget, Colors.blue, Icons.savings_rounded),
+            _buildGoalProgress('Savings Target', actualSaved, goal.savingsTarget, Colors.blue, Icons.savings_rounded),
+          ],
+          if (goal.emi > 0) ...[
+            const SizedBox(height: 16),
+            _buildGoalProgress('EMI Target', actualEmi, goal.emi, Colors.purple, Icons.calendar_month_rounded),
           ],
           // Category Limits from Goal
           if (goal.categoryLimits.isNotEmpty) ...[
