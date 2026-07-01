@@ -278,6 +278,13 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                     if (cat.contains('emi') || cat.contains('loan repay') || cat.contains('loan repayment')) {
                       actualEmi += tx.amount;
                     }
+                  } else if (tx.type == TransactionType.others) {
+                    if (cat.contains('emi') || cat.contains('loan repay') || cat.contains('loan repayment')) {
+                      if (!cat.contains('received')) {
+                        actualEmi += tx.amount;
+                        expense += tx.amount;
+                      }
+                    }
                   }
                 }
               }

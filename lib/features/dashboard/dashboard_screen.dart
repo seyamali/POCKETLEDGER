@@ -1422,8 +1422,16 @@ class BudgetAlertBanner extends StatelessWidget {
               final cat = tx.category.toLowerCase();
               bool isSavings = cat.contains('sav') || 
                                tx.toAccountName?.toLowerCase().contains('sav') == true;
-              if (!isSavings && tx.type == TransactionType.expense) {
-                actualExpense += tx.amount;
+              if (!isSavings) {
+                if (tx.type == TransactionType.expense) {
+                  actualExpense += tx.amount;
+                } else if (tx.type == TransactionType.others) {
+                  if (cat.contains('emi') || cat.contains('loan repay') || cat.contains('loan repayment')) {
+                    if (!cat.contains('received')) {
+                      actualExpense += tx.amount;
+                    }
+                  }
+                }
               }
             }
 
@@ -2065,6 +2073,13 @@ class SmartAdvisorCard extends StatelessWidget {
                 if (tx.type == TransactionType.expense) {
                   actualExpense += tx.amount;
                   expenseByCategory[tx.category] = (expenseByCategory[tx.category] ?? 0) + tx.amount;
+                } else if (tx.type == TransactionType.others) {
+                  if (cat.contains('emi') || cat.contains('loan repay') || cat.contains('loan repayment')) {
+                    if (!cat.contains('received')) {
+                      actualExpense += tx.amount;
+                      expenseByCategory[tx.category] = (expenseByCategory[tx.category] ?? 0) + tx.amount;
+                    }
+                  }
                 }
               }
             }

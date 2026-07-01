@@ -282,6 +282,14 @@ class _MonthlyGoalScreenState extends State<MonthlyGoalScreen> {
                   if (cat.contains('emi') || cat.contains('loan repay') || cat.contains('loan repayment')) {
                     actualEmi += tx.amount;
                   }
+                } else if (tx.type == TransactionType.others) {
+                  if (cat.contains('emi') || cat.contains('loan repay') || cat.contains('loan repayment')) {
+                    if (!cat.contains('received')) {
+                      actualEmi += tx.amount;
+                      actualExpense += tx.amount;
+                      expenseByCategory[tx.category] = (expenseByCategory[tx.category] ?? 0) + tx.amount;
+                    }
+                  }
                 }
               }
             }

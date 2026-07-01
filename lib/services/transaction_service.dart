@@ -324,4 +324,113 @@ class TransactionService {
       rethrow;
     }
   }
+  // Delete Transaction
+  Future<void> deleteTransaction(TransactionModel transaction) async {
+    if (_uid == null) return;
+
+    if (transaction.type == TransactionType.others) {
+      throw AppException('Cannot delete loan repayments automatically.');
+    }
+
+    try {
+      await _db.runTransaction((tx) async {
+        final transRef = _db.collection('transactions').doc(transaction.id);
+        final doc = await tx.get(transRef);
+        if (!doc.exists) {
+          throw AppException('Transaction not found');
+        }
+
+        if (transaction.type == TransactionType.income || transaction.type == TransactionType.expense) {
+          final bool isCreditCardPurchase = transaction.type == TransactionType.expense && 
+              transaction.creditCardId != null && 
+              !transaction.isCreditCardPayment;
+
+          if (!isCreditCardPurchase) {
+            final accountRef = _db.collection('accounts').doc(transaction.accountId);
+            final accountDoc = await tx.get(accountRef);
+            
+            if (accountDoc.exists) {
+              final accountData = accountDoc.data() as Map<String, dynamic>;
+              double currentTotal = (accountData['totalBalance'] ?? 0).toDouble();
+              Map<String, double> breakdown = Map<String, double>.from(
+                (accountData['breakdown'] ?? {}).map((key, value) => MapEntry(key, value.toDouble())),
+              );
+
+              double ownerBalance = breakdown[transaction.owner] ?? 0;
+
+              // Reverse the operation
+              if (transaction.type == TransactionType.income) {
+                currentTotal -= transaction.amount;
+                ownerBalance -= transaction.amount;
+              } else if (transaction.type == TransactionType.expense) {
+                currentTotal += transaction.amount;
+                ownerBalance += transaction.amount;
+              }
+
+              breakdown[transaction.owner] = ownerBalance;
+
+              tx.update(accountRef, {
+                'totalBalance': currentTotal,
+                'breakdown': breakdown,
+              });
+            }
+          }
+
+          if (transaction.type == TransactionType.expense && transaction.creditCardId != null) {
+            final cardRef = _db.collection('users').doc(_uid!).collection('creditCards').doc(transaction.creditCardId);
+            // Revert increment
+            final double revertVal = transaction.isCreditCardPayment ? transaction.amount : -transaction.amount;
+            tx.update(cardRef, {
+              'outstandingBalance': FieldValue.increment(revertVal)
+            });
+          }
+
+        } else if (transaction.type == TransactionType.transfer) {
+          final fromRef = _db.collection('accounts').doc(transaction.accountId);
+          final toRef = _db.collection('accounts').doc(transaction.toAccountId);
+
+          final fromDoc = await tx.get(fromRef);
+          final toDoc = await tx.get(toRef);
+
+          if (fromDoc.exists) {
+            final fromData = fromDoc.data() as Map<String, dynamic>;
+            double fromTotal = (fromData['totalBalance'] ?? 0).toDouble();
+            Map<String, double> fromBreakdown = Map<String, double>.from(
+              (fromData['breakdown'] ?? {}).map((key, value) => MapEntry(key, value.toDouble())),
+            );
+            
+            fromTotal += transaction.amount;
+            fromBreakdown[transaction.owner] = (fromBreakdown[transaction.owner] ?? 0) + transaction.amount;
+            
+            tx.update(fromRef, {
+              'totalBalance': fromTotal,
+              'breakdown': fromBreakdown,
+            });
+          }
+
+          if (toDoc.exists) {
+            final toData = toDoc.data() as Map<String, dynamic>;
+            double toTotal = (toData['totalBalance'] ?? 0).toDouble();
+            Map<String, double> toBreakdown = Map<String, double>.from(
+              (toData['breakdown'] ?? {}).map((key, value) => MapEntry(key, value.toDouble())),
+            );
+
+            toTotal -= transaction.amount;
+            toBreakdown[transaction.toOwner ?? 'Self'] = (toBreakdown[transaction.toOwner ?? 'Self'] ?? 0) - transaction.amount;
+
+            tx.update(toRef, {
+              'totalBalance': toTotal,
+              'breakdown': toBreakdown,
+            });
+          }
+        }
+
+        // Delete the transaction
+        tx.delete(transRef);
+      });
+    } catch (e, stackTrace) {
+      ErrorLogger.logError(e, stackTrace, 'deleteTransaction');
+      rethrow;
+    }
+  }
 }

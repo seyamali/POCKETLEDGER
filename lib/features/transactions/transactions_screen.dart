@@ -1178,6 +1178,63 @@ class _TransactionCard extends StatefulWidget {
 
 class _TransactionCardState extends State<_TransactionCard> {
   bool _isExpanded = false;
+  final TransactionService _transactionService = TransactionService();
+
+  Future<void> _deleteTransaction() async {
+    if (widget.transaction.type == TransactionType.others) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Cannot delete loan repayments directly.'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+      return;
+    }
+
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Delete Transaction', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+        content: Text(
+          'Are you sure you want to delete this transaction? This will revert the account balance.',
+          style: GoogleFonts.outfit(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('Cancel', style: GoogleFonts.outfit(color: Colors.grey)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text('Delete', style: GoogleFonts.outfit(color: Colors.red, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    try {
+      await _transactionService.deleteTransaction(widget.transaction);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Transaction deleted successfully.'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error deleting transaction: $e'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1399,6 +1456,37 @@ class _TransactionCardState extends State<_TransactionCard> {
                             _buildDetailRow(AppLocalizations.get('tx_type'), _transactionTypeLabel(widget.transaction.type)),
                             if (widget.transaction.note.isNotEmpty)
                               _buildDetailRow(AppLocalizations.get('note'), widget.transaction.note),
+                            const SizedBox(height: 12),
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: GestureDetector(
+                                onTap: _deleteTransaction,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.delete_outline_rounded, color: Colors.red, size: 16),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        AppLocalizations.get('delete') != 'delete' && AppLocalizations.get('delete').isNotEmpty 
+                                          ? AppLocalizations.get('delete') 
+                                          : 'Delete',
+                                        style: GoogleFonts.outfit(
+                                          color: Colors.red,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
                           ],
                         ),
                       ),
